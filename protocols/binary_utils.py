@@ -1,5 +1,6 @@
 import struct
 import time
+import hashlib
 
 MESSAGE_TYPES = {
     "CREATE_ACCOUNT": 0x01,
@@ -11,6 +12,9 @@ MESSAGE_TYPES = {
 }
 
 # TODO: hash passwords
+def hash_password(password):
+    """Hashes a password using SHA-256. Returns a 32-byte binary hash"""
+    return hashlib.sha256(password.encode()).digest()
 
 """
 Methods for encoding.
@@ -64,13 +68,17 @@ Methods for creating requests.
 def create_account(username, password):
     """Encodes a Create Account request."""
     timestamp = int(time.time())
-    payload = encode_string(username) + encode_string(password) + struct.pack("!I", timestamp)
+    hashed_password = hash_password(password)
+
+    payload = encode_string(username) + hashed_password + struct.pack("!I", timestamp)
     return encode_message(MESSAGE_TYPES["CREATE_ACCOUNT"], payload)
 
 def login(username, password):
     """Encodes a Login request."""
     timestamp = int(time.time())
-    payload = encode_string(username) + encode_string(password) + struct.pack("!I", timestamp)
+    hashed_password = hash_password(password)
+
+    payload = encode_string(username) + hashed_password + struct.pack("!I", timestamp)
     return encode_message(MESSAGE_TYPES["LOGIN"], payload)
 
 def send_message(sender, receiver, message):
@@ -94,5 +102,7 @@ def delete_message(username, message_ids, timestamp):
 def delete_account(username, password, timestamp):
     """Encodes a Delete Account request."""
     timestamp = int(time.time())
-    payload = encode_string(username) + encode_string(password) + struct.pack("!I", timestamp)
+    hashed_password = hash_password(password)
+
+    payload = encode_string(username) + hashed_password + struct.pack("!I", timestamp)
     return encode_message(MESSAGE_TYPES["DELETE_MESSAGE"], payload)
