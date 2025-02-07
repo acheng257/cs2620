@@ -16,7 +16,7 @@ parser.add_argument("--host", type=str, default=DEFAULT_HOST, help="Host address
 parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port number to listen on")
 args = parser.parse_args()
 
-with open("protocols/protocol.json", "r") as schema_file:
+with open("../protocols/protocol.json", "r") as schema_file:
     SCHEMA = json.load(schema_file)
 
 def validate_json(data):
