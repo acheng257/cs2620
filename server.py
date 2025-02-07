@@ -27,9 +27,11 @@ def service_connection(key, mask):
         if recv_data:
             data.outb += recv_data
         else:
-            print(f"Closing connection to {data.addr}")
-            sel.unregister(sock)
-            sock.close()
+            # print(f"Closing connection to {data.addr}")
+            # sel.unregister(sock)
+            # sock.close()
+            print(f"Client {data.addr} is still connected but sent empty data.")
+            return
     if mask & selectors.EVENT_WRITE:
         if data.outb:
             return_data = test_function(data.outb.decode("utf-8"))
