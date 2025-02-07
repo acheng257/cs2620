@@ -63,13 +63,13 @@ Methods for creating requests.
 """
 def create_account(username, password):
     """Encodes a Create Account request."""
-    timestamp = int(time.time())  # Server timestamp
+    timestamp = int(time.time())
     payload = encode_string(username) + encode_string(password) + struct.pack("!I", timestamp)
     return encode_message(MESSAGE_TYPES["CREATE_ACCOUNT"], payload)
 
 def login(username, password):
     """Encodes a Login request."""
-    timestamp = int(time.time())  # Server timestamp
+    timestamp = int(time.time())
     payload = encode_string(username) + encode_string(password) + struct.pack("!I", timestamp)
     return encode_message(MESSAGE_TYPES["LOGIN"], payload)
 
