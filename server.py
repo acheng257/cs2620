@@ -15,6 +15,10 @@ def accept_wrapper(sock):
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     sel.register(conn, events, data=data)
 
+def test_function(msg):
+    print("Message:", msg)
+    return msg
+
 def service_connection(key, mask):
     sock = key.fileobj
     data = key.data
@@ -32,10 +36,6 @@ def service_connection(key, mask):
             return_data = return_data.encode("utf-8")
             sent = sock.send(return_data)
             data.outb = data.outb[sent:]
-
-def test_function(msg):
-    print("Message:", msg)
-    return msg
 
 
 
