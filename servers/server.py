@@ -152,7 +152,6 @@ class ChatServer:
 
                 sender_username = self.active_connections[client_socket].username
                 print(f"User {sender_username} sent to {target_username}: {content}")
-
                 self.send_direct_message(target_username, content, sender_username)
 
         except Exception as e:
