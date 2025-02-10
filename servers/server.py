@@ -2,7 +2,8 @@ import socket
 from typing import Dict, Set, List, Optional
 import threading
 from dataclasses import dataclass
-from protocols.base import Protocol
+from protocols.base import Protocol, Message
+from protocols.binary_protocol import BinaryProtocol
 
 @dataclass
 class User:
@@ -38,7 +39,10 @@ class ChatServer:
             client_socket, address = self.socket.accept()
             print(f"New connection from {address}")
 
-            connection = ClientConnection(socket=client_socket, protocol="json")
+            protocol_byte = client_socket.recv(1)
+            protocol = BinaryProtocol()
+
+            connection = ClientConnection(socket=client_socket, protocol=protocol)
             self.active_connections[client_socket] = connection
 
             thread = threading.Thread(target=self.handle_client, args=(client_socket,))
@@ -46,19 +50,33 @@ class ChatServer:
             thread.start()
     
     def handle_client(self, client_socket):
+        connection = self.active_connections[client_socket]
+
         try:
             while True:
-                client_message = client_socket.recv(1024).decode('utf-8')
-                if not client_message:
+                length_bytes = client_socket.recv(4)
+                if not length_bytes:
                     # Connection closed by client
                     print("Client disconnected.")
                     break
-                print(client_message)
-                clientId, message = client_message.split(",")
-                print(f"Client {clientId} sent: {message}")
+
+                message_length = int.from_bytes(length_bytes, "big")
+                message_data = client_socket.recv(message_length)
+
+                if not message_data:
+                    print("Client disconnected.")
+                    break
+
+                message = connection.protocol.deserialize(message_data)
+                self.handle_message(client_socket, message)
                 
         except Exception as e:
             print(f"Error handling client: {e}")
+
+    def handle_message(self, client_socket: socket.socket, message: Message):
+        """Handle received message."""
+        connection = self.active_connections[client_socket]
+        print("Message received from client:", message)
 
 if __name__ == "__main__":
     server = ChatServer()
