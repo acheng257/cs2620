@@ -30,39 +30,42 @@ class ChatServer:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((host, port))
+        self.lock = threading.Lock()
 
     def send_direct_message(
         self, target_username: str, message: str, sender_username: str
     ):
         """Send a message to a specific client."""
-        if target_username in self.username_to_socket:
-            target_socket = self.username_to_socket[target_username]
-            try:
-                formatted_message = f"{message},{sender_username}"
-                target_socket.send(formatted_message.encode("utf-8"))
-            except Exception as e:
-                print(f"Error sending to user {target_username}: {e}")
-                self.remove_client(target_socket)
-        else:
-            # If target client doesn't exist, send error back to sender
-            sender_socket = self.username_to_socket[sender_username]
-            try:
-                error_msg = f"Error: User {target_username} not found,SERVER"
-                sender_socket.send(error_msg.encode("utf-8"))
-            except Exception as e:
-                print(f"Error sending error message to user {sender_username}: {e}")
+        with self.lock:
+            if target_username in self.username_to_socket:
+                target_socket = self.username_to_socket[target_username]
+                try:
+                    formatted_message = f"{message},{sender_username}"
+                    target_socket.send(formatted_message.encode("utf-8"))
+                except Exception as e:
+                    print(f"Error sending to user {target_username}: {e}")
+                    self.remove_client(target_socket)
+            else:
+                # If target client doesn't exist, send error back to sender
+                sender_socket = self.username_to_socket[sender_username]
+                try:
+                    error_msg = f"Error: User {target_username} not found,SERVER"
+                    sender_socket.send(error_msg.encode("utf-8"))
+                except Exception as e:
+                    print(f"Error sending error message to user {sender_username}: {e}")
 
     def remove_client(self, client_socket: socket.socket):
         """Remove a client from active connections."""
-        if client_socket in self.active_connections:
-            username = self.active_connections[client_socket].username
-            if username in self.username_to_socket:
-                del self.username_to_socket[username]
-            del self.active_connections[client_socket]
-            try:
-                client_socket.close()
-            except Exception as e:
-                print(f"Error closing client socket: {e}")
+        with self.lock:
+            if client_socket in self.active_connections:
+                username = self.active_connections[client_socket].username
+                if username in self.username_to_socket:
+                    del self.username_to_socket[username]
+                del self.active_connections[client_socket]
+                try:
+                    client_socket.close()
+                except Exception as e:
+                    print(f"Error closing client socket: {e}")
 
     def start(self):
         """Start the server."""
@@ -74,7 +77,8 @@ class ChatServer:
             print(f"New connection from {address}")
 
             connection = ClientConnection(socket=client_socket, protocol=None)
-            self.active_connections[client_socket] = connection
+            with self.lock:
+                self.active_connections[client_socket] = connection
 
             thread = threading.Thread(target=self.handle_client, args=(client_socket,))
             thread.daemon = True
@@ -95,7 +99,8 @@ class ChatServer:
                 if self.active_connections[client_socket].username is None:
                     username = target_username
                     self.active_connections[client_socket].username = username
-                    self.username_to_socket[username] = client_socket
+                    with self.lock:
+                        self.username_to_socket[username] = client_socket
                     print(f"User {username} registered")
                     continue
 
