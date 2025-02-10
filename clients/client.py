@@ -53,7 +53,11 @@ class ChatClient:
                 content, sender_username = message.split(",", 1)
 
                 if sender_username == "SERVER":
-                    print(f"Server message: {content}")
+                    # Handle multiline chat history
+                    if content.startswith("Chat history:"):
+                        print("\n" + content.replace("\\n", "\n"))
+                    else:
+                        print(f"Server message: {content}")
                 else:
                     print(f"User [{sender_username}] says: {content}")
             except Exception as e:
@@ -84,8 +88,12 @@ if __name__ == "__main__":
     try:
         if client.connect():
             print(f"Connected to server as {username}")
-            print("Type messages in format: <recipient_username>,<message>")
-            print("Example: alice,Hello World!")
+            print("Commands:")
+            print("1. Send message: <recipient_username>,<message>")
+            print("2. View chat history: <username>,!history")
+            print("Example:")
+            print("  Send: alice,Hello World!")
+            print("  History: alice,!history")
             print("Press Ctrl+C to quit")
 
             while True:

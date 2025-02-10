@@ -5,15 +5,6 @@ from enum import Enum
 
 
 class MessageType(Enum):
-    # CREATE_ACCOUNT = "create_account"
-    # LOGIN = "login"
-    # LIST_ACCOUNTS = "list_accounts"
-    # SEND_MESSAGE = "send_message"
-    # READ_MESSAGES = "read_messages"
-    # DELETE_MESSAGES = "delete_messages"
-    # DELETE_ACCOUNT = "delete_account"
-    # ERROR = "error"
-    # SUCCESS = "success"
     CREATE_ACCOUNT = 0
     LOGIN = 1
     LIST_ACCOUNTS = 2
