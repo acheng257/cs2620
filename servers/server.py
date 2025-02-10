@@ -2,7 +2,8 @@ import socket
 from typing import Dict, Set, List, Optional
 import threading
 from dataclasses import dataclass
-from protocols.base import Protocol
+from protocols.binary_protocol import BinaryProtocol
+from protocols.base import MessageType, Protocol, Message
 
 
 @dataclass
@@ -33,26 +34,50 @@ class ChatServer:
         self.lock = threading.Lock()
 
     def send_direct_message(
-        self, target_username: str, message: str, sender_username: str
+        self, target_username: str, message_content: str, sender_username: str
     ):
-        """Send a message to a specific client."""
+        """Send a message to a specific client using the binary protocol."""
         with self.lock:
             if target_username in self.username_to_socket:
                 target_socket = self.username_to_socket[target_username]
+                connection = self.active_connections[target_socket]
+
+                # Create a Message object
+                message = Message(
+                    type=MessageType.SEND_MESSAGE,
+                    payload={"text": message_content},
+                    sender=sender_username,
+                    recipient=target_username,
+                )
+
                 try:
-                    formatted_message = f"{message},{sender_username}"
-                    target_socket.send(formatted_message.encode("utf-8"))
+                    data = connection.protocol.serialize(message)  # serialize message
+                    length = len(data)
+                    target_socket.send(length.to_bytes(4, "big"))  # send length
+                    target_socket.send(data)  # send message
                 except Exception as e:
                     print(f"Error sending to user {target_username}: {e}")
                     self.remove_client(target_socket)
             else:
-                # If target client doesn't exist, send error back to sender
+                # if target client doesn't exist, send error back to sender
                 sender_socket = self.username_to_socket[sender_username]
+                connection = self.active_connections[sender_socket]
+
                 try:
-                    error_msg = f"Error: User {target_username} not found,SERVER"
-                    sender_socket.send(error_msg.encode("utf-8"))
+                    error_message = Message(
+                        type=MessageType.SEND_MESSAGE,
+                        payload={"text": f"Error: User {target_username} not found"},
+                        sender="SERVER", # server is sender for errors
+                        recipient=sender_username
+                    )
+                    data = connection.protocol.serialize(error_message)
+                    length = len(data)
+                    sender_socket.send(length.to_bytes(4, "big"))
+                    sender_socket.send(data)
+
                 except Exception as e:
                     print(f"Error sending error message to user {sender_username}: {e}")
+                    self.remove_client(sender_socket)
 
     def remove_client(self, client_socket: socket.socket):
         """Remove a client from active connections."""
@@ -76,7 +101,12 @@ class ChatServer:
             client_socket, address = self.socket.accept()
             print(f"New connection from {address}")
 
-            connection = ClientConnection(socket=client_socket, protocol=None)
+            protocol_byte = client_socket.recv(1)
+            # TODO: uncomment this line once JsonProtocol exists
+            # protocol = JsonProtocol() if protocol_byte == b"J" else BinaryProtocol()
+            protocol = BinaryProtocol()
+
+            connection = ClientConnection(socket=client_socket, protocol=protocol)
             with self.lock:
                 self.active_connections[client_socket] = connection
 
@@ -85,19 +115,35 @@ class ChatServer:
             thread.start()
 
     def handle_client(self, client_socket):
+        connection = self.active_connections[client_socket]
         try:
             while True:
-                data = client_socket.recv(1024)
-                if not data:
+                length_bytes = client_socket.recv(4)
+                if not length_bytes:
                     print("Client disconnected.")
                     break
 
-                message = data.decode("utf-8")
-                target_username, content = message.split(",", 1)
+                message_length = int.from_bytes(length_bytes, 'big')
+                
+                message_data = b''
+                # recv message data in chunks since messages may not be sent all at once
+                while len(message_data) < message_length:
+                    chunk = client_socket.recv(message_length - len(message_data))
+                    if not chunk:
+                        print("Client disconnected during message reception.")
+                        break
+                    message_data += chunk
 
-                # Set username if not already set
+                if len(message_data) < message_length:
+                    break
+
+                message_content = connection.protocol.deserialize(message_data)
+
+                target_username = message_content.recipient
+                content = message_content.payload
+
                 if self.active_connections[client_socket].username is None:
-                    username = target_username
+                    username = message_content.sender
                     self.active_connections[client_socket].username = username
                     with self.lock:
                         self.username_to_socket[username] = client_socket
