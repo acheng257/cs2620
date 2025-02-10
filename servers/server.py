@@ -3,6 +3,7 @@ from typing import Dict, Set, List, Optional
 import threading
 from dataclasses import dataclass
 from protocols.json_protocol import JsonProtocol
+from protocols.binary_protocol import BinaryProtocol
 from protocols.base import MessageType, Protocol, Message
 
 
@@ -102,11 +103,10 @@ class ChatServer:
             print(f"New connection from {address}")
 
             protocol_byte = client_socket.recv(1)
-            # TODO: uncomment this line once JsonProtocol exists
-            # protocol = JsonProtocol() if protocol_byte == b"J" else BinaryProtocol()
-            protocol = JsonProtocol()
+            protocol = JsonProtocol() if protocol_byte == b"J" else BinaryProtocol()
 
             connection = ClientConnection(socket=client_socket, protocol=protocol)
+            print(f"Using {connection.protocol.get_protocol_name()} protocol")
             with self.lock:
                 self.active_connections[client_socket] = connection
 

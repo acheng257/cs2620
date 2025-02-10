@@ -5,26 +5,25 @@ import sys
 from typing import Optional
 from protocols.base import Message, MessageType
 from protocols.json_protocol import JsonProtocol
+from protocols.binary_protocol import BinaryProtocol
 
 class ChatClient:
-    def __init__(self, username: str, host: str = "127.0.0.1", port: int = 54400, use_json: bool = True):
+    def __init__(self, username: str, host: str = "127.0.0.1", port: int = 54400, use_json: bool = False):
         self.host = host
         self.port = port
         self.username = username
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.running = False
         self.receive_thread: Optional[threading.Thread] = None
-        self.protocol = JsonProtocol()
-        # TODO: uncomment this once JsonProtocol exists
-        # self.protocol = JsonProtocol() if use_json else BinaryProtocol()
+        self.protocol = JsonProtocol() if use_json else BinaryProtocol()
 
     def connect(self) -> bool:
         try:
             self.socket.connect((self.host, self.port))
-            self.socket.sendall(b"B")
+            self.socket.sendall(b"J" if isinstance(self.protocol, JsonProtocol) else b"B")
 
             init_msg = Message(
-                type=MessageType.SEND_MESSAGE,
+                type=MessageType.LOGIN,
                 payload={"text": "initial connection"},
                 sender=self.username,
                 recipient="server",
