@@ -1,3 +1,4 @@
+import argparse
 import socket
 import time
 import threading
@@ -8,19 +9,25 @@ from protocols.json_protocol import JsonProtocol
 from protocols.binary_protocol import BinaryProtocol
 
 class ChatClient:
-    def __init__(self, username: str, host: str = "127.0.0.1", port: int = 54400, use_json: bool = False):
+    def __init__(self, username, protocol_type, host="127.0.0.1", port=54400):
         self.host = host
         self.port = port
         self.username = username
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.running = False
-        self.receive_thread: Optional[threading.Thread] = None
-        self.protocol = JsonProtocol() if use_json else BinaryProtocol()
+        self.receive_thread = None
+
+        if protocol_type.upper().startswith("J"):
+            self.protocol_byte = b"J"
+            self.protocol = JsonProtocol()
+        else:
+            self.protocol_byte = b"B"
+            self.protocol = BinaryProtocol()
 
     def connect(self) -> bool:
         try:
             self.socket.connect((self.host, self.port))
-            self.socket.sendall(b"J" if isinstance(self.protocol, JsonProtocol) else b"B")
+            self.socket.sendall(self.protocol_byte)
 
             init_msg = Message(
                 type=MessageType.LOGIN,
@@ -112,16 +119,17 @@ class ChatClient:
             print(f"Error closing connection: {e}")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python client.py <username>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Simple chat client.")
+    parser.add_argument("username", help="Your chat username.")
+    parser.add_argument("--protocol", choices=["B", "J"], default="B",
+                        help="Which protocol to use: B = Binary, J = JSON.")
+    args = parser.parse_args()
 
-    username = sys.argv[1]
-    client = ChatClient(username)
+    client = ChatClient(username=args.username, protocol_type=args.protocol)
 
     try:
         if client.connect():
-            print(f"Connected to server as {username}")
+            print(f"Connected to server as {args.username}")
             print("Type messages as <recipient>,<your text>")
             print("Example: alice,Hello World!")
             print("Press Ctrl+C to quit")
