@@ -3,10 +3,11 @@ import socket
 import time
 import threading
 import sys
-from typing import Optional
+import getpass
 from protocols.base import Message, MessageType
 from protocols.json_protocol import JsonProtocol
 from protocols.binary_protocol import BinaryProtocol
+
 
 class ChatClient:
     def __init__(self, username, protocol_type, host="127.0.0.1", port=54400):
@@ -16,6 +17,7 @@ class ChatClient:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.running = False
         self.receive_thread = None
+        self.logged_in = False
 
         if protocol_type.upper().startswith("J"):
             self.protocol_byte = b"J"
@@ -28,20 +30,12 @@ class ChatClient:
         try:
             self.socket.connect((self.host, self.port))
             self.socket.sendall(self.protocol_byte)
-
-            init_msg = Message(
-                type=MessageType.LOGIN,
-                payload={"text": "initial connection"},
-                sender=self.username,
-                recipient="server",
-                timestamp=time.time(),
-            )
-            self._send_message_no_response(init_msg)
-
             self.running = True
 
             # Start thread that continuously reads incoming messages
-            self.receive_thread = threading.Thread(target=self.receive_messages, daemon=True)
+            self.receive_thread = threading.Thread(
+                target=self.receive_messages, daemon=True
+            )
             self.receive_thread.start()
 
             return True
@@ -54,15 +48,56 @@ class ChatClient:
         try:
             data = self.protocol.serialize(message)
             length = len(data)
-
-            self.socket.sendall(length.to_bytes(4, "big")) # length of message
-            self.socket.sendall(data) # actual message
+            self.socket.sendall(length.to_bytes(4, "big"))
+            self.socket.sendall(data)
             return True
         except Exception as e:
             print(f"Communication error: {e}")
             return False
 
+    def create_account(self, password: str) -> bool:
+        """Create a new account."""
+        message = Message(
+            type=MessageType.CREATE_ACCOUNT,
+            payload={"username": self.username, "password": password},
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        return self._send_message_no_response(message)
+
+    def login(self, password: str) -> bool:
+        """Log in to an existing account."""
+        message = Message(
+            type=MessageType.LOGIN,
+            payload={"username": self.username, "password": password},
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        return self._send_message_no_response(message)
+
+    def delete_account(self) -> bool:
+        """Delete the current account."""
+        if not self.logged_in:
+            print("Must be logged in to delete account")
+            return False
+
+        message = Message(
+            type=MessageType.DELETE_ACCOUNT,
+            payload={},
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        return self._send_message_no_response(message)
+
     def send_message(self, recipient: str, text: str) -> bool:
+        """Send a message to another user."""
+        if not self.logged_in:
+            print("Must be logged in to send messages")
+            return False
+
         message = Message(
             type=MessageType.SEND_MESSAGE,
             payload={"text": text},
@@ -94,13 +129,19 @@ class ChatClient:
                 if len(message_data) < msg_len:
                     break
 
-                message_content = self.protocol.deserialize(message_data)
+                message = self.protocol.deserialize(message_data)
+                text = message.payload.get("text", "")
 
-                if message_content.sender == "SERVER":
-                    print(f"[SERVER] {message_content.payload}")
+                if message.type == MessageType.SUCCESS:
+                    if "Login successful" in text:
+                        self.logged_in = True
+                    print(f"[SUCCESS] {text}")
+                elif message.type == MessageType.ERROR:
+                    print(f"[ERROR] {text}")
+                elif message.sender == "SERVER":
+                    print(f"[SERVER] {text}")
                 else:
-                    text = message_content.payload.get("text", "")
-                    print(f"[{message_content.sender}] {text}")
+                    print(f"[{message.sender}] {text}")
 
             except Exception as e:
                 print(f"Error in receive thread: {e}")
@@ -118,20 +159,53 @@ class ChatClient:
         except Exception as e:
             print(f"Error closing connection: {e}")
 
+
+def get_password(prompt: str) -> str:
+    """Securely get password from user."""
+    while True:
+        password = getpass.getpass(prompt)
+        if len(password) >= 6:
+            return password
+        print("Password must be at least 6 characters long")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simple chat client.")
-    parser.add_argument("username", help="Your chat username.")
-    parser.add_argument("--protocol", choices=["B", "J"], default="B",
-                        help="Which protocol to use: B = Binary, J = JSON.")
+    parser.add_argument("username", help="Your chat username")
+    parser.add_argument(
+        "--protocol",
+        choices=["B", "J"],
+        default="B",
+        help="Which protocol to use: B = Binary, J = JSON",
+    )
     args = parser.parse_args()
 
     client = ChatClient(username=args.username, protocol_type=args.protocol)
 
     try:
         if client.connect():
-            print(f"Connected to server as {args.username}")
-            print("Type messages as <recipient>,<your text>")
-            print("Example: alice,Hello World!")
+            print(f"Welcome, {args.username}!")
+            print("1. Create new account")
+            print("2. Login to existing account")
+            choice = input("Choose an option (1/2): ")
+
+            if choice == "1":
+                password = get_password("Create password: ")
+                confirm = get_password("Confirm password: ")
+                if password != confirm:
+                    print("Passwords don't match")
+                    sys.exit(1)
+                client.create_account(password)
+            elif choice == "2":
+                password = get_password("Enter password: ")
+                client.login(password)
+            else:
+                print("Invalid choice")
+                sys.exit(1)
+
+            print("\nCommands:")
+            print("1. Send message: <recipient>,<message>")
+            print("2. Delete account: !delete")
             print("Press Ctrl+C to quit")
 
             while True:
@@ -139,8 +213,19 @@ if __name__ == "__main__":
                 if not message:
                     break
 
+                if message.strip().lower() == "!delete":
+                    if (
+                        input(
+                            "Are you sure you want to delete your account? (yes/no): "
+                        ).lower()
+                        == "yes"
+                    ):
+                        client.delete_account()
+                        break
+                    continue
+
                 if "," not in message:
-                    print("Invalid format. Use: <recipient_username>,<message>")
+                    print("Invalid format. Use: <recipient>,<message>")
                     continue
 
                 recipient, text = message.split(",", 1)
