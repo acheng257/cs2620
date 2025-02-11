@@ -1,6 +1,6 @@
 import json
-from typing import Dict, Any
-from protocols.base import Protocol, Message, MessageType
+
+from protocols.base import Message, MessageType, Protocol
 
 
 class JsonProtocol(Protocol):

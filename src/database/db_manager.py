@@ -1,5 +1,6 @@
 import sqlite3
 from typing import List
+
 import bcrypt
 
 
@@ -73,9 +74,7 @@ class DatabaseManager:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT password_hash FROM accounts WHERE username = ?", (username,)
-                )
+                cursor.execute("SELECT password_hash FROM accounts WHERE username = ?", (username,))
                 result = cursor.fetchone()
 
                 if result is None:
@@ -145,9 +144,7 @@ class DatabaseManager:
             print(f"Error storing message: {e}")
             return False
 
-    def mark_messages_as_read(
-        self, username: str, message_ids: List[int] = None
-    ) -> bool:
+    def mark_messages_as_read(self, username: str, message_ids: List[int] = None) -> bool:
         """Mark messages as read. If no message_ids provided, mark all as read."""
         try:
             with sqlite3.connect(self.db_path) as conn:
