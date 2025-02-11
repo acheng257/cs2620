@@ -7,6 +7,7 @@ from protocols.binary_protocol import BinaryProtocol
 from protocols.base import MessageType, Protocol, Message
 
 
+
 @dataclass
 class User:
     username: str
