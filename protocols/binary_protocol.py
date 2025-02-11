@@ -65,4 +65,3 @@ class BinaryProtocol(Protocol):
     def calculate_message_size(self, message: Message) -> int:
         return len(self.serialize(message))
 
-
