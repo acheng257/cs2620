@@ -23,7 +23,10 @@ ensure_newline_before_comments = true
 [tool.flake8]
 max-line-length = 100
 exclude = [".git", "__pycache__", "build", "dist"]
-per-file-ignores = {"__init__.py" = ["F401"]}
+extend-ignore = [
+    "E203",  # See https://github.com/PyCQA/pycodestyle/issues/373
+    "W503"   # Line break before binary operator - Black does this
+]
 
 [tool.mypy]
 python_version = "3.13"
