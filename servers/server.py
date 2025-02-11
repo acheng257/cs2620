@@ -61,6 +61,9 @@ class ChatServer:
             return
 
         if self.db.create_account(username, password):
+            self.active_connections[client_socket].username = username
+            with self.lock:
+                self.username_to_socket[username] = client_socket
             self.send_response(client_socket, MessageType.SUCCESS, "Account created successfully")
         else:
             self.send_response(client_socket, MessageType.ERROR, "Username already exists")
