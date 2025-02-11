@@ -133,7 +133,8 @@ class ChatClient:
                 text = message.payload.get("text", "")
 
                 if message.type == MessageType.SUCCESS:
-                    if "Login successful" in text:
+                    print("message received is:", text)
+                    if "Login successful" or "Account created" in text:
                         self.logged_in = True
                     print(f"[SUCCESS] {text}")
                 elif message.type == MessageType.ERROR:
