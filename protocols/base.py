@@ -1,8 +1,8 @@
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
 from enum import Enum
-import time
+from typing import Any, Dict
 
 
 class MessageType(Enum):
@@ -20,7 +20,7 @@ class MessageType(Enum):
 @dataclass
 class Message:
     type: MessageType
-    payload: Any
+    payload: Dict[str, Any]
     sender: str
     recipient: str
     timestamp: float = time.time()
