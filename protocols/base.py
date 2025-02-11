@@ -2,18 +2,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 from enum import Enum
+import time
 
 
 class MessageType(Enum):
-    # CREATE_ACCOUNT = "create_account"
-    # LOGIN = "login"
-    # LIST_ACCOUNTS = "list_accounts"
-    # SEND_MESSAGE = "send_message"
-    # READ_MESSAGES = "read_messages"
-    # DELETE_MESSAGES = "delete_messages"
-    # DELETE_ACCOUNT = "delete_account"
-    # ERROR = "error"
-    # SUCCESS = "success"
     CREATE_ACCOUNT = 0
     LOGIN = 1
     LIST_ACCOUNTS = 2
@@ -28,10 +20,10 @@ class MessageType(Enum):
 @dataclass
 class Message:
     type: MessageType
-    payload: Dict[str, Any]
-    sender: Optional[str] = None
-    recipient: Optional[str] = None
-    timestamp: Optional[float] = None
+    payload: Any
+    sender: str
+    recipient: str
+    timestamp: float = time.time()
 
 
 # Abstract class Protocol that will be used by the other protocols

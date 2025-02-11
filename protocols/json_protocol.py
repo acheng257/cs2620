@@ -2,6 +2,7 @@ import json
 from typing import Dict, Any
 from protocols.base import Protocol, Message, MessageType
 
+
 class JsonProtocol(Protocol):
     def serialize(self, message: Message) -> bytes:
         """Serialize a message to JSON format."""
