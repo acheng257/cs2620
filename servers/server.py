@@ -1,12 +1,13 @@
 import socket
-from typing import Dict, Set, List, Optional
 import threading
-from dataclasses import dataclass
-from protocols.json_protocol import JsonProtocol
-from protocols.binary_protocol import BinaryProtocol
-from protocols.base import MessageType, Protocol, Message
-from src.database.db_manager import DatabaseManager
 import time
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+from protocols.base import Message, MessageType, Protocol
+from protocols.binary_protocol import BinaryProtocol
+from protocols.json_protocol import JsonProtocol
+from src.database.db_manager import DatabaseManager
 
 
 @dataclass
@@ -35,9 +36,7 @@ class ChatServer:
         self.lock = threading.Lock()
         self.db = DatabaseManager(db_path)
 
-    def send_response(
-        self, client_socket: socket.socket, message_type: MessageType, content: str
-    ):
+    def send_response(self, client_socket: socket.socket, message_type: MessageType, content: str):
         """Send a response message to a client."""
         connection = self.active_connections[client_socket]
         response = Message(
@@ -58,19 +57,13 @@ class ChatServer:
         password = message.payload.get("password")
 
         if not username or not password:
-            self.send_response(
-                client_socket, MessageType.ERROR, "Username and password required"
-            )
+            self.send_response(client_socket, MessageType.ERROR, "Username and password required")
             return
 
         if self.db.create_account(username, password):
-            self.send_response(
-                client_socket, MessageType.SUCCESS, "Account created successfully"
-            )
+            self.send_response(client_socket, MessageType.SUCCESS, "Account created successfully")
         else:
-            self.send_response(
-                client_socket, MessageType.ERROR, "Username already exists"
-            )
+            self.send_response(client_socket, MessageType.ERROR, "Username already exists")
 
     def handle_login(self, client_socket: socket.socket, message: Message):
         """Handle login request."""
@@ -78,9 +71,7 @@ class ChatServer:
         password = message.payload.get("password")
 
         if not username or not password:
-            self.send_response(
-                client_socket, MessageType.ERROR, "Username and password required"
-            )
+            self.send_response(client_socket, MessageType.ERROR, "Username and password required")
             return
 
         if self.db.verify_login(username, password):
@@ -97,9 +88,7 @@ class ChatServer:
                 f"Login successful. You have {unread_count} unread messages.",
             )
         else:
-            self.send_response(
-                client_socket, MessageType.ERROR, "Invalid username or password"
-            )
+            self.send_response(client_socket, MessageType.ERROR, "Invalid username or password")
 
     def handle_delete_account(self, client_socket: socket.socket, message: Message):
         """Handle account deletion request."""
@@ -109,18 +98,12 @@ class ChatServer:
             return
 
         if self.db.delete_account(connection.username):
-            self.send_response(
-                client_socket, MessageType.SUCCESS, "Account deleted successfully"
-            )
+            self.send_response(client_socket, MessageType.SUCCESS, "Account deleted successfully")
             self.remove_client(client_socket)
         else:
-            self.send_response(
-                client_socket, MessageType.ERROR, "Failed to delete account"
-            )
+            self.send_response(client_socket, MessageType.ERROR, "Failed to delete account")
 
-    def send_direct_message(
-        self, target_username: str, message_content: str, sender_username: str
-    ):
+    def send_direct_message(self, target_username: str, message_content: str, sender_username: str):
         """Send a message to a specific client using the binary protocol."""
         if not self.db.user_exists(target_username):
             # Send error to sender
@@ -190,9 +173,7 @@ class ChatServer:
                     self.handle_delete_account(client_socket, message)
                 elif message.type == MessageType.SEND_MESSAGE:
                     if not connection.username:
-                        self.send_response(
-                            client_socket, MessageType.ERROR, "Not logged in"
-                        )
+                        self.send_response(client_socket, MessageType.ERROR, "Not logged in")
                         continue
                     self.send_direct_message(
                         message.recipient, message.payload["text"], connection.username

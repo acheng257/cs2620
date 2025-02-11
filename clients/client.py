@@ -1,12 +1,13 @@
 import argparse
-import socket
-import time
-import threading
-import sys
 import getpass
+import socket
+import sys
+import threading
+import time
+
 from protocols.base import Message, MessageType
-from protocols.json_protocol import JsonProtocol
 from protocols.binary_protocol import BinaryProtocol
+from protocols.json_protocol import JsonProtocol
 
 
 class ChatClient:
@@ -33,9 +34,7 @@ class ChatClient:
             self.running = True
 
             # Start thread that continuously reads incoming messages
-            self.receive_thread = threading.Thread(
-                target=self.receive_messages, daemon=True
-            )
+            self.receive_thread = threading.Thread(target=self.receive_messages, daemon=True)
             self.receive_thread.start()
 
             return True
@@ -215,9 +214,7 @@ if __name__ == "__main__":
 
                 if message.strip().lower() == "!delete":
                     if (
-                        input(
-                            "Are you sure you want to delete your account? (yes/no): "
-                        ).lower()
+                        input("Are you sure you want to delete your account? (yes/no): ").lower()
                         == "yes"
                     ):
                         client.delete_account()
