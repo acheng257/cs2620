@@ -334,4 +334,32 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting messages between {user1} and {user2}: {e}")
             return {"messages": [], "total": 0}
+        
+    def get_chat_partners(self, me: str):
+        """
+        Return all distinct users who have either
+        sent a message to 'me' or received a message from 'me'.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT DISTINCT
+                        CASE WHEN sender = ? THEN recipient
+                            ELSE sender
+                        END AS partner
+                    FROM messages
+                    WHERE sender = ? OR recipient = ?
+                    """,
+                    (me, me, me)
+                )
+                rows = cursor.fetchall()
+                # Rows will be something like [(partner1,), (partner2,), ...]
+                partners = [r[0] for r in rows if r[0] != me]  # exclude self if it appears
+                return partners
+        except Exception as e:
+            print(f"Error getting chat partners for {me}: {e}")
+            return []
+
 

@@ -469,6 +469,8 @@ class ChatServer:
                         self.send_response(client_socket, MessageType.ERROR, "Not logged in")
                         continue
                     self.handle_delete_messages(client_socket, message)
+                elif message.type == MessageType.LIST_CHAT_PARTNERS:
+                    self.handle_list_chat_partners(client_socket, message)
 
         except Exception as e:
             print(f"Error handling client: {e}")
@@ -616,6 +618,28 @@ class ChatServer:
             self.send_response(client_socket, MessageType.SUCCESS, "Messages deleted")
         else:
             self.send_response(client_socket, MessageType.ERROR, "Failed to delete messages")
+
+    def handle_list_chat_partners(self, client_socket: socket.socket, message: Message):
+        connection = self.active_connections[client_socket]
+        username = connection.username
+        if not username:
+            self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+            return
+        
+        # Query the DB
+        partners = self.db.get_chat_partners(username)
+
+        # Build a response
+        from protocols.base import MessageType, Message
+        response = Message(
+            type=MessageType.SUCCESS,
+            payload={"chat_partners": partners},  # your key name can be anything
+            sender="SERVER",
+            recipient=username,
+            timestamp=time.time(),
+        )
+        self.send_message_to_socket(client_socket, response)
+
 
 
 if __name__ == "__main__":

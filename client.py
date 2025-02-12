@@ -113,6 +113,21 @@ class ChatClient:
         )
         response = self._send_message_and_wait(msg)
         return response
+    
+    def list_chat_partners_sync(self):
+        """
+        Ask the server for a list of all chat partners for self.username.
+        Returns a Message (type=SUCCESS with payload["chat_partners"], or ERROR).
+        """
+        msg = Message(
+            type=MessageType.LIST_CHAT_PARTNERS,
+            payload={},
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        return self._send_message_and_wait(msg)
+
 
     def create_account(self, password: str) -> bool:
         """Create a new account (fire-and-forget)."""
@@ -201,6 +216,7 @@ class ChatClient:
                     MessageType.LIST_ACCOUNTS,
                     MessageType.READ_MESSAGES,
                     MessageType.DELETE_MESSAGES,
+                    MessageType.LIST_CHAT_PARTNERS,
                 ]:
                     with self.response_lock:
                         self.last_response = message

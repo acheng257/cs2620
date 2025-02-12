@@ -83,6 +83,16 @@ def fetch_accounts(pattern: str = "", page: int = 1):
         st.session_state.search_results = []
         st.warning("No users found or an error occurred.")
 
+def fetch_chat_partners():
+    """
+    Wrapper that calls client.list_chat_partners_sync(),
+    returns the list of partner names or an empty list.
+    """
+    resp = st.session_state.client.list_chat_partners_sync()
+    if resp and resp.type == MessageType.SUCCESS:
+        return resp.payload.get("chat_partners", [])
+    return []
+
 def process_incoming_realtime_messages():
     """
     Process any real-time push messages the server sends us.
@@ -108,6 +118,36 @@ def process_incoming_realtime_messages():
 def render_chat_page():
     st.title("Secure Chat")
     st.sidebar.subheader(f"Logged in as: {st.session_state.username}")
+
+    # 1) Fetch existing chat partners automatically
+    chat_partners = fetch_chat_partners()
+
+    # 2) Display them in the sidebar
+    if chat_partners:
+        st.sidebar.markdown("**Existing Chats:**")
+        for partner in chat_partners:
+            if partner != st.session_state.username:
+                if st.sidebar.button(partner, key=f"chat_partner_{partner}"):
+                    # 1) Set the current chat
+                    st.session_state.current_chat = partner
+                    # 2) Fetch conversation from DB
+                    resp = st.session_state.client.read_conversation_sync(partner)
+                    if resp and resp.type == MessageType.SUCCESS:
+                        db_msgs = resp.payload.get("messages", [])
+                        # Convert DB messages into your in-memory format
+                        st.session_state.messages = []
+                        for m in db_msgs:
+                            st.session_state.messages.append({
+                                "sender": m["from"],
+                                "text": m["content"],
+                                "timestamp": m["timestamp"]
+                            })
+                    else:
+                        st.session_state.messages = []
+
+                    st.rerun()
+    else:
+        st.sidebar.write("No existing chats found.")
 
     # Searching for users
     pattern = st.sidebar.text_input("Search Users", key="search_pattern")
