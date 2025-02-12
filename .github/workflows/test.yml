@@ -29,4 +29,4 @@ jobs:
           
       - name: Run tests with coverage
         run: |
-          pipenv run pytest --cov=protocols --cov-report=xml --cov-report=term-missing
+          pipenv run pytest --cov=protocols --cov=client --cov-report=xml --cov-report=term-missing
