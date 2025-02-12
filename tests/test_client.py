@@ -63,11 +63,17 @@ class TestChatClient:
         """Test successful connection to server."""
         client = ChatClient("test_user", "json")
         mock_socket.return_value.connect.return_value = None
+        # Mock the receive behavior to keep the client running
+        mock_socket.return_value.recv.side_effect = [b"test"]  # Return some data first
 
         assert client.connect() is True
         assert client.running is True
         assert client.receive_thread is not None
         assert client.receive_thread.is_alive()
+
+        # Clean up
+        client.running = False
+        client.receive_thread.join(timeout=1.0)
 
     def test_connect_failure(self, mock_socket: Mock) -> None:
         """Test connection failure handling."""
