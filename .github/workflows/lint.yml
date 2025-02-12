@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - '**'  # This will match all branches
-  pull_request:
-    branches:
-      - '**'  # This will match all branches
 
 jobs:
   lint:
@@ -25,7 +22,7 @@ jobs:
           pip install flake8 mypy
           
       - name: Lint with flake8
-        run: flake8 . --count --max-line-length=100 --statistics
+        run: flake8 . --config=./pyproject.toml --count --max-line-length=100 --statistics
         
       - name: Type check with mypy
-        run: mypy . --ignore-missing-imports 
+        run: mypy . --config=./pyproject.toml --ignore-missing-imports 

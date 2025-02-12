@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - '**'
-  pull_request:
-    branches:
-      - '**'
 
 jobs:
   format:
@@ -25,7 +22,7 @@ jobs:
           pip install black isort
           
       - name: Check formatting with black
-        run: black . --check
+        run: black . --config=./pyproject.toml--check
         
       - name: Check imports with isort
-        run: isort . --check-only --profile black 
+        run: isort . --config=./pyproject.toml --check-only --profile black 
