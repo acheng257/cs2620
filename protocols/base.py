@@ -2,7 +2,7 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class MessageType(Enum):
@@ -17,12 +17,13 @@ class MessageType(Enum):
     SUCCESS = 8
 
 
+# TODO(@ItamarRocha): need to make sure it should be optional
 @dataclass
 class Message:
     type: MessageType
     payload: Dict[str, Any]
-    sender: str
-    recipient: str
+    sender: Optional[str]
+    recipient: Optional[str]
     timestamp: float = time.time()
 
 

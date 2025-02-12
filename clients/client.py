@@ -4,21 +4,25 @@ import socket
 import sys
 import threading
 import time
+from typing import Optional
 
-from protocols.base import Message, MessageType
+from protocols.base import Message, MessageType, Protocol
 from protocols.binary_protocol import BinaryProtocol
 from protocols.json_protocol import JsonProtocol
 
 
 class ChatClient:
-    def __init__(self, username, protocol_type, host="127.0.0.1", port=54400):
+    def __init__(
+        self, username: str, protocol_type: str, host: str = "127.0.0.1", port: int = 54400
+    ) -> None:
         self.host = host
         self.port = port
         self.username = username
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.running = False
-        self.receive_thread = None
+        self.receive_thread: Optional[threading.Thread] = None
         self.logged_in = False
+        self.protocol: Protocol
 
         if protocol_type.upper().startswith("J"):
             self.protocol_byte = b"J"
@@ -150,7 +154,7 @@ class ChatClient:
         self.running = False
         self.close()
 
-    def close(self):
+    def close(self) -> None:
         """Close the socket connection."""
         self.running = False
         try:
