@@ -303,9 +303,11 @@ class ChatServer:
                 self.db.store_message(
                     sender_username, target_username, message_content, True
                 )  # Store message and set delivered to True
-                self.db.mark_message_as_delivered(
-                    self.db.get_last_message_id(sender_username, target_username)
-                )  # Mark message as delivered
+
+                # Get and verify the message ID before marking as delivered
+                message_id = self.db.get_last_message_id(sender_username, target_username)
+                if message_id is not None:
+                    self.db.mark_message_as_delivered(message_id)  # Mark message as delivered
             except Exception as e:
                 print(f"Error sending to user {target_username}: {e}")
                 self.remove_client(target_socket)

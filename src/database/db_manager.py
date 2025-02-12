@@ -440,7 +440,7 @@ class DatabaseManager:
                 # Build parameterized query
                 placeholder = ",".join("?" for _ in message_ids)
                 query = f"""
-                    DELETE FROM messages 
+                    DELETE FROM messages
                     WHERE id IN ({placeholder})
                     AND (sender = ? OR recipient = ?)
                 """
