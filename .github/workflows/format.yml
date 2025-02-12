@@ -22,7 +22,7 @@ jobs:
           pip install black isort
           
       - name: Check formatting with black
-        run: black . --config=./pyproject.toml--check
+        run: black . --config=./pyproject.toml --check
         
       - name: Check imports with isort
         run: isort . --config=./pyproject.toml --check-only --profile black 
