@@ -39,8 +39,26 @@ disallow_incomplete_defs = true
 pythonpath = ["."]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=protocols --cov=client --cov=server --cov-report=term-missing"
+addopts = "--cov=src --cov-report=term-missing"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
-source = ["protocols", "client", "server"]
-omit = ["tests/*"]
+source = ["src"]
+omit = [
+    "tests/*",
+    "*/__init__.py",
+    "src/__init__.py",
+    "src/*//__init__.py",
+    "src/database/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+    "raise ImportError",
+]

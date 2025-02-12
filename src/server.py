@@ -4,10 +4,10 @@ import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from protocols.base import Message, MessageType, Protocol
-from protocols.binary_protocol import BinaryProtocol
-from protocols.json_protocol import JsonProtocol
 from src.database.db_manager import DatabaseManager
+from src.protocols.base import Message, MessageType, Protocol
+from src.protocols.binary_protocol import BinaryProtocol
+from src.protocols.json_protocol import JsonProtocol
 
 
 @dataclass

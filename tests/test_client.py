@@ -6,10 +6,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from client import ChatClient
-from protocols.base import Message, MessageType, Protocol
-from protocols.binary_protocol import BinaryProtocol
-from protocols.json_protocol import JsonProtocol
+from src.client import ChatClient
+from src.protocols.base import Message, MessageType, Protocol
+from src.protocols.binary_protocol import BinaryProtocol
+from src.protocols.json_protocol import JsonProtocol
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 import json
 import struct
 
-from protocols.base import Message, MessageType, Protocol
+from src.protocols.base import Message, MessageType, Protocol
 
 
 class BinaryProtocol(Protocol):

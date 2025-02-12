@@ -2,9 +2,9 @@ from typing import List
 
 import pytest
 
-from protocols.base import Message, MessageType
-from protocols.binary_protocol import BinaryProtocol
-from protocols.json_protocol import JsonProtocol
+from src.protocols.base import Message, MessageType
+from src.protocols.binary_protocol import BinaryProtocol
+from src.protocols.json_protocol import JsonProtocol
 
 
 @pytest.fixture

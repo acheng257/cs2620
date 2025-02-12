@@ -6,8 +6,8 @@ from typing import Dict, List, Optional, Tuple
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
-from client import ChatClient
-from protocols.base import MessageType
+from src.client import ChatClient
+from src.protocols.base import MessageType
 
 
 def init_session_state() -> None:

@@ -331,13 +331,13 @@ mypy . --config=./pyproject.toml --ignore-missing-imports
 │   └── test_client.py
 ├── README.md
 ├── app.py
-├── server.py
-├── client.py
-├── protocols/
-│   ├── binary_protocol.py
-│   ├── json_protocol.py
-│   └── base.py
 └── src/
+    ├── server.py
+    ├── client.py
+    ├── protocols/
+    │   ├── binary_protocol.py
+    │   ├── json_protocol.py
+    │   └── base.py
     └── database/
         └── db_manager.py
 ```
