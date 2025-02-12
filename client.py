@@ -1,28 +1,29 @@
 # client.py
 import argparse
 import getpass
-import queue 
+import queue
 import socket
 import sys
 import threading
 import time
-from typing import Optional
+from typing import List, Optional
 
 from protocols.base import Message, MessageType, Protocol
 from protocols.binary_protocol import BinaryProtocol
 from protocols.json_protocol import JsonProtocol
 
+
 class ChatClient:
     def __init__(
         self, username: str, protocol_type: str, host: str = "127.0.0.1", port: int = 54400
     ) -> None:
-        self.host = host
-        self.port = port
-        self.username = username
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.running = False
+        self.host: str = host
+        self.port: int = port
+        self.username: str = username
+        self.socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.running: bool = False
         self.receive_thread: Optional[threading.Thread] = None
-        self.logged_in = False
+        self.logged_in: bool = False
         self.protocol: Protocol
 
         if protocol_type.upper().startswith("J"):
@@ -34,10 +35,10 @@ class ChatClient:
 
         # synchronous response waiting
         self.response_lock = threading.Lock()
-        self.last_response = None
+        self.last_response: Optional[Message] = None
 
         # queue to hold real-time pushed messages from the server
-        self.incoming_messages_queue = queue.Queue()
+        self.incoming_messages_queue: queue.Queue[Message] = queue.Queue()
 
     def connect(self) -> bool:
         try:
@@ -66,7 +67,7 @@ class ChatClient:
             print(f"Communication error: {e}")
             return False
 
-    def _send_message_and_wait(self, message: Message, timeout: float = 10.0):
+    def _send_message_and_wait(self, message: Message, timeout: float = 10.0) -> Optional[Message]:
         """Send a message and wait for a response within a timeout."""
         with self.response_lock:
             self.last_response = None
@@ -86,8 +87,10 @@ class ChatClient:
 
         print("Timed out waiting for server response.")
         return None
-    
-    def read_conversation_sync(self, other_user: str, offset=0, limit=20):
+
+    def read_conversation_sync(
+        self, other_user: str, offset: int = 0, limit: int = 20
+    ) -> Optional[Message]:
         msg = Message(
             type=MessageType.READ_MESSAGES,
             payload={
@@ -101,8 +104,7 @@ class ChatClient:
         )
         return self._send_message_and_wait(msg, timeout=10.0)
 
-
-    def list_accounts_sync(self, pattern="", page=1):
+    def list_accounts_sync(self, pattern: str = "", page: int = 1) -> Optional[Message]:
         """Send LIST_ACCOUNTS request and wait for the server's response."""
         msg = Message(
             type=MessageType.LIST_ACCOUNTS,
@@ -112,11 +114,11 @@ class ChatClient:
         )
         response = self._send_message_and_wait(msg)
         return response
-    
-    def list_chat_partners_sync(self):
+
+    def list_chat_partners_sync(self) -> Optional[Message]:
         """
         Ask the server for a list of all chat partners for self.username.
-        Returns a Message (type=SUCCESS with payload["chat_partners"], or ERROR).
+        Returns a Message or None.
         """
         msg = Message(
             type=MessageType.LIST_CHAT_PARTNERS,
@@ -126,7 +128,6 @@ class ChatClient:
             timestamp=time.time(),
         )
         return self._send_message_and_wait(msg)
-
 
     def create_account(self, password: str) -> bool:
         """Create a new account (fire-and-forget)."""
@@ -248,7 +249,8 @@ class ChatClient:
         except Exception as e:
             print(f"Error closing connection: {e}")
 
-def list_accounts(client: ChatClient, pattern: str = "", page: int = 1):
+
+def list_accounts(client: ChatClient, pattern: str = "", page: int = 1) -> None:
     msg = Message(
         type=MessageType.LIST_ACCOUNTS,
         payload={"pattern": pattern, "page": page},
@@ -258,7 +260,8 @@ def list_accounts(client: ChatClient, pattern: str = "", page: int = 1):
     )
     client._send_message_no_response(msg)
 
-def read_messages(client: ChatClient, offset: int = 0, limit: int = 10):
+
+def read_messages(client: ChatClient, offset: int = 0, limit: int = 10) -> None:
     msg = Message(
         type=MessageType.READ_MESSAGES,
         payload={"offset": offset, "limit": limit},
@@ -268,7 +271,8 @@ def read_messages(client: ChatClient, offset: int = 0, limit: int = 10):
     )
     client._send_message_no_response(msg)
 
-def delete_messages(client: ChatClient, message_ids: list[int]):
+
+def delete_messages(client: ChatClient, message_ids: List[int]) -> None:
     msg = Message(
         type=MessageType.DELETE_MESSAGES,
         payload={"message_ids": message_ids},

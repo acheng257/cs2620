@@ -1,12 +1,12 @@
 import sqlite3
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import bcrypt
 
 
 class DatabaseManager:
-    def __init__(self, db_path: str = "chat.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = "chat.db") -> None:
+        self.db_path: str = db_path
         self.init_database()
 
     def init_database(self) -> None:
@@ -50,7 +50,6 @@ class DatabaseManager:
     def create_account(self, username: str, password: str) -> bool:
         """Create a new account with hashed password."""
         try:
-            # Hash the password
             salt = bcrypt.gensalt()
             password_hash = bcrypt.hashpw(password.encode("utf-8"), salt)
 
@@ -151,10 +150,12 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 if message_ids:
-                    cursor.execute(
-                        "UPDATE messages SET read = TRUE WHERE recipient = ? AND id IN (?)",
-                        (username, ",".join(map(str, message_ids))),
-                    )
+                    # Must build a parameterized query carefully
+                    placeholder = ",".join("?" for _ in message_ids)
+                    query = f"UPDATE messages SET read = TRUE WHERE recipient = ? \
+                        AND id IN ({placeholder})"
+                    params = [username] + message_ids
+                    cursor.execute(query, params)
                 else:
                     cursor.execute(
                         "UPDATE messages SET read = TRUE WHERE recipient = ?",
@@ -166,10 +167,9 @@ class DatabaseManager:
             print(f"Error marking messages as read: {e}")
             return False
 
-    def list_accounts(self, pattern: str = "", page: int = 1, per_page: int = 10):
+    def list_accounts(self, pattern: str = "", page: int = 1, per_page: int = 10) -> Dict[str, Any]:
         """
-        Return a dict with keys {users, total, page, per_page},
-        where 'users' is a list of matching usernames.
+        Return a dict with keys {users, total, page, per_page}.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -206,11 +206,11 @@ class DatabaseManager:
             print(f"Error listing accounts: {e}")
             return {"users": [], "total": 0, "page": page, "per_page": per_page}
 
-    def get_messages_for_user(self, username: str, offset: int = 0, limit: int = 10):
+    def get_messages_for_user(
+        self, username: str, offset: int = 0, limit: int = 10
+    ) -> Dict[str, Any]:
         """
         Return a dict with keys {messages, total}.
-        Each entry in 'messages' looks like:
-        {id, from, to, content, timestamp, is_read}.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -242,14 +242,16 @@ class DatabaseManager:
                 messages = []
                 for row in rows:
                     msg_id, sender, recipient, content, ts, read_status = row
-                    messages.append({
-                        "id": msg_id,
-                        "from": sender,
-                        "to": recipient,
-                        "content": content,
-                        "timestamp": ts,
-                        "is_read": bool(read_status),
-                    })
+                    messages.append(
+                        {
+                            "id": msg_id,
+                            "from": sender,
+                            "to": recipient,
+                            "content": content,
+                            "timestamp": ts,
+                            "is_read": bool(read_status),
+                        }
+                    )
 
                 return {"messages": messages, "total": total_count}
         except Exception as e:
@@ -277,51 +279,12 @@ class DatabaseManager:
                 conn.commit()
 
                 # rowcount is the number of rows actually deleted
-                return (cursor.rowcount > 0)
+                return cursor.rowcount > 0
         except Exception as e:
             print(f"Error deleting messages: {e}")
             return False
-        
-    # def get_messages_between_users(self, user1: str, user2: str, offset=0, limit=20):
-    #     """
-    #     Return the conversation between user1 and user2,
-    #     ordered by timestamp DESC, meaning the *newest* rows come first.
-    #     offset=0 => the newest 'limit' messages in the entire conversation.
-    #     offset=20 => the next 20 older than that, etc.
-    #     """
-    #     try:
-    #         with sqlite3.connect(self.db_path) as conn:
-    #             cursor = conn.cursor()
-    #             query = """
-    #                 SELECT id, sender, recipient, content, timestamp, read
-    #                 FROM messages
-    #                 WHERE (sender = ? AND recipient = ?)
-    #                 OR (sender = ? AND recipient = ?)
-    #                 ORDER BY timestamp DESC
-    #                 LIMIT ? OFFSET ?
-    #             """
-    #             cursor.execute(query, (user1, user2, user2, user1, limit, offset))
-    #             rows = cursor.fetchall()
 
-    #             messages = []
-    #             for row in rows:
-    #                 msg_id, sender, recipient, content, ts, read_status = row
-    #                 messages.append({
-    #                     "id": msg_id,
-    #                     "from": sender,
-    #                     "to": recipient,
-    #                     "content": content,
-    #                     "timestamp": ts,
-    #                     "is_read": bool(read_status),
-    #                 })
-
-    #             return {"messages": messages, "total": len(messages)}
-
-    #     except Exception as e:
-    #         print(f"Error in get_messages_between_users pagination: {e}")
-    #         return {"messages": [], "total": 0}
-        
-    def get_chat_partners(self, me: str):
+    def get_chat_partners(self, me: str) -> List[str]:
         """
         Return all distinct users who have either
         sent a message to 'me' or received a message from 'me'.
@@ -338,55 +301,50 @@ class DatabaseManager:
                     FROM messages
                     WHERE sender = ? OR recipient = ?
                     """,
-                    (me, me, me)
+                    (me, me, me),
                 )
                 rows = cursor.fetchall()
-                # Rows will be something like [(partner1,), (partner2,), ...]
-                partners = [r[0] for r in rows if r[0] != me]  # exclude self if it appears
+                partners = [r[0] for r in rows if r[0] != me]
                 return partners
         except Exception as e:
             print(f"Error getting chat partners for {me}: {e}")
             return []
 
-    def get_messages_between_users(self, user1: str, user2: str, offset=0, limit=999999):
+    def get_messages_between_users(
+        self, user1: str, user2: str, offset: int = 0, limit: int = 999999
+    ) -> Dict[str, Any]:
         """
-        Return ALL messages between user1 and user2, ignoring offset/limit
-        or setting them big. We'll keep the query, but set a large default 
-        so we effectively get everything. ORDER BY timestamp DESC means 
-        newest messages come first in DB results.
+        Return a dict {messages, total} of messages between two users,
+        newest first in DB results, then we can reverse if needed.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                # We'll keep DESC
                 query = """
                     SELECT id, sender, recipient, content, timestamp, read
                     FROM messages
                     WHERE (sender = ? AND recipient = ?)
                        OR (sender = ? AND recipient = ?)
                     ORDER BY timestamp DESC
-                    -- effectively ignoring offset, limit
                     LIMIT ? OFFSET ?
                 """
-                # We'll pass offset=0, limit=999999 from server side
                 cursor.execute(query, (user1, user2, user2, user1, limit, offset))
                 rows = cursor.fetchall()
 
                 messages = []
                 for row in rows:
                     msg_id, sender, recipient, content, ts, read_status = row
-                    messages.append({
-                        "id": msg_id,
-                        "from": sender,
-                        "to": recipient,
-                        "content": content,
-                        "timestamp": ts,
-                        "is_read": bool(read_status),
-                    })
+                    messages.append(
+                        {
+                            "id": msg_id,
+                            "from": sender,
+                            "to": recipient,
+                            "content": content,
+                            "timestamp": ts,
+                            "is_read": bool(read_status),
+                        }
+                    )
                 return {"messages": messages, "total": len(messages)}
         except Exception as e:
             print(f"Error in get_messages_between_users pagination: {e}")
             return {"messages": [], "total": 0}
-
-
-

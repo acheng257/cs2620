@@ -104,7 +104,10 @@ class ChatServer:
             self.send_response(client_socket, MessageType.ERROR, "Not logged in")
             return
 
-        if self.db.delete_account(connection.username):
+        username = connection.username
+        assert username is not None  # for mypy
+
+        if self.db.delete_account(username):
             self.send_response(client_socket, MessageType.SUCCESS, "Account deleted successfully")
             self.remove_client(client_socket)
         else:
@@ -113,7 +116,7 @@ class ChatServer:
     def send_direct_message(
         self, target_username: str, message_content: str, sender_username: str
     ) -> None:
-        """Send a message to a specific client using the binary protocol."""
+        """Send a message to a specific client using the binary/JSON protocol."""
         if not self.db.user_exists(target_username):
             # Send error to sender
             sender_socket = self.username_to_socket[sender_username]
@@ -254,7 +257,7 @@ class ChatServer:
             thread.daemon = True
             thread.start()
 
-    def send_message_to_socket(self, client_socket: socket.socket, msg: Message):
+    def send_message_to_socket(self, client_socket: socket.socket, msg: Message) -> None:
         """
         A small helper to serialize and send the given Message object
         to the specified client socket.
@@ -265,16 +268,17 @@ class ChatServer:
         client_socket.sendall(length.to_bytes(4, "big"))
         client_socket.sendall(data)
 
-    def handle_list_accounts(self, client_socket: socket.socket, message: Message):
+    def handle_list_accounts(self, client_socket: socket.socket, message: Message) -> None:
         pattern = message.payload.get("pattern", "")
         print(f"DEBUG: pattern={pattern}")
         page = int(message.payload.get("page", 1))
-        per_page = 10 # TODO: pass through payload?
+        per_page = 10  # TODO: pass through payload?
 
         result = self.db.list_accounts(pattern, page, per_page)
         print(f"DEBUG: DB returned: {result}")
 
-        from protocols.base import MessageType, Message
+        from protocols.base import Message, MessageType
+
         connection = self.active_connections[client_socket]
         response = Message(
             type=MessageType.SUCCESS,
@@ -289,18 +293,18 @@ class ChatServer:
         client_socket.send(length.to_bytes(4, "big"))
         client_socket.send(data)
 
-    def handle_read_messages(self, client_socket, message: Message):
+    def handle_read_messages(self, client_socket: socket.socket, message: Message) -> None:
         offset = int(message.payload.get("offset", 0))
         limit = int(message.payload.get("limit", 20))  # default 20
         other_user = message.payload.get("otherUser")
         connection = self.active_connections[client_socket]
         username = connection.username
+        assert username is not None  # for mypy
 
         if other_user:
-            # conversation between "username" and "other_user"
+            assert other_user is not None  # for mypy
             result = self.db.get_messages_between_users(username, other_user, offset, limit)
         else:
-            # fallback if no other_user given
             result = self.db.get_messages_for_user(username, offset, limit)
 
         response = Message(
@@ -312,9 +316,13 @@ class ChatServer:
         )
         self.send_message_to_socket(client_socket, response)
 
-    def handle_delete_messages(self, client_socket: socket.socket, message: Message):
+    def handle_delete_messages(self, client_socket: socket.socket, message: Message) -> None:
         connection = self.active_connections[client_socket]
         username = connection.username
+        if not username:
+            self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+            return
+        assert username is not None  # for mypy
 
         message_ids = message.payload.get("message_ids", [])
         if not isinstance(message_ids, list):
@@ -327,16 +335,18 @@ class ChatServer:
         else:
             self.send_response(client_socket, MessageType.ERROR, "Failed to delete messages")
 
-    def handle_list_chat_partners(self, client_socket: socket.socket, message: Message):
+    def handle_list_chat_partners(self, client_socket: socket.socket, message: Message) -> None:
         connection = self.active_connections[client_socket]
         username = connection.username
         if not username:
             self.send_response(client_socket, MessageType.ERROR, "Not logged in")
             return
-        
+        assert username is not None  # for mypy
+
         partners = self.db.get_chat_partners(username)
 
-        from protocols.base import MessageType, Message
+        from protocols.base import Message, MessageType
+
         response = Message(
             type=MessageType.SUCCESS,
             payload={"chat_partners": partners},
@@ -345,7 +355,6 @@ class ChatServer:
             timestamp=time.time(),
         )
         self.send_message_to_socket(client_socket, response)
-
 
 
 if __name__ == "__main__":
