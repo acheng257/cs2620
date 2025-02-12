@@ -1,3 +1,5 @@
+# server.py
+
 import socket
 import threading
 import time
@@ -7,7 +9,7 @@ from typing import Dict, List, Optional
 from protocols.base import Message, MessageType, Protocol
 from protocols.binary_protocol import BinaryProtocol
 from protocols.json_protocol import JsonProtocol
-from src.database.db_manager import DatabaseManager
+from src.database.db_manager import DatabaseManager  # Adjusted import path
 
 
 @dataclass
@@ -180,7 +182,7 @@ class ChatServer:
                 timestamp = time.time()
             msg = Message(
                 type=MessageType.SEND_MESSAGE,
-                payload={"text": message["content"]},
+                payload={"text": message["content"], "id": message["id"]},  # Include message ID
                 sender=message["from"],
                 recipient=username,
                 timestamp=timestamp,
@@ -224,9 +226,21 @@ class ChatServer:
                 )
                 return
 
+            message_id = self.db.store_message(
+                sender_username, target_username, message_content, True
+            )  # Store message and set delivered to True
+
+            if not message_id:
+                self.send_response(
+                    target_socket,
+                    MessageType.ERROR,
+                    "Failed to store the message.",
+                )
+                return
+
             message = Message(
                 type=MessageType.SEND_MESSAGE,
-                payload={"text": message_content},
+                payload={"text": message_content, "id": message_id},
                 sender=sender_username,
                 recipient=target_username,
                 timestamp=time.time(),
@@ -234,22 +248,19 @@ class ChatServer:
 
             try:
                 self.send_message_to_socket(target_socket, message)
-                self.db.store_message(
-                    sender_username, target_username, message_content, True
-                )  # Store message and set delivered to True
-                self.db.mark_message_as_delivered(
-                    self.db.get_last_message_id(sender_username, target_username)
-                )  # Mark message as delivered
                 print(f"[INFO] Sent message from '{sender_username}' to '{target_username}'.")
             except Exception as e:
                 print(f"[ERROR] Error sending message to '{target_username}': {e}")
                 self.remove_client(target_socket)
         else:
             # Store message as undelivered
-            self.db.store_message(
+            message_id = self.db.store_message(
                 sender_username, target_username, message_content, False
             )  # Store message and set delivered to False
-            print(f"[INFO] User '{target_username}' is offline. Message stored as undelivered.")
+            if message_id:
+                print(f"[INFO] User '{target_username}' is offline. Message ID {message_id} stored as undelivered.")
+            else:
+                print(f"[ERROR] Failed to store undelivered message for '{target_username}'.")
 
     def handle_client(self, client_socket: socket.socket) -> None:
         """Handle communication with a connected client."""
@@ -397,8 +408,9 @@ class ChatServer:
             return
 
         success = self.db.delete_messages(connection.username, message_ids)
+
         if success:
-            self.send_response(client_socket, MessageType.SUCCESS, "Messages deleted.")
+            self.send_response(client_socket, MessageType.SUCCESS, "Messages deleted for you.")
             print(f"[INFO] Deleted messages for user '{connection.username}'. Message IDs: {message_ids}")
         else:
             self.send_response(client_socket, MessageType.ERROR, "Failed to delete messages.")

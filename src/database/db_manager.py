@@ -1,4 +1,5 @@
 # db_manager.py
+
 import sqlite3
 from typing import Any, Dict, List, Optional
 
@@ -27,7 +28,7 @@ class DatabaseManager:
                 """
                 )
 
-                # Create messages table with read and delivered status
+                # Create messages table with read, delivered, and deleted status
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS messages (
@@ -38,6 +39,8 @@ class DatabaseManager:
                         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                         is_read BOOLEAN DEFAULT FALSE,
                         is_delivered BOOLEAN DEFAULT TRUE,
+                        sender_deleted BOOLEAN DEFAULT FALSE,
+                        recipient_deleted BOOLEAN DEFAULT FALSE,
                         FOREIGN KEY (sender) REFERENCES accounts(username),
                         FOREIGN KEY (recipient) REFERENCES accounts(username)
                     )
@@ -93,7 +96,7 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "SELECT COUNT(*) FROM messages WHERE recipient = ? AND is_read = FALSE",
+                    "SELECT COUNT(*) FROM messages WHERE recipient = ? AND is_read = FALSE AND recipient_deleted = FALSE",
                     (username,),
                 )
                 result = cursor.fetchone()
@@ -133,21 +136,20 @@ class DatabaseManager:
 
     def store_message(
         self, sender: str, recipient: str, content: str, is_delivered: bool = True
-    ) -> bool:
+    ) -> Optional[int]:
         """Store a message in the database, with option to mark as undelivered."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO messages (sender, recipient, content, is_delivered, \
-                        is_read) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO messages (sender, recipient, content, is_delivered, is_read) VALUES (?, ?, ?, ?, ?)",
                     (sender, recipient, content, is_delivered, False),
                 )
                 conn.commit()
-                return True
+                return cursor.lastrowid
         except Exception as e:
             print(f"Error storing message: {e}")
-            return False
+            return None
 
     def mark_messages_as_read(self, username: str, message_ids: Optional[List[int]] = None) -> bool:
         """Mark messages as read. If no message_ids provided, mark all as read."""
@@ -157,13 +159,12 @@ class DatabaseManager:
                 if message_ids:
                     # Must build a parameterized query carefully
                     placeholder = ",".join("?" for _ in message_ids)
-                    query = f"UPDATE messages SET is_read = TRUE WHERE \
-                        recipient = ? AND id IN ({placeholder})"
+                    query = f"UPDATE messages SET is_read = TRUE WHERE recipient = ? AND id IN ({placeholder})"
                     params = [username] + message_ids
                     cursor.execute(query, params)
                 else:
                     cursor.execute(
-                        "UPDATE messages SET is_read = TRUE WHERE recipient = ?",
+                        "UPDATE messages SET is_read = TRUE WHERE recipient = ? AND recipient_deleted = FALSE",
                         (username,),
                     )
                 conn.commit()
@@ -218,6 +219,7 @@ class DatabaseManager:
         Return a dict with keys {messages, total}.
         Each entry in 'messages' looks like:
         {id, from, to, content, timestamp, is_read, is_delivered}.
+        Excludes messages that the user has deleted.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -228,7 +230,8 @@ class DatabaseManager:
                     """
                     SELECT COUNT(*)
                     FROM messages
-                    WHERE sender = ? OR recipient = ?
+                    WHERE (sender = ? OR recipient = ?)
+                      AND (sender_deleted = FALSE OR recipient_deleted = FALSE)
                     """,
                     (username, username),
                 )
@@ -238,7 +241,8 @@ class DatabaseManager:
                     """
                     SELECT id, sender, recipient, content, timestamp, is_read, is_delivered
                     FROM messages
-                    WHERE sender = ? OR recipient = ?
+                    WHERE (sender = ? OR recipient = ?)
+                      AND (sender_deleted = FALSE OR recipient_deleted = FALSE)
                     ORDER BY timestamp DESC
                     LIMIT ? OFFSET ?
                     """,
@@ -268,7 +272,8 @@ class DatabaseManager:
 
     def delete_messages(self, username: str, message_ids: List[int]) -> bool:
         """
-        Delete messages by ID if the user is either the sender or recipient.
+        Soft delete messages by ID for the user. If the user is the sender, set sender_deleted = TRUE.
+        If the user is the recipient, set recipient_deleted = TRUE.
         """
         if not message_ids:
             return True
@@ -276,18 +281,30 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
 
-                placeholders = ",".join("?" for _ in message_ids)
-                query = f"""
-                    DELETE FROM messages
-                    WHERE id IN ({placeholders})
-                      AND (sender = ? OR recipient = ?)
-                """
-                params = list(message_ids) + [username, username]
-                cursor.execute(query, params)
+                # Update sender_deleted or recipient_deleted based on the user's role
+                for message_id in message_ids:
+                    cursor.execute(
+                        """
+                        SELECT sender, recipient FROM messages WHERE id = ?
+                        """,
+                        (message_id,),
+                    )
+                    result = cursor.fetchone()
+                    if not result:
+                        continue
+                    sender, recipient = result
+                    if username == sender:
+                        cursor.execute(
+                            "UPDATE messages SET sender_deleted = TRUE WHERE id = ?",
+                            (message_id,),
+                        )
+                    elif username == recipient:
+                        cursor.execute(
+                            "UPDATE messages SET recipient_deleted = TRUE WHERE id = ?",
+                            (message_id,),
+                        )
                 conn.commit()
-
-                # rowcount is the number of rows actually deleted
-                return cursor.rowcount > 0
+                return True
         except Exception as e:
             print(f"Error deleting messages: {e}")
             return False
@@ -322,8 +339,7 @@ class DatabaseManager:
         self, user1: str, user2: str, offset: int = 0, limit: int = 999999
     ) -> Dict[str, Any]:
         """
-        Return the conversation between user1 and user2, newest first in \
-            DB results (then we can reverse if desired).
+        Return the conversation between user1 and user2, excluding messages deleted by user1.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -342,8 +358,11 @@ class DatabaseManager:
                 query = """
                     SELECT id, sender, recipient, content, timestamp, is_read, is_delivered
                     FROM messages
-                    WHERE (sender = ? AND recipient = ?)
-                       OR (sender = ? AND recipient = ?)
+                    WHERE (
+                        (sender = ? AND recipient = ? AND recipient_deleted = FALSE)
+                        OR
+                        (sender = ? AND recipient = ? AND sender_deleted = FALSE)
+                    )
                     ORDER BY timestamp DESC
                     LIMIT ? OFFSET ?
                 """
@@ -369,7 +388,7 @@ class DatabaseManager:
             print(f"Error in get_messages_between_users pagination: {e}")
             return {"messages": [], "total": 0}
 
-    def get_unread_between_users(self, user1: str, user2: str) -> Any:
+    def get_unread_between_users(self, user1: str, user2: str) -> int:
         """
         Return how many messages sent from user2 to user1 are still marked
         as unread for user1.
@@ -377,12 +396,12 @@ class DatabaseManager:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                # Only count messages sent from user2 to user1 that are unread
+                # Only count messages sent from user2 to user1 that are unread and not deleted
                 cursor.execute(
                     """
                     SELECT COUNT(*)
                     FROM messages
-                    WHERE sender = ? AND recipient = ? AND is_read = FALSE
+                    WHERE sender = ? AND recipient = ? AND is_read = FALSE AND recipient_deleted = FALSE
                     """,
                     (user2, user1),
                 )
@@ -403,7 +422,7 @@ class DatabaseManager:
                     """
                     SELECT id, sender, recipient, content, timestamp
                     FROM messages
-                    WHERE recipient = ? AND is_delivered = FALSE
+                    WHERE recipient = ? AND is_delivered = FALSE AND recipient_deleted = FALSE
                     """,
                     (username,),
                 )
@@ -440,7 +459,7 @@ class DatabaseManager:
             print(f"Error marking message {message_id} as delivered: {e}")
             return False
 
-    def get_last_message_id(self, sender: str, recipient: str) -> Any:
+    def get_last_message_id(self, sender: str, recipient: str) -> Optional[int]:
         """Get the ID of the most recent message between two users."""
         try:
             with sqlite3.connect(self.db_path) as conn:

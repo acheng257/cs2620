@@ -1,3 +1,5 @@
+# app.py
+
 import datetime
 import threading
 import time
@@ -52,6 +54,10 @@ def init_session_state() -> None:
         st.session_state.client = None  # Initialize client as None
     if "error_message" not in st.session_state:
         st.session_state.error_message = ""  # To store and display error messages
+    if "fetch_chat_partners" not in st.session_state:
+        st.session_state.fetch_chat_partners = False  # New flag
+    if "pending_deletions" not in st.session_state:
+        st.session_state.pending_deletions = []  # List of message IDs pending deletion
 
 
 def get_chat_client() -> Optional[ChatClient]:
@@ -159,10 +165,14 @@ def render_login_page() -> None:
         st.session_state.current_chat = None
         st.session_state.messages = []
         st.session_state.unread_map = {}
+        st.session_state.chat_partners = []
+        st.session_state.search_results = []
         st.session_state.client = None
         st.session_state.client_connected = False
         st.session_state.server_connected = False
         st.session_state.error_message = ""  # Clear error messages
+        st.session_state.fetch_chat_partners = False  # Reset flag
+        st.session_state.pending_deletions = []  # Clear pending deletions
         st.warning("Protocol changed. Please reconnect to the server.")
         # No rerun; user can reconnect manually
 
@@ -191,19 +201,21 @@ def render_login_page() -> None:
                     )
                     connected = client.connect()
                     if connected:
-                        success = client.login(password_login)
+                        # Use the new synchronous login method
+                        success, error = client.login_sync(password_login)
                         if success:
                             st.session_state.username = username_login
                             st.session_state.logged_in = True
                             st.session_state.client = client
                             st.session_state.client_connected = True
+                            st.session_state.fetch_chat_partners = True  # Set flag
                             st.session_state.error_message = ""  # Clear error messages
                             st.success("Logged in successfully!")
                         else:
                             st.session_state.error_message = (
-                                "Login failed. Please check your credentials."
+                                f"Login failed: {error}"
                             )
-                            client.close()
+                            # client.close()
                     else:
                         st.session_state.error_message = (
                             "Failed to connect to the server. Please check the IP address and port."
@@ -245,6 +257,7 @@ def render_login_page() -> None:
                             st.session_state.logged_in = True
                             st.session_state.client = client
                             st.session_state.client_connected = True
+                            st.session_state.fetch_chat_partners = True  # Set flag
                             st.session_state.error_message = ""  # Clear error messages
                             st.success("Account created and logged in successfully!")
                         else:
@@ -284,7 +297,6 @@ def fetch_accounts(pattern: str = "", page: int = 1) -> None:
 def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
     """
     Fetch chat partners and their corresponding unread message counts.
-    Updates the session state's unread_map.
     Returns:
         Tuple[List[str], Dict[str, int]]: (list_of_partners, unread_map)
     """
@@ -295,7 +307,6 @@ def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
             if resp and resp.type == MessageType.SUCCESS:
                 partners = resp.payload.get("chat_partners", [])
                 unread_map = resp.payload.get("unread_map", {})
-                st.session_state.unread_map = unread_map
                 return partners, unread_map
         except Exception as e:
             st.warning(f"An error occurred while fetching chat partners: {e}")
@@ -346,12 +357,8 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
 
                     # Reset unread count for this partner
                     st.session_state.unread_map[partner] = 0
-            else:
-                if offset == 0:
-                    st.session_state.messages = []
-                    st.warning("No messages found.")
-                else:
-                    st.warning("No more messages to load.")
+
+                st.write(f"Loaded {len(new_messages)} messages.")  # Debug
         except Exception as e:
             st.warning(f"An error occurred while loading conversation: {e}")
     else:
@@ -372,6 +379,7 @@ def process_incoming_realtime_messages() -> None:
                     sender = msg.sender
                     text = msg.payload.get("text", "")
                     timestamp = msg.timestamp
+                    msg_id = msg.payload.get("id")  # Ensure the server sends message ID
 
                     with st.session_state.lock:
                         if st.session_state.current_chat == sender:
@@ -383,6 +391,7 @@ def process_incoming_realtime_messages() -> None:
                                     "timestamp": timestamp,
                                     "is_read": True,
                                     "is_delivered": True,
+                                    "id": msg_id,
                                 }
                             )
                             # Mark messages as read
@@ -397,8 +406,7 @@ def process_incoming_realtime_messages() -> None:
                     # Display alert for new message
                     st.success(f"New message from {sender}: {text}")
 
-                    # Trigger a rerun to update the sidebar unread counts
-                    st.rerun()
+                    # Streamlit reruns automatically, so no need to manually rerun
         except Exception as e:
             st.warning(f"An error occurred while processing incoming messages: {e}")
     else:
@@ -410,14 +418,26 @@ def render_sidebar() -> None:
     st.sidebar.title("Menu")
     st.sidebar.subheader(f"Logged in as: {st.session_state.username}")
 
-    # Fetch chat partners and their unread counts
-    chat_partners, unread_map = fetch_chat_partners()
+    # Check if we need to fetch chat partners
+    if st.session_state.get("fetch_chat_partners", False):
+        chat_partners, unread_map = fetch_chat_partners()
+        st.session_state.fetch_chat_partners = False  # Reset flag
+    else:
+        # Use cached values if available
+        chat_partners = st.session_state.get("chat_partners", [])
+        unread_map = st.session_state.get("unread_map", {})
+
+    # Update session state with fetched data
+    if "chat_partners" not in st.session_state or st.session_state.fetch_chat_partners:
+        st.session_state.chat_partners = chat_partners
+    if "unread_map" not in st.session_state or st.session_state.fetch_chat_partners:
+        st.session_state.unread_map = unread_map
 
     with st.sidebar.expander("Existing Chats", expanded=True):
         if chat_partners:
             for partner in chat_partners:
                 if partner != st.session_state.username:
-                    unread_count = st.session_state.unread_map.get(partner, 0)
+                    unread_count = unread_map.get(partner, 0)
                     label = f"{partner}"
                     if unread_count > 0:
                         label += f" ({unread_count} unread)"
@@ -450,6 +470,11 @@ def render_sidebar() -> None:
                         st.session_state.scroll_to_top = False
 
     with st.sidebar.expander("Account Options", expanded=False):
+        st.write("---")
+        if st.button("Refresh Chat Partners"):
+            st.session_state.fetch_chat_partners = True  # Set flag
+            st.experimental_rerun()  # Rerun to trigger fetch
+
         if st.button("Delete Account"):
             confirm = st.sidebar.checkbox(
                 "Are you sure you want to delete your account?", key="confirm_delete"
@@ -465,10 +490,13 @@ def render_sidebar() -> None:
                             st.session_state.current_chat = None
                             st.session_state.messages = []
                             st.session_state.unread_map = {}
+                            st.session_state.chat_partners = []
+                            st.session_state.search_results = []
                             st.session_state.client = None
                             st.session_state.client_connected = False
                             st.session_state.server_connected = False
                             st.session_state.error_message = ""  # Clear error messages
+                            st.session_state.pending_deletions = []  # Clear pending deletions
                             st.success("Account deleted successfully.")
                         else:
                             st.error("Failed to delete account.")
@@ -482,15 +510,18 @@ def render_sidebar() -> None:
             st.session_state.current_chat = None
             st.session_state.messages = []
             st.session_state.unread_map = {}
+            st.session_state.chat_partners = []
+            st.session_state.search_results = []
             st.session_state.client = None
             st.session_state.client_connected = False
             st.session_state.server_connected = False
             st.session_state.error_message = ""  # Clear error messages
+            st.session_state.pending_deletions = []  # Clear pending deletions
             st.success("Logged out successfully.")
 
 
-def render_chat_page() -> None:
-    """Render the main chat interface."""
+def render_chat_page_with_deletion() -> None:
+    """Render the main chat interface with message deletion functionality."""
     st.title("Secure Chat")
 
     if st.session_state.current_chat:
@@ -513,40 +544,99 @@ def render_chat_page() -> None:
             st.session_state.scroll_to_bottom = True
             st.session_state.scroll_to_top = False
 
-        # Scrollable chat container
+        # Container for messages with deletion checkboxes on the side
+        with st.container():
+            # Step 1: Select messages to delete
+            if not st.session_state.pending_deletions:
+                with st.form("select_messages_form"):
+                    selected_message_ids = []
+                    for msg in st.session_state.messages:
+                        sender = msg.get("sender")
+                        text = msg.get("text")
+                        ts = msg.get("timestamp", time.time())
+                        msg_id = msg.get("id")
+
+                        # Convert timestamp to a readable string
+                        if isinstance(ts, str):
+                            try:
+                                dt = datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+                                epoch = dt.timestamp()
+                            except ValueError:
+                                epoch = time.time()
+                        else:
+                            try:
+                                epoch = float(ts)
+                            except (ValueError, TypeError):
+                                epoch = time.time()
+
+                        formatted_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
+                        sender_name = "You" if sender == st.session_state.username else sender
+
+                        # Display the message with checkbox on the right
+                        cols = st.columns([4, 1])
+                        with cols[0]:
+                            st.markdown(f"**{sender_name}** [{formatted_timestamp}]: {text}")
+                        with cols[1]:
+                            delete_checkbox = st.checkbox(
+                                "🗑️",
+                                key=f"delete_{msg_id}",
+                                help="Select to delete this message.",
+                                label_visibility="collapsed",
+                            )
+                            if delete_checkbox:
+                                selected_message_ids.append(msg_id)
+
+                    # Submit button for deletion
+                    submit_button = st.form_submit_button(label="Delete Selected Messages")
+
+                    if submit_button:
+                        if selected_message_ids:
+                            # Store the selected message IDs in session_state
+                            st.session_state.pending_deletions = selected_message_ids
+                        else:
+                            st.warning("No messages selected for deletion.")
+
+            # Step 2: Confirm deletion
+            if st.session_state.pending_deletions:
+                st.markdown("### Confirm Deletion")
+                with st.form("confirm_deletion_form"):
+                    confirm = st.checkbox("Are you sure you want to delete the selected messages?", key="confirm_deletion")
+                    confirm_button = st.form_submit_button("Confirm Deletion")
+                    cancel_button = st.form_submit_button("Cancel")
+
+                    if confirm_button:
+                        if confirm:
+                            client = get_chat_client()
+                            if client:
+                                try:
+                                    st.write(f"Attempting to delete messages: {st.session_state.pending_deletions}")  # Debug
+                                    success = client.delete_messages_sync(st.session_state.pending_deletions)
+                                    st.write(f"Deletion success: {success}")  # Debug
+                                    if success:
+                                        st.success("Selected messages have been deleted.")
+                                        # Reload the conversation to reflect deletions
+                                        load_conversation(partner, 0, st.session_state.messages_limit)
+                                    else:
+                                        st.error("Failed to delete selected messages.")
+                                except Exception as e:
+                                    st.error(f"An error occurred while deleting messages: {e}")
+                            else:
+                                st.error("Client is not connected.")
+                            # Clear pending deletions after action
+                            st.session_state.pending_deletions = []
+                        else:
+                            st.warning("Please confirm the deletion.")
+                    if cancel_button:
+                        st.warning("Deletion canceled.")
+                        st.session_state.pending_deletions = []
+
+        # Informative Scrollable Container
         chat_html = """
         <div style="height:400px; overflow-y:scroll; padding:0.5rem;" id="chat-container">
         """
         if st.session_state.messages:
-            # Print messages from oldest to newest
-            for msg in st.session_state.messages:
-                sender = msg.get("sender")
-                text = msg.get("text")
-                ts = msg.get("timestamp", time.time())
-                # is_read = msg.get("is_read", True)
-                # is_delivered = msg.get("is_delivered", True)
-
-                # Convert timestamp to a readable string
-                if isinstance(ts, str):
-                    try:
-                        dt = datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
-                        epoch = dt.timestamp()
-                    except ValueError:
-                        epoch = time.time()
-                else:
-                    try:
-                        epoch = float(ts)
-                    except (ValueError, TypeError):
-                        epoch = time.time()
-
-                formatted_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
-                sender_name = "You" if sender == st.session_state.username else sender
-                # read_indicator = "✓" if is_read else "✗"
-                # delivered_indicator = "✓" if is_delivered else "☐"
-
-                chat_html += (
-                    f"<p><strong>{sender_name}</strong> [{formatted_timestamp}]: {text}</p>"
-                )
+            # Messages are already displayed above with checkboxes
+            chat_html += "<p><em>Use the checkboxes on the right to select messages for deletion.</em></p>"
         else:
             chat_html += "<p><em>No messages to display.</em></p>"
 
@@ -601,23 +691,8 @@ def render_chat_page() -> None:
                             st.success("Message sent.")
                             st.session_state["clear_message_area"] = True
 
-                            with st.session_state.lock:
-                                st.session_state.messages.append(
-                                    {
-                                        "sender": st.session_state.username,
-                                        "text": new_msg,
-                                        "timestamp": time.time(),
-                                        "is_read": True,
-                                        "is_delivered": True,
-                                    }
-                                )
-                                if (
-                                    st.session_state.unread_map.get(
-                                        st.session_state.current_chat, 0
-                                    )
-                                    > 0
-                                ):
-                                    st.session_state.unread_map[st.session_state.current_chat] = 0
+                            # Reload the conversation to fetch the latest messages
+                            load_conversation(st.session_state.current_chat, 0, st.session_state.messages_limit)
                         else:
                             st.error("Failed to send message.")
                     except Exception as e:
@@ -661,7 +736,7 @@ def main() -> None:
             except Exception as e:
                 st.warning(f"An error occurred while processing messages: {e}")
             render_sidebar()
-            render_chat_page()
+            render_chat_page_with_deletion()
         else:
             st.error("Client is not connected. Please try logging in again.")
 
