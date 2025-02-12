@@ -44,6 +44,7 @@ class ChatServer:
         self.socket.bind((host, port))
         self.lock = threading.Lock()
         self.db = DatabaseManager(db_path)
+        print(f"[INFO] ChatServer initialized on {self.host}:{self.port}")
 
     def send_response(
         self, client_socket: socket.socket, message_type: MessageType, content: str
@@ -51,7 +52,7 @@ class ChatServer:
         """Send a response message to a client."""
         connection = self.active_connections.get(client_socket)
         if not connection:
-            print(f"Attempted to send response to unknown client socket: {client_socket}")
+            print(f"[ERROR] Attempted to send response to unknown client socket: {client_socket}")
             return
 
         response = Message(
@@ -66,8 +67,29 @@ class ChatServer:
             length = len(data)
             client_socket.sendall(length.to_bytes(4, "big"))
             client_socket.sendall(data)
+            print(f"[INFO] Sent {message_type.name} response to {connection.username or 'unknown'}.")
         except Exception as e:
-            print(f"Failed to send response to {connection.username}: {e}")
+            print(f"[ERROR] Failed to send response to {connection.username or 'unknown'}: {e}")
+            self.remove_client(client_socket)
+
+    def send_message_to_socket(self, client_socket: socket.socket, msg: Message) -> None:
+        """
+        A helper to serialize and send the given Message object
+        to the specified client socket.
+        """
+        connection = self.active_connections.get(client_socket)
+        if not connection:
+            print(f"[ERROR] No connection found for client socket: {client_socket}")
+            return
+
+        try:
+            data = connection.protocol.serialize(msg)
+            length = len(data)
+            client_socket.sendall(length.to_bytes(4, "big"))
+            client_socket.sendall(data)
+            print(f"[INFO] Sent {msg.type.name} message to {connection.username or 'unknown'}.")
+        except Exception as e:
+            print(f"[ERROR] Failed to send message to {connection.username or 'unknown'}: {e}")
             self.remove_client(client_socket)
 
     def handle_create_account(self, client_socket: socket.socket, message: Message) -> None:
@@ -76,16 +98,20 @@ class ChatServer:
         password = message.payload.get("password")
 
         if not username or not password:
-            self.send_response(client_socket, MessageType.ERROR, "Username and password required")
+            self.send_response(client_socket, MessageType.ERROR, "Username and password required.")
             return
 
         if self.db.create_account(username, password):
-            self.active_connections[client_socket].username = username
             with self.lock:
-                self.username_to_socket[username] = client_socket
-            self.send_response(client_socket, MessageType.SUCCESS, "Account created successfully")
+                connection = self.active_connections.get(client_socket)
+                if connection:
+                    connection.username = username
+                    self.username_to_socket[username] = client_socket
+            self.send_response(client_socket, MessageType.SUCCESS, "Account created successfully.")
+            print(f"[INFO] Account created for user: {username}")
         else:
-            self.send_response(client_socket, MessageType.ERROR, "Username already exists")
+            self.send_response(client_socket, MessageType.ERROR, "Username already exists.")
+            print(f"[WARNING] Attempt to create duplicate account: {username}")
 
     def handle_login(self, client_socket: socket.socket, message: Message) -> None:
         """Handle login request."""
@@ -93,54 +119,58 @@ class ChatServer:
         password = message.payload.get("password")
 
         if not username or not password:
-            self.send_response(client_socket, MessageType.ERROR, "Username and password required")
+            self.send_response(client_socket, MessageType.ERROR, "Username and password required.")
             return
 
         if self.db.verify_login(username, password):
-            # Set up the connection
-            connection = self.active_connections[client_socket]
-            connection.username = username
             with self.lock:
-                self.username_to_socket[username] = client_socket
+                connection = self.active_connections.get(client_socket)
+                if connection:
+                    connection.username = username
+                    self.username_to_socket[username] = client_socket
 
-            # Deliver any undelivered messages
-            self.deliver_undelivered_messages(username)
-
-            # Get unread message counts for all chat partners
+            # Send login success before delivering messages to ensure prompt response
             unread_count = self.db.get_unread_message_count(username)
             self.send_response(
                 client_socket,
                 MessageType.SUCCESS,
                 f"Login successful. You have {unread_count} unread messages.",
             )
+            print(f"[INFO] User '{username}' logged in successfully.")
+
+            # Deliver any undelivered messages
+            self.deliver_undelivered_messages(username)
         else:
-            self.send_response(client_socket, MessageType.ERROR, "Invalid username or password")
+            self.send_response(client_socket, MessageType.ERROR, "Invalid username or password.")
+            print(f"[WARNING] Failed login attempt for user: {username}")
 
     def handle_delete_account(self, client_socket: socket.socket, message: Message) -> None:
         """Handle account deletion request."""
         connection = self.active_connections.get(client_socket)
         if not connection or not connection.username:
-            self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+            self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
             return
 
         username = connection.username
         if self.db.delete_account(username):
-            self.send_response(client_socket, MessageType.SUCCESS, "Account deleted successfully")
+            self.send_response(client_socket, MessageType.SUCCESS, "Account deleted successfully.")
+            print(f"[INFO] Account deleted for user: {username}")
             self.remove_client(client_socket)
         else:
-            self.send_response(client_socket, MessageType.ERROR, "Failed to delete account")
+            self.send_response(client_socket, MessageType.ERROR, "Failed to delete account.")
+            print(f"[ERROR] Failed to delete account for user: {username}")
 
     def deliver_undelivered_messages(self, username: str) -> None:
         """Deliver undelivered messages to a user upon login."""
         undelivered_messages = self.db.get_undelivered_messages(username)
         target_socket = self.username_to_socket.get(username)
         if not target_socket:
-            print(f"No active socket found for user {username} to deliver messages.")
+            print(f"[ERROR] No active socket found for user {username} to deliver messages.")
             return
 
         connection = self.active_connections.get(target_socket)
         if not connection:
-            print(f"No active connection found for socket {target_socket} to deliver messages.")
+            print(f"[ERROR] No active connection found for socket {target_socket} to deliver messages.")
             return
 
         for message in undelivered_messages:
@@ -157,13 +187,11 @@ class ChatServer:
             )
 
             try:
-                data = connection.protocol.serialize(msg)
-                length = len(data)
-                target_socket.sendall(length.to_bytes(4, "big"))
-                target_socket.sendall(data)
+                self.send_message_to_socket(target_socket, msg)
                 self.db.mark_message_as_delivered(message["id"])  # Mark as delivered
+                print(f"[INFO] Delivered undelivered message ID {message['id']} to {username}.")
             except Exception as e:
-                print(f"Error delivering undelivered message to {username}: {e}")
+                print(f"[ERROR] Error delivering undelivered message to {username}: {e}")
                 self.remove_client(target_socket)
 
     def send_direct_message(
@@ -177,10 +205,10 @@ class ChatServer:
                 self.send_response(
                     sender_socket,
                     MessageType.ERROR,
-                    f"User {target_username} does not exist",
+                    f"User '{target_username}' does not exist.",
                 )
             else:
-                print(f"Sender {sender_username} socket not found.")
+                print(f"[ERROR] Sender '{sender_username}' socket not found.")
             return
 
         # Check if the target user is online
@@ -188,11 +216,11 @@ class ChatServer:
         if target_socket:
             connection = self.active_connections.get(target_socket)
             if not connection:
-                print(f"Connection not found for target user {target_username}.")
+                print(f"[ERROR] Connection not found for target user '{target_username}'.")
                 self.send_response(
                     target_socket,
                     MessageType.ERROR,
-                    f"User {target_username} is not available.",
+                    f"User '{target_username}' is not available.",
                 )
                 return
 
@@ -205,195 +233,105 @@ class ChatServer:
             )
 
             try:
-                data = connection.protocol.serialize(message)
-                length = len(data)
-                target_socket.sendall(length.to_bytes(4, "big"))
-                target_socket.sendall(data)
-
+                self.send_message_to_socket(target_socket, message)
                 self.db.store_message(
                     sender_username, target_username, message_content, True
                 )  # Store message and set delivered to True
                 self.db.mark_message_as_delivered(
                     self.db.get_last_message_id(sender_username, target_username)
                 )  # Mark message as delivered
+                print(f"[INFO] Sent message from '{sender_username}' to '{target_username}'.")
             except Exception as e:
-                print(f"Error sending to user {target_username}: {e}")
+                print(f"[ERROR] Error sending message to '{target_username}': {e}")
                 self.remove_client(target_socket)
         else:
             # Store message as undelivered
             self.db.store_message(
                 sender_username, target_username, message_content, False
             )  # Store message and set delivered to False
-            print(f"User {target_username} is offline. Message stored as undelivered.")
+            print(f"[INFO] User '{target_username}' is offline. Message stored as undelivered.")
 
     def handle_client(self, client_socket: socket.socket) -> None:
         """Handle communication with a connected client."""
         connection = self.active_connections.get(client_socket)
         if not connection:
-            print(f"No connection found for client socket: {client_socket}")
+            print(f"[ERROR] No connection found for client socket: {client_socket}")
             return
 
         try:
             while True:
                 length_bytes = self.receive_all(client_socket, 4)
                 if not length_bytes:
-                    print("Client disconnected.")
+                    print(f"[INFO] Client '{connection.username or 'unknown'}' disconnected.")
                     break
 
                 message_length = int.from_bytes(length_bytes, "big")
                 message_data = self.receive_all(client_socket, message_length)
                 if not message_data:
-                    print("Client disconnected during message reception.")
-                    break
-
-                if not connection:
-                    print("Connection lost during message processing")
+                    print(f"[INFO] Client '{connection.username or 'unknown'}' disconnected during message reception.")
                     break
 
                 message = connection.protocol.deserialize(message_data)
+                print(f"[RECEIVED] {connection.username or 'unknown'} sent {message.type.name} with payload: {message.payload}")
 
-                # Handle different message types
                 if message.type == MessageType.CREATE_ACCOUNT:
                     self.handle_create_account(client_socket, message)
                 elif message.type == MessageType.LOGIN:
                     self.handle_login(client_socket, message)
-                    # TODO(@ItamarRocha): Remove duplicated code
-                    connection = self.active_connections.get(client_socket)  # re-acquire connection
-                    username = connection.username if connection else ""
-                    if username:
-                        self.deliver_undelivered_messages(username)  # deliver messages
-                elif message.type == MessageType.LIST_ACCOUNTS:
-                    if not connection or not connection.username:
-                        self.send_response(client_socket, MessageType.ERROR, "Not logged in")
-                        continue
-                    self.handle_list_accounts(client_socket, message)
+                elif message.type == MessageType.DELETE_ACCOUNT:
+                    self.handle_delete_account(client_socket, message)
                 elif message.type == MessageType.SEND_MESSAGE:
-                    if not connection or not connection.username:
-                        self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+                    if not connection.username:
+                        self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
                         continue
                     recipient = message.recipient
                     if not recipient:
                         self.send_response(
-                            client_socket, MessageType.ERROR, "No recipient specified"
+                            client_socket, MessageType.ERROR, "No recipient specified."
                         )
                         continue
                     self.send_direct_message(
-                        recipient, message.payload["text"], connection.username
+                        recipient, message.payload.get("text", ""), connection.username
                     )
+                elif message.type == MessageType.LIST_ACCOUNTS:
+                    if not connection.username:
+                        self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
+                        continue
+                    self.handle_list_accounts(client_socket, message)
                 elif message.type == MessageType.READ_MESSAGES:
-                    if not connection or not connection.username:
-                        self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+                    if not connection.username:
+                        self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
                         continue
                     self.handle_read_messages(client_socket, message)
                 elif message.type == MessageType.DELETE_MESSAGES:
-                    if not connection or not connection.username:
-                        self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+                    if not connection.username:
+                        self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
                         continue
                     self.handle_delete_messages(client_socket, message)
-                elif message.type == MessageType.DELETE_ACCOUNT:
-                    self.handle_delete_account(client_socket, message)
                 elif message.type == MessageType.LIST_CHAT_PARTNERS:
+                    if not connection.username:
+                        self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
+                        continue
                     self.handle_list_chat_partners(client_socket, message)
                 else:
-                    self.send_response(client_socket, MessageType.ERROR, "Unknown message type")
+                    self.send_response(client_socket, MessageType.ERROR, "Unknown message type.")
+                    print(f"[WARNING] Received unknown message type from {connection.username or 'unknown'}: {message.type}")
         except Exception as e:
-            print(f"Error handling client: {e}")
+            print(f"[ERROR] Error handling client '{connection.username or 'unknown'}': {e}")
         finally:
-            self.remove_client(client_socket)
-
-    def receive_all(self, client_socket: socket.socket, length: int) -> Optional[bytes]:
-        """Helper function to receive exactly `length` bytes from the socket."""
-        data = b""
-        while len(data) < length:
-            try:
-                chunk = client_socket.recv(length - len(data))
-                if not chunk:
-                    return None
-                data += chunk
-            except Exception as e:
-                print(f"Error receiving data: {e}")
-                return None
-        return data
-
-    def remove_client(self, client_socket: socket.socket) -> None:
-        """Remove a client from active connections."""
-        with self.lock:
-            connection = self.active_connections.pop(client_socket, None)
-            if connection and connection.username:
-                self.username_to_socket.pop(connection.username, None)
-                print(f"User {connection.username} has been disconnected.")
-            try:
-                client_socket.close()
-            except Exception as e:
-                print(f"Error closing client socket: {e}")
-
-    def start(self) -> None:
-        """Start the server and listen for incoming connections."""
-        self.socket.listen(5)
-        print(f"Server started on {self.host}:{self.port}")
-
-        while True:
-            try:
-                client_socket, address = self.socket.accept()
-                print(f"New connection from {address}")
-
-                # Receive protocol byte
-                protocol_byte = self.receive_all(client_socket, 1)
-                if not protocol_byte:
-                    print(f"Failed to receive protocol byte from {address}. Closing connection.")
-                    client_socket.close()
-                    continue
-
-                protocol = JsonProtocol() if protocol_byte == b"J" else BinaryProtocol()
-                protocol_name = "JSON" if protocol_byte == b"J" else "Binary"
-
-                connection = ClientConnection(socket=client_socket, protocol=protocol)
-                print(f"Using {protocol_name} protocol for connection from {address}")
-
-                with self.lock:
-                    self.active_connections[client_socket] = connection
-
-                thread = threading.Thread(target=self.handle_client, args=(client_socket,))
-                thread.daemon = True
-                thread.start()
-            except KeyboardInterrupt:
-                print("Server shutting down...")
-                break
-            except Exception as e:
-                print(f"Error accepting new connection: {e}")
-
-        self.shutdown()
-
-    def send_message_to_socket(self, client_socket: socket.socket, msg: Message) -> None:
-        """
-        A helper to serialize and send the given Message object
-        to the specified client socket.
-        """
-        connection = self.active_connections.get(client_socket)
-        if not connection:
-            print(f"No connection found for client socket: {client_socket}")
-            return
-
-        try:
-            data = connection.protocol.serialize(msg)
-            length = len(data)
-            client_socket.sendall(length.to_bytes(4, "big"))
-            client_socket.sendall(data)
-        except Exception as e:
-            print(f"Failed to send message to {connection.username}: {e}")
             self.remove_client(client_socket)
 
     def handle_list_accounts(self, client_socket: socket.socket, message: Message) -> None:
         """Handle LIST_ACCOUNTS request."""
         pattern = message.payload.get("pattern", "")
         page = int(message.payload.get("page", 1))
-        per_page = 10
+        per_page = 10  # Define how many accounts to list per page
 
         result = self.db.list_accounts(pattern, page, per_page)
 
         connection = self.active_connections.get(client_socket)
         if not connection:
-            print(f"No connection found for client socket: {client_socket}")
+            print(f"[ERROR] No connection found for client socket: {client_socket}")
             return
 
         response = Message(
@@ -404,6 +342,7 @@ class ChatServer:
             timestamp=time.time(),
         )
         self.send_message_to_socket(client_socket, response)
+        print(f"[INFO] Sent LIST_ACCOUNTS response to {connection.username or 'unknown'}.")
 
     def handle_read_messages(self, client_socket: socket.socket, message: Message) -> None:
         """
@@ -416,12 +355,12 @@ class ChatServer:
 
         connection = self.active_connections.get(client_socket)
         if not connection:
-            print(f"No connection found for client socket: {client_socket}")
+            print(f"[ERROR] No connection found for client socket: {client_socket}")
             return
 
         username = connection.username
         if not username:
-            self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+            self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
             return
 
         if other_user:
@@ -432,6 +371,7 @@ class ChatServer:
         msg_ids = [m["id"] for m in result.get("messages", [])]
         if msg_ids:
             self.db.mark_messages_as_read(username, msg_ids)
+            print(f"[INFO] Marked messages as read for user '{username}'. Message IDs: {msg_ids}")
 
         response = Message(
             type=MessageType.SUCCESS,
@@ -441,24 +381,28 @@ class ChatServer:
             timestamp=time.time(),
         )
         self.send_message_to_socket(client_socket, response)
+        print(f"[INFO] Sent READ_MESSAGES response to {username}.")
 
     def handle_delete_messages(self, client_socket: socket.socket, message: Message) -> None:
         """Handle DELETE_MESSAGES request."""
         connection = self.active_connections.get(client_socket)
         if not connection or not connection.username:
-            self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+            self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
             return
 
         message_ids = message.payload.get("message_ids", [])
         if not isinstance(message_ids, list):
-            self.send_response(client_socket, MessageType.ERROR, "'message_ids' must be a list")
+            self.send_response(client_socket, MessageType.ERROR, "'message_ids' must be a list.")
+            print(f"[WARNING] Invalid 'message_ids' format from user '{connection.username}'.")
             return
 
         success = self.db.delete_messages(connection.username, message_ids)
         if success:
-            self.send_response(client_socket, MessageType.SUCCESS, "Messages deleted")
+            self.send_response(client_socket, MessageType.SUCCESS, "Messages deleted.")
+            print(f"[INFO] Deleted messages for user '{connection.username}'. Message IDs: {message_ids}")
         else:
-            self.send_response(client_socket, MessageType.ERROR, "Failed to delete messages")
+            self.send_response(client_socket, MessageType.ERROR, "Failed to delete messages.")
+            print(f"[ERROR] Failed to delete messages for user '{connection.username}'. Message IDs: {message_ids}")
 
     def handle_list_chat_partners(self, client_socket: socket.socket, message: Message) -> None:
         """
@@ -467,7 +411,7 @@ class ChatServer:
         """
         connection = self.active_connections.get(client_socket)
         if not connection or not connection.username:
-            self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+            self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
             return
 
         username = connection.username
@@ -481,30 +425,104 @@ class ChatServer:
             type=MessageType.SUCCESS,
             payload={
                 "chat_partners": partners,  # e.g., ["alice", "bob"]
-                "unread_map": unread_map,  # e.g., {"alice": 3, "bob": 1}
+                "unread_map": unread_map,    # e.g., {"alice": 3, "bob": 1}
             },
             sender="SERVER",
             recipient=username,
             timestamp=time.time(),
         )
         self.send_message_to_socket(client_socket, response)
+        print(f"[INFO] Sent LIST_CHAT_PARTNERS response to {username}.")
+
+    def receive_all(self, client_socket: socket.socket, length: int) -> Optional[bytes]:
+        """Helper function to receive exactly `length` bytes from the socket."""
+        data = b""
+        while len(data) < length:
+            try:
+                chunk = client_socket.recv(length - len(data))
+                if not chunk:
+                    return None
+                data += chunk
+            except Exception as e:
+                connection = self.active_connections.get(client_socket)
+                username = connection.username if connection else "unknown"
+                print(f"[ERROR] Error receiving data from '{username}': {e}")
+                return None
+        return data
+
+    def remove_client(self, client_socket: socket.socket) -> None:
+        """Remove a client from active connections."""
+        with self.lock:
+            connection = self.active_connections.pop(client_socket, None)
+            if connection and connection.username:
+                self.username_to_socket.pop(connection.username, None)
+                print(f"[INFO] User '{connection.username}' has been disconnected.")
+            try:
+                client_socket.close()
+                print(f"[INFO] Closed connection socket: {client_socket}")
+            except Exception as e:
+                print(f"[ERROR] Error closing client socket: {e}")
+
+    def start(self) -> None:
+        """Start the server and listen for incoming connections."""
+        self.socket.listen(5)
+        print(f"[INFO] Server started on {self.host}:{self.port}")
+
+        while True:
+            try:
+                client_socket, address = self.socket.accept()
+                print(f"[INFO] New connection from {address}")
+
+                # Receive protocol byte
+                protocol_byte = self.receive_all(client_socket, 1)
+                if not protocol_byte:
+                    print(f"[WARNING] Failed to receive protocol byte from {address}. Closing connection.")
+                    client_socket.close()
+                    continue
+
+                protocol = JsonProtocol() if protocol_byte == b"J" else BinaryProtocol()
+                protocol_name = "JSON" if protocol_byte == b"J" else "Binary"
+
+                connection = ClientConnection(socket=client_socket, protocol=protocol)
+                print(f"[INFO] Using {protocol_name} protocol for connection from {address}")
+
+                with self.lock:
+                    self.active_connections[client_socket] = connection
+
+                thread = threading.Thread(target=self.handle_client, args=(client_socket,))
+                thread.daemon = True
+                thread.start()
+                print(f"[INFO] Started thread to handle client {address}")
+            except KeyboardInterrupt:
+                print("\n[INFO] Keyboard interrupt received. Shutting down server...")
+                break
+            except Exception as e:
+                print(f"[ERROR] Error accepting new connection: {e}")
+
+        self.shutdown()
 
     def shutdown(self) -> None:
         """Gracefully shut down the server and close all connections."""
-        print("Shutting down server...")
+        print("[INFO] Shutting down server...")
         with self.lock:
             for client_socket in list(self.active_connections.keys()):
                 try:
-                    client_socket.close()
+                    client_socket.shutdown(socket.SHUT_RDWR)
                 except Exception as e:
-                    print(f"Error closing client socket: {e}")
+                    print(f"[ERROR] Error shutting down client socket: {e}")
+                try:
+                    client_socket.close()
+                    print(f"[INFO] Closed connection socket: {client_socket}")
+                except Exception as e:
+                    print(f"[ERROR] Error closing client socket: {e}")
             self.active_connections.clear()
             self.username_to_socket.clear()
         try:
             self.socket.close()
+            print("[INFO] Server socket closed.")
         except Exception as e:
-            print(f"Error closing server socket: {e}")
-        print("Server shutdown complete.")
+            print(f"[ERROR] Error closing server socket: {e}")
+        print("[INFO] Server shutdown complete.")
 
 
 if __name__ == "__main__":
@@ -535,6 +553,6 @@ if __name__ == "__main__":
     try:
         server.start()
     except KeyboardInterrupt:
-        print("\nKeyboard interrupt received. Exiting...")
+        print("\n[INFO] Keyboard interrupt received. Exiting...")
     finally:
         server.shutdown()
