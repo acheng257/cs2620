@@ -1,4 +1,3 @@
-# server.py
 import socket
 import threading
 import time
@@ -26,9 +25,7 @@ class ClientConnection:
 
 
 class ChatServer:
-    def __init__(
-        self, host: str = "0.0.0.0", port: int = 54400, db_path: str = "chat.db"
-    ) -> None:
+    def __init__(self, host: str = "0.0.0.0", port: int = 54400, db_path: str = "chat.db") -> None:
         """
         Initialize the ChatServer.
 
@@ -249,6 +246,10 @@ class ChatServer:
                     print("Client disconnected during message reception.")
                     break
 
+                if not connection:
+                    print("Connection lost during message processing")
+                    break
+
                 message = connection.protocol.deserialize(message_data)
 
                 # Handle different message types
@@ -256,39 +257,41 @@ class ChatServer:
                     self.handle_create_account(client_socket, message)
                 elif message.type == MessageType.LOGIN:
                     self.handle_login(client_socket, message)
+                    # TODO(@ItamarRocha): Remove duplicated code
                     connection = self.active_connections.get(client_socket)  # re-acquire connection
                     username = connection.username if connection else ""
                     if username:
                         self.deliver_undelivered_messages(username)  # deliver messages
-                elif message.type == MessageType.DELETE_ACCOUNT:
-                    self.handle_delete_account(client_socket, message)
-                elif message.type == MessageType.SEND_MESSAGE:
-                    if not connection.username:
+                elif message.type == MessageType.LIST_ACCOUNTS:
+                    if not connection or not connection.username:
                         self.send_response(client_socket, MessageType.ERROR, "Not logged in")
                         continue
-                    if not message.recipient:
+                    self.handle_list_accounts(client_socket, message)
+                elif message.type == MessageType.SEND_MESSAGE:
+                    if not connection or not connection.username:
+                        self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+                        continue
+                    recipient = message.recipient
+                    if not recipient:
                         self.send_response(
                             client_socket, MessageType.ERROR, "No recipient specified"
                         )
                         continue
                     self.send_direct_message(
-                        message.recipient, message.payload["text"], connection.username
+                        recipient, message.payload["text"], connection.username
                     )
-                elif message.type == MessageType.LIST_ACCOUNTS:
-                    if not connection.username:
-                        self.send_response(client_socket, MessageType.ERROR, "Not logged in")
-                        continue
-                    self.handle_list_accounts(client_socket, message)
                 elif message.type == MessageType.READ_MESSAGES:
-                    if not connection.username:
+                    if not connection or not connection.username:
                         self.send_response(client_socket, MessageType.ERROR, "Not logged in")
                         continue
                     self.handle_read_messages(client_socket, message)
                 elif message.type == MessageType.DELETE_MESSAGES:
-                    if not connection.username:
+                    if not connection or not connection.username:
                         self.send_response(client_socket, MessageType.ERROR, "Not logged in")
                         continue
                     self.handle_delete_messages(client_socket, message)
+                elif message.type == MessageType.DELETE_ACCOUNT:
+                    self.handle_delete_account(client_socket, message)
                 elif message.type == MessageType.LIST_CHAT_PARTNERS:
                     self.handle_list_chat_partners(client_socket, message)
                 else:

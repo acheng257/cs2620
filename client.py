@@ -1,4 +1,3 @@
-# client.py
 import argparse
 import getpass
 import queue
@@ -305,7 +304,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    client = ChatClient(username=args.username, protocol_type=args.protocol, host=args.host, port=args.port)
+    client = ChatClient(
+        username=args.username, protocol_type=args.protocol, host=args.host, port=args.port
+    )
 
     try:
         if client.connect():

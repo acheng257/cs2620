@@ -1,7 +1,7 @@
 import datetime
 import threading
 import time
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
@@ -58,8 +58,16 @@ def get_chat_client() -> Optional[ChatClient]:
     """
     Return the connected ChatClient if logged in, else None.
     """
-    if st.session_state.logged_in and st.session_state.client_connected and st.session_state.client:
+    if (
+        hasattr(st.session_state, "logged_in")
+        and hasattr(st.session_state, "client_connected")
+        and hasattr(st.session_state, "client")
+        and st.session_state.logged_in
+        and st.session_state.client_connected
+        and isinstance(st.session_state.client, ChatClient)
+    ):
         return st.session_state.client
+    print("Nope!")
     return None
 
 
@@ -112,17 +120,24 @@ def render_login_page() -> None:
                         st.session_state.server_connected = True
                         st.session_state.client_connected = False  # Not authenticated yet
                         st.session_state.client = None  # Disregard the unauthenticated client
-                        st.success("Connected to server successfully. You can now log in or create an account.")
+                        st.success(
+                            "Connected to server successfully. "
+                            "You can now log in or create an account."
+                        )
                     else:
                         st.session_state.server_connected = False
                         st.session_state.client_connected = False
                         st.session_state.client = None
-                        st.session_state.error_message = "Failed to connect to the server. Please check the IP address and port."
+                        st.session_state.error_message = (
+                            "Failed to connect to the server. Please check the IP address and port."
+                        )
                 except Exception as e:
                     st.session_state.server_connected = False
                     st.session_state.client_connected = False
                     st.session_state.client = None
-                    st.session_state.error_message = f"An error occurred while connecting to the server: {e}"
+                    st.session_state.error_message = (
+                        f"An error occurred while connecting to the server: {e}"
+                    )
                 # No rerun here to allow error_message to persist
 
     st.markdown("---")
@@ -185,10 +200,14 @@ def render_login_page() -> None:
                             st.session_state.error_message = ""  # Clear error messages
                             st.success("Logged in successfully!")
                         else:
-                            st.session_state.error_message = "Login failed. Please check your credentials."
+                            st.session_state.error_message = (
+                                "Login failed. Please check your credentials."
+                            )
                             client.close()
                     else:
-                        st.session_state.error_message = "Failed to connect to the server. Please check the IP address and port."
+                        st.session_state.error_message = (
+                            "Failed to connect to the server. Please check the IP address and port."
+                        )
                 except Exception as e:
                     st.session_state.error_message = f"An error occurred during login: {e}"
                 # No rerun to allow error_message to persist
@@ -229,12 +248,18 @@ def render_login_page() -> None:
                             st.session_state.error_message = ""  # Clear error messages
                             st.success("Account created and logged in successfully!")
                         else:
-                            st.session_state.error_message = "Account creation failed. Username may already exist."
+                            st.session_state.error_message = (
+                                "Account creation failed. Username may already exist."
+                            )
                             client.close()
                     else:
-                        st.session_state.error_message = "Failed to connect to the server. Please check the IP address and port."
+                        st.session_state.error_message = (
+                            "Failed to connect to the server. Please check the IP address and port."
+                        )
                 except Exception as e:
-                    st.session_state.error_message = f"An error occurred during account creation: {e}"
+                    st.session_state.error_message = (
+                        f"An error occurred during account creation: {e}"
+                    )
                 # No rerun to allow error_message to persist
 
 
@@ -587,7 +612,9 @@ def render_chat_page() -> None:
                                     }
                                 )
                                 if (
-                                    st.session_state.unread_map.get(st.session_state.current_chat, 0)
+                                    st.session_state.unread_map.get(
+                                        st.session_state.current_chat, 0
+                                    )
                                     > 0
                                 ):
                                     st.session_state.unread_map[st.session_state.current_chat] = 0
@@ -614,7 +641,9 @@ def main() -> None:
         # Ensure the client is initialized if the user is logged in
         client = get_chat_client()
         if not client:
-            st.session_state.error_message = "Failed to initialize the chat client. Please try logging in again."
+            st.session_state.error_message = (
+                "Failed to initialize the chat client. Please try logging in again."
+            )
             st.session_state.logged_in = False
             st.session_state.username = None
             st.session_state.client_connected = False
