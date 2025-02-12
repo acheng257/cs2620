@@ -1,3 +1,4 @@
+# server.py
 import socket
 import threading
 import time
@@ -83,11 +84,15 @@ class ChatServer:
 
         if self.db.verify_login(username, password):
             # Set up the connection
-            self.active_connections[client_socket].username = username
+            connection = self.active_connections[client_socket]
+            connection.username = username
             with self.lock:
                 self.username_to_socket[username] = client_socket
 
-            # Get unread message count
+            # Deliver any undelivered messages
+            self.deliver_undelivered_messages(username)
+
+            # Get unread message counts for all chat partners
             unread_count = self.db.get_unread_message_count(username)
             self.send_response(
                 client_socket,
@@ -105,18 +110,42 @@ class ChatServer:
             return
 
         username = connection.username
-        assert username is not None  # for mypy
-
         if self.db.delete_account(username):
             self.send_response(client_socket, MessageType.SUCCESS, "Account deleted successfully")
             self.remove_client(client_socket)
         else:
             self.send_response(client_socket, MessageType.ERROR, "Failed to delete account")
 
+    def deliver_undelivered_messages(self, username: str) -> None:
+        """Deliver undelivered messages to a user upon login."""
+        undelivered_messages = self.db.get_undelivered_messages(username)
+        for message in undelivered_messages:
+            target_socket = self.username_to_socket.get(username)
+            if target_socket:
+                connection = self.active_connections[target_socket]
+
+                msg = Message(
+                    type=MessageType.SEND_MESSAGE,
+                    payload={"text": message["content"]},
+                    sender=message["from"],
+                    recipient=username,
+                    timestamp=message["timestamp"],
+                )
+
+                try:
+                    data = connection.protocol.serialize(msg)
+                    length = len(data)
+                    target_socket.send(length.to_bytes(4, "big"))
+                    target_socket.send(data)
+                    self.db.mark_message_as_delivered(message["id"])  # Mark as delivered
+                except Exception as e:
+                    print(f"Error delivering undelivered message to {username}: {e}")
+                    self.remove_client(target_socket)
+
     def send_direct_message(
         self, target_username: str, message_content: str, sender_username: str
     ) -> None:
-        """Send a message to a specific client using the binary/JSON protocol."""
+        """Send a message to a specific client using the protocol."""
         if not self.db.user_exists(target_username):
             # Send error to sender
             sender_socket = self.username_to_socket[sender_username]
@@ -127,9 +156,7 @@ class ChatServer:
             )
             return
 
-        self.db.store_message(sender_username, target_username, message_content)
-
-        # if user is online, send message immediately
+        # Check if the target user is online
         if target_username in self.username_to_socket:
             target_socket = self.username_to_socket[target_username]
             connection = self.active_connections[target_socket]
@@ -147,9 +174,23 @@ class ChatServer:
                 length = len(data)
                 target_socket.send(length.to_bytes(4, "big"))
                 target_socket.send(data)
+
+                self.db.store_message(
+                    sender_username, target_username, message_content, True
+                )  # Store message and set delivered to True
+                self.db.mark_message_as_delivered(
+                    self.db.get_last_message_id(sender_username, target_username)
+                )  # Mark message as delivered
             except Exception as e:
                 print(f"Error sending to user {target_username}: {e}")
                 self.remove_client(target_socket)
+
+        else:
+            # Store message as undelivered
+            self.db.store_message(
+                sender_username, target_username, message_content, False
+            )  # Store message and set delivered to False
+            print(f"User {target_username} is offline. Message stored as undelivered.")
 
     def handle_client(self, client_socket: socket.socket) -> None:
         connection = self.active_connections[client_socket]
@@ -180,6 +221,9 @@ class ChatServer:
                     self.handle_create_account(client_socket, message)
                 elif message.type == MessageType.LOGIN:
                     self.handle_login(client_socket, message)
+                    connection = self.active_connections[client_socket]  # re-acquire connection
+                    username = connection.username if connection.username else ""
+                    self.deliver_undelivered_messages(username)  # deliver messages
                 elif message.type == MessageType.DELETE_ACCOUNT:
                     self.handle_delete_account(client_socket, message)
                 elif message.type == MessageType.SEND_MESSAGE:
@@ -194,22 +238,16 @@ class ChatServer:
                     self.send_direct_message(
                         message.recipient, message.payload["text"], connection.username
                     )
-
-                # -------------------------
-                # NEW HANDLERS (APPENDED):
-                # -------------------------
                 elif message.type == MessageType.LIST_ACCOUNTS:
                     if not connection.username:
                         self.send_response(client_socket, MessageType.ERROR, "Not logged in")
                         continue
                     self.handle_list_accounts(client_socket, message)
-
                 elif message.type == MessageType.READ_MESSAGES:
                     if not connection.username:
                         self.send_response(client_socket, MessageType.ERROR, "Not logged in")
                         continue
                     self.handle_read_messages(client_socket, message)
-
                 elif message.type == MessageType.DELETE_MESSAGES:
                     if not connection.username:
                         self.send_response(client_socket, MessageType.ERROR, "Not logged in")
@@ -217,7 +255,6 @@ class ChatServer:
                     self.handle_delete_messages(client_socket, message)
                 elif message.type == MessageType.LIST_CHAT_PARTNERS:
                     self.handle_list_chat_partners(client_socket, message)
-
         except Exception as e:
             print(f"Error handling client: {e}")
         finally:
@@ -259,7 +296,7 @@ class ChatServer:
 
     def send_message_to_socket(self, client_socket: socket.socket, msg: Message) -> None:
         """
-        A small helper to serialize and send the given Message object
+        A helper to serialize and send the given Message object
         to the specified client socket.
         """
         connection = self.active_connections[client_socket]
@@ -270,46 +307,49 @@ class ChatServer:
 
     def handle_list_accounts(self, client_socket: socket.socket, message: Message) -> None:
         pattern = message.payload.get("pattern", "")
-        print(f"DEBUG: pattern={pattern}")
         page = int(message.payload.get("page", 1))
-        per_page = 10  # TODO: pass through payload?
+        per_page = 10
 
         result = self.db.list_accounts(pattern, page, per_page)
-        print(f"DEBUG: DB returned: {result}")
-
-        from protocols.base import Message, MessageType
 
         connection = self.active_connections[client_socket]
         response = Message(
             type=MessageType.SUCCESS,
-            payload=result,
+            payload=result,  # e.g. { "users": [...], "total": X, ... }
             sender="SERVER",
             recipient=connection.username or "unknown",
             timestamp=time.time(),
         )
-        print(f"DEBUG: Response before serialization is: {response}")
-        data = connection.protocol.serialize(response)
-        length = len(data)
-        client_socket.send(length.to_bytes(4, "big"))
-        client_socket.send(data)
+        self.send_message_to_socket(client_socket, response)
 
     def handle_read_messages(self, client_socket: socket.socket, message: Message) -> None:
+        """
+        This marks only the fetched messages as read. If you request offset=20, limit=20,
+        you'll mark that chunk of older messages as read, effectively reading them
+        'as the user scrolls.'
+        """
         offset = int(message.payload.get("offset", 0))
-        limit = int(message.payload.get("limit", 20))  # default 20
+        limit = int(message.payload.get("limit", 20))
         other_user = message.payload.get("otherUser")
+
         connection = self.active_connections[client_socket]
         username = connection.username
-        assert username is not None  # for mypy
+        if not username:
+            self.send_response(client_socket, MessageType.ERROR, "Not logged in")
+            return
 
         if other_user:
-            assert other_user is not None  # for mypy
             result = self.db.get_messages_between_users(username, other_user, offset, limit)
         else:
             result = self.db.get_messages_for_user(username, offset, limit)
 
+        msg_ids = [m["id"] for m in result["messages"]]
+        if msg_ids:
+            self.db.mark_messages_as_read(username, msg_ids)
+
         response = Message(
             type=MessageType.SUCCESS,
-            payload=result,  # {"messages": [...], "total": N}
+            payload=result,
             sender="SERVER",
             recipient=username,
             timestamp=time.time(),
@@ -322,7 +362,6 @@ class ChatServer:
         if not username:
             self.send_response(client_socket, MessageType.ERROR, "Not logged in")
             return
-        assert username is not None  # for mypy
 
         message_ids = message.payload.get("message_ids", [])
         if not isinstance(message_ids, list):
@@ -336,20 +375,29 @@ class ChatServer:
             self.send_response(client_socket, MessageType.ERROR, "Failed to delete messages")
 
     def handle_list_chat_partners(self, client_socket: socket.socket, message: Message) -> None:
+        """
+        Return both:
+         - A list of usernames (strings)
+         - A dictionary of {username: unread_count}.
+        """
         connection = self.active_connections[client_socket]
         username = connection.username
         if not username:
             self.send_response(client_socket, MessageType.ERROR, "Not logged in")
             return
-        assert username is not None  # for mypy
 
         partners = self.db.get_chat_partners(username)
-
-        from protocols.base import Message, MessageType
+        unread_map = {}
+        for p in partners:
+            # Assuming get_unread_between_users returns the number of unread messages
+            unread_map[p] = self.db.get_unread_between_users(username, p)
 
         response = Message(
             type=MessageType.SUCCESS,
-            payload={"chat_partners": partners},
+            payload={
+                "chat_partners": partners,  # e.g. ["alice", "bob"]
+                "unread_map": unread_map,  # e.g. {"alice": 3, "bob": 1}
+            },
             sender="SERVER",
             recipient=username,
             timestamp=time.time(),

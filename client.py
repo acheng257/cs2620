@@ -224,14 +224,15 @@ class ChatClient:
                     if ("Login successful" in text) or ("Account created" in text):
                         self.logged_in = True
 
-                if message.type == MessageType.SUCCESS:
-                    print(f"[SUCCESS] {text}")
-                elif message.type == MessageType.ERROR:
-                    print(f"[ERROR] {text}")
-                elif message.sender == "SERVER":
-                    print(f"[SERVER] {text}")
-                else:
-                    print(f"[{message.sender}] {text}")
+                # Remove the duplicated console output
+                # if message.type == MessageType.SUCCESS:
+                #     print(f"[SUCCESS] {text}")
+                # elif message.type == MessageType.ERROR:
+                #     print(f"[ERROR] {text}")
+                # elif message.sender == "SERVER":
+                #     print(f"[SERVER] {text}")
+                # else:
+                #     print(f"[{message.sender}] {text}")
 
             except Exception as e:
                 print(f"Error in receive thread: {e}")
