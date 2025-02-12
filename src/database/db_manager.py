@@ -1,5 +1,6 @@
+# db_manager.py
 import sqlite3
-from typing import Any, Dict, List, Optional
+from typing import List, Optional, Dict, Any
 
 import bcrypt
 
@@ -26,7 +27,7 @@ class DatabaseManager:
                 """
                 )
 
-                # Create messages table with read status
+                # Create messages table with read and delivered status
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS messages (
@@ -35,7 +36,8 @@ class DatabaseManager:
                         recipient TEXT NOT NULL,
                         content TEXT NOT NULL,
                         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        read BOOLEAN DEFAULT FALSE,
+                        is_read BOOLEAN DEFAULT FALSE,
+                        is_delivered BOOLEAN DEFAULT TRUE,
                         FOREIGN KEY (sender) REFERENCES accounts(username),
                         FOREIGN KEY (recipient) REFERENCES accounts(username)
                     )
@@ -86,12 +88,12 @@ class DatabaseManager:
             return False
 
     def get_unread_message_count(self, username: str) -> int:
-        """Get number of unread messages for a user."""
+        """Get number of unread messages for a user (any conversation)."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "SELECT COUNT(*) FROM messages WHERE recipient = ? AND read = FALSE",
+                    "SELECT COUNT(*) FROM messages WHERE recipient = ? AND is_read = FALSE",
                     (username,),
                 )
                 result = cursor.fetchone()
@@ -129,14 +131,14 @@ class DatabaseManager:
             print(f"Error checking user existence: {e}")
             return False
 
-    def store_message(self, sender: str, recipient: str, content: str) -> bool:
-        """Store a message in the database."""
+    def store_message(self, sender: str, recipient: str, content: str, is_delivered: bool = True) -> bool:
+        """Store a message in the database, with option to mark as undelivered."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO messages (sender, recipient, content) VALUES (?, ?, ?)",
-                    (sender, recipient, content),
+                    "INSERT INTO messages (sender, recipient, content, is_delivered, is_read) VALUES (?, ?, ?, ?, ?)",
+                    (sender, recipient, content, is_delivered, False),
                 )
                 conn.commit()
                 return True
@@ -144,7 +146,9 @@ class DatabaseManager:
             print(f"Error storing message: {e}")
             return False
 
-    def mark_messages_as_read(self, username: str, message_ids: Optional[List[int]] = None) -> bool:
+    def mark_messages_as_read(
+        self, username: str, message_ids: Optional[List[int]] = None
+    ) -> bool:
         """Mark messages as read. If no message_ids provided, mark all as read."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -152,13 +156,12 @@ class DatabaseManager:
                 if message_ids:
                     # Must build a parameterized query carefully
                     placeholder = ",".join("?" for _ in message_ids)
-                    query = f"UPDATE messages SET read = TRUE WHERE recipient = ? \
-                        AND id IN ({placeholder})"
+                    query = f"UPDATE messages SET is_read = TRUE WHERE recipient = ? AND id IN ({placeholder})"
                     params = [username] + message_ids
                     cursor.execute(query, params)
                 else:
                     cursor.execute(
-                        "UPDATE messages SET read = TRUE WHERE recipient = ?",
+                        "UPDATE messages SET is_read = TRUE WHERE recipient = ?",
                         (username,),
                     )
                 conn.commit()
@@ -211,6 +214,8 @@ class DatabaseManager:
     ) -> Dict[str, Any]:
         """
         Return a dict with keys {messages, total}.
+        Each entry in 'messages' looks like:
+        {id, from, to, content, timestamp, is_read, is_delivered}.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -229,10 +234,10 @@ class DatabaseManager:
 
                 cursor.execute(
                     """
-                    SELECT id, sender, recipient, content, timestamp, read
+                    SELECT id, sender, recipient, content, timestamp, is_read, is_delivered
                     FROM messages
                     WHERE sender = ? OR recipient = ?
-                    ORDER BY timestamp ASC
+                    ORDER BY timestamp DESC
                     LIMIT ? OFFSET ?
                     """,
                     (username, username, limit, offset),
@@ -241,7 +246,7 @@ class DatabaseManager:
 
                 messages = []
                 for row in rows:
-                    msg_id, sender, recipient, content, ts, read_status = row
+                    msg_id, sender, recipient, content, ts, read_status, is_delivered = row
                     messages.append(
                         {
                             "id": msg_id,
@@ -250,6 +255,7 @@ class DatabaseManager:
                             "content": content,
                             "timestamp": ts,
                             "is_read": bool(read_status),
+                            "is_delivered": bool(is_delivered),
                         }
                     )
 
@@ -314,14 +320,24 @@ class DatabaseManager:
         self, user1: str, user2: str, offset: int = 0, limit: int = 999999
     ) -> Dict[str, Any]:
         """
-        Return a dict {messages, total} of messages between two users,
-        newest first in DB results, then we can reverse if needed.
+        Return the conversation between user1 and user2, newest first in DB results (then we can reverse if desired).
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
+
+                # First, mark undelivered messages for user1 as delivered
+                cursor.execute(
+                    """
+                    UPDATE messages
+                    SET is_delivered = TRUE
+                    WHERE sender = ? AND recipient = ? AND is_delivered = FALSE
+                    """,
+                    (user2, user1),
+                )
+
                 query = """
-                    SELECT id, sender, recipient, content, timestamp, read
+                    SELECT id, sender, recipient, content, timestamp, is_read, is_delivered
                     FROM messages
                     WHERE (sender = ? AND recipient = ?)
                        OR (sender = ? AND recipient = ?)
@@ -333,7 +349,7 @@ class DatabaseManager:
 
                 messages = []
                 for row in rows:
-                    msg_id, sender, recipient, content, ts, read_status = row
+                    msg_id, sender, recipient, content, ts, read_status, is_delivered = row
                     messages.append(
                         {
                             "id": msg_id,
@@ -342,9 +358,104 @@ class DatabaseManager:
                             "content": content,
                             "timestamp": ts,
                             "is_read": bool(read_status),
+                            "is_delivered": bool(is_delivered),
                         }
                     )
                 return {"messages": messages, "total": len(messages)}
         except Exception as e:
             print(f"Error in get_messages_between_users pagination: {e}")
             return {"messages": [], "total": 0}
+
+    def get_unread_between_users(self, user1: str, user2: str) -> int:
+        """
+        Return how many messages sent from user2 to user1 are still marked
+        as unread for user1.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Only count messages sent from user2 to user1 that are unread
+                cursor.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM messages
+                    WHERE sender = ? AND recipient = ? AND is_read = FALSE
+                    """,
+                    (user2, user1),
+                )
+                row = cursor.fetchone()
+                if row:
+                    return row[0]
+                return 0
+        except Exception as e:
+            print(f"Error getting unread messages between {user1} and {user2}: {e}")
+            return 0
+
+    def get_undelivered_messages(self, username: str) -> List[Dict[str, Any]]:
+        """Retrieve undelivered messages for a user."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, sender, recipient, content, timestamp
+                    FROM messages
+                    WHERE recipient = ? AND is_delivered = FALSE
+                    """,
+                    (username,),
+                )
+                rows = cursor.fetchall()
+                messages = []
+                for row in rows:
+                    msg_id, sender, recipient, content, ts = row
+                    messages.append(
+                        {
+                            "id": msg_id,
+                            "from": sender,
+                            "to": recipient,
+                            "content": content,
+                            "timestamp": ts,
+                        }
+                    )
+                return messages
+        except Exception as e:
+            print(f"Error getting undelivered messages for {username}: {e}")
+            return []
+
+    def mark_message_as_delivered(self, message_id: int) -> bool:
+        """Mark a specific message as delivered."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE messages SET is_delivered = TRUE WHERE id = ?",
+                    (message_id,),
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Error marking message {message_id} as delivered: {e}")
+            return False
+
+    def get_last_message_id(self, sender: str, recipient: str) -> int:
+        """Get the ID of the most recent message between two users."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id FROM messages
+                    WHERE sender = ? AND recipient = ?
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                    """,
+                    (sender, recipient),
+                )
+                result = cursor.fetchone()
+                if result:
+                    return result[0]
+                else:
+                    return None
+        except Exception as e:
+            print(f"Error getting last message ID: {e}")
+            return None

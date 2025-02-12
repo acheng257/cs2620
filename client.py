@@ -6,7 +6,7 @@ import socket
 import sys
 import threading
 import time
-from typing import List, Optional
+from typing import Optional, List, Union
 
 from protocols.base import Message, MessageType, Protocol
 from protocols.binary_protocol import BinaryProtocol
@@ -67,7 +67,9 @@ class ChatClient:
             print(f"Communication error: {e}")
             return False
 
-    def _send_message_and_wait(self, message: Message, timeout: float = 10.0) -> Optional[Message]:
+    def _send_message_and_wait(
+        self, message: Message, timeout: float = 10.0
+    ) -> Optional[Message]:
         """Send a message and wait for a response within a timeout."""
         with self.response_lock:
             self.last_response = None
@@ -224,14 +226,15 @@ class ChatClient:
                     if ("Login successful" in text) or ("Account created" in text):
                         self.logged_in = True
 
-                if message.type == MessageType.SUCCESS:
-                    print(f"[SUCCESS] {text}")
-                elif message.type == MessageType.ERROR:
-                    print(f"[ERROR] {text}")
-                elif message.sender == "SERVER":
-                    print(f"[SERVER] {text}")
-                else:
-                    print(f"[{message.sender}] {text}")
+                # Remove the duplicated console output
+                # if message.type == MessageType.SUCCESS:
+                #     print(f"[SUCCESS] {text}")
+                # elif message.type == MessageType.ERROR:
+                #     print(f"[ERROR] {text}")
+                # elif message.sender == "SERVER":
+                #     print(f"[SERVER] {text}")
+                # else:
+                #     print(f"[{message.sender}] {text}")
 
             except Exception as e:
                 print(f"Error in receive thread: {e}")
