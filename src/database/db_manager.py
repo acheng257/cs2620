@@ -81,7 +81,7 @@ class DatabaseManager:
                     return False
 
                 stored_hash = result[0]
-                return bcrypt.checkpw(password.encode("utf-8"), stored_hash)
+                return bool(bcrypt.checkpw(password.encode("utf-8"), stored_hash))
         except Exception as e:
             print(f"Error verifying login: {e}")
             return False
