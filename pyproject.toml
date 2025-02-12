@@ -39,8 +39,8 @@ disallow_incomplete_defs = true
 pythonpath = ["."]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=protocols --cov-report=term-missing"
+addopts = "-v --cov=protocols --cov=client --cov-report=term-missing"
 
 [tool.coverage.run]
-source = ["protocols"]
+source = ["protocols", "client"]
 omit = ["tests/*"]
