@@ -25,7 +25,9 @@ class ClientConnection:
 
 
 class ChatServer:
-    def __init__(self, host="127.0.0.1", port=54400, db_path="chat.db"):
+    def __init__(
+        self, host: str = "127.0.0.1", port: int = 54400, db_path: str = "chat.db"
+    ) -> None:
         self.host = host
         self.port = port
         self.active_connections: Dict[socket.socket, ClientConnection] = {}
@@ -36,7 +38,9 @@ class ChatServer:
         self.lock = threading.Lock()
         self.db = DatabaseManager(db_path)
 
-    def send_response(self, client_socket: socket.socket, message_type: MessageType, content: str):
+    def send_response(
+        self, client_socket: socket.socket, message_type: MessageType, content: str
+    ) -> None:
         """Send a response message to a client."""
         connection = self.active_connections[client_socket]
         response = Message(
@@ -51,7 +55,7 @@ class ChatServer:
         client_socket.send(length.to_bytes(4, "big"))
         client_socket.send(data)
 
-    def handle_create_account(self, client_socket: socket.socket, message: Message):
+    def handle_create_account(self, client_socket: socket.socket, message: Message) -> None:
         """Handle account creation request."""
         username = message.payload.get("username")
         password = message.payload.get("password")
@@ -68,7 +72,7 @@ class ChatServer:
         else:
             self.send_response(client_socket, MessageType.ERROR, "Username already exists")
 
-    def handle_login(self, client_socket: socket.socket, message: Message):
+    def handle_login(self, client_socket: socket.socket, message: Message) -> None:
         """Handle login request."""
         username = message.payload.get("username")
         password = message.payload.get("password")
@@ -93,7 +97,7 @@ class ChatServer:
         else:
             self.send_response(client_socket, MessageType.ERROR, "Invalid username or password")
 
-    def handle_delete_account(self, client_socket: socket.socket, message: Message):
+    def handle_delete_account(self, client_socket: socket.socket, message: Message) -> None:
         """Handle account deletion request."""
         connection = self.active_connections[client_socket]
         if not connection.username:
@@ -106,7 +110,9 @@ class ChatServer:
         else:
             self.send_response(client_socket, MessageType.ERROR, "Failed to delete account")
 
-    def send_direct_message(self, target_username: str, message_content: str, sender_username: str):
+    def send_direct_message(
+        self, target_username: str, message_content: str, sender_username: str
+    ) -> None:
         """Send a message to a specific client using the binary protocol."""
         if not self.db.user_exists(target_username):
             # Send error to sender
@@ -143,7 +149,7 @@ class ChatServer:
                 print(f"Error sending to user {target_username}: {e}")
                 self.remove_client(target_socket)
 
-    def handle_client(self, client_socket):
+    def handle_client(self, client_socket: socket.socket) -> None:
         connection = self.active_connections[client_socket]
         try:
             while True:
@@ -178,6 +184,11 @@ class ChatServer:
                     if not connection.username:
                         self.send_response(client_socket, MessageType.ERROR, "Not logged in")
                         continue
+                    if not message.recipient:
+                        self.send_response(
+                            client_socket, MessageType.ERROR, "No recipient specified"
+                        )
+                        continue
                     self.send_direct_message(
                         message.recipient, message.payload["text"], connection.username
                     )
@@ -187,7 +198,7 @@ class ChatServer:
         finally:
             self.remove_client(client_socket)
 
-    def remove_client(self, client_socket: socket.socket):
+    def remove_client(self, client_socket: socket.socket) -> None:
         """Remove a client from active connections."""
         with self.lock:
             if client_socket in self.active_connections:
@@ -200,7 +211,7 @@ class ChatServer:
                 except Exception as e:
                     print(f"Error closing client socket: {e}")
 
-    def start(self):
+    def start(self) -> None:
         """Start the server."""
         self.socket.listen(5)
         print(f"Server started on {self.host}:{self.port}")

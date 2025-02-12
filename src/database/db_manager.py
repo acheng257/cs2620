@@ -1,5 +1,5 @@
 import sqlite3
-from typing import List
+from typing import List, Optional
 
 import bcrypt
 
@@ -9,7 +9,7 @@ class DatabaseManager:
         self.db_path = db_path
         self.init_database()
 
-    def init_database(self):
+    def init_database(self) -> None:
         """Initialize the database with necessary tables."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -95,7 +95,8 @@ class DatabaseManager:
                     "SELECT COUNT(*) FROM messages WHERE recipient = ? AND read = FALSE",
                     (username,),
                 )
-                return cursor.fetchone()[0]
+                result = cursor.fetchone()
+                return result[0] if result is not None else 0
         except Exception as e:
             print(f"Error getting unread message count: {e}")
             return 0
@@ -144,7 +145,7 @@ class DatabaseManager:
             print(f"Error storing message: {e}")
             return False
 
-    def mark_messages_as_read(self, username: str, message_ids: List[int] = None) -> bool:
+    def mark_messages_as_read(self, username: str, message_ids: Optional[List[int]] = None) -> bool:
         """Mark messages as read. If no message_ids provided, mark all as read."""
         try:
             with sqlite3.connect(self.db_path) as conn:
