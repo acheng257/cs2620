@@ -4,7 +4,9 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-bcrypt = "*"
+bcrypt = ">=4.1.2"
+streamlit = "*"
+streamlit-autorefresh = "*"
 
 [dev-packages]
 black = "*"
