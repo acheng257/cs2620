@@ -1,7 +1,7 @@
 import datetime
 import threading
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
@@ -41,53 +41,35 @@ def init_session_state() -> None:
     if "input_text" not in st.session_state:
         st.session_state.input_text = ""
     if "client_connected" not in st.session_state:
-        st.session_state.client_connected = False  # Track client connection status
+        st.session_state.client_connected = False  # Track user authentication status
     if "server_host" not in st.session_state:
         st.session_state.server_host = ""  # Initialize as empty to enforce user input
     if "server_port" not in st.session_state:
         st.session_state.server_port = 54400  # Default port; users can change as needed
+    if "server_connected" not in st.session_state:
+        st.session_state.server_connected = False  # Track server connection status
+    if "client" not in st.session_state:
+        st.session_state.client = None  # Initialize client as None
+    if "error_message" not in st.session_state:
+        st.session_state.error_message = ""  # To store and display error messages
 
 
-def get_chat_client() -> ChatClient | None:
+def get_chat_client() -> Optional[ChatClient]:
     """
-    Initialize and return a ChatClient based on the session state.
-    This function ensures that the client is reinitialized upon refresh if needed.
+    Return the connected ChatClient if logged in, else None.
     """
-    if "client" not in st.session_state or st.session_state.client is None:
-        if st.session_state.logged_in and st.session_state.username:
-            # Reinitialize the client with stored protocol, username, host, and port
-            protocol_map = {"JSON": "J", "Binary": "B"}
-            protocol_type = protocol_map.get(st.session_state.protocol, "J")
-            host = st.session_state.server_host
-            port = st.session_state.server_port
-
-            if not host:
-                st.error("Server host is not specified.")
-                return None
-
-            client = ChatClient(
-                username=st.session_state.username,
-                protocol_type=protocol_type,
-                host=host,
-                port=port,
-            )
-            connected = client.connect()
-            if connected:
-                st.session_state.client = client
-                st.session_state.client_connected = True
-            else:
-                st.session_state.client = None
-                st.session_state.client_connected = False
-                st.error("Failed to reconnect to the server.")
-        else:
-            st.session_state.client = None
-            st.session_state.client_connected = False
-    return st.session_state.client
+    if st.session_state.logged_in and st.session_state.client_connected and st.session_state.client:
+        return st.session_state.client
+    return None
 
 
 def render_login_page() -> None:
     """Render the login and account creation interface."""
     st.title("Secure Chat - Login")
+
+    # Display persistent error message if exists
+    if st.session_state.error_message:
+        st.error(st.session_state.error_message)
 
     # Server Connection Settings
     with st.expander("Server Settings", expanded=True):
@@ -109,24 +91,39 @@ def render_login_page() -> None:
             if not server_host:
                 st.warning("Please enter the server's IP address.")
             else:
+                # Update session state with server details
                 st.session_state.server_host = server_host
                 st.session_state.server_port = int(server_port)
+                st.session_state.server_connected = False  # Reset server connection status
                 st.session_state.client = None  # Reset client to force reinitialization
                 st.session_state.client_connected = False
-                # Attempt to connect immediately
-                client = ChatClient(
-                    username="",  # No username yet
-                    protocol_type="J" if st.session_state.protocol == "JSON" else "B",
-                    host=st.session_state.server_host,
-                    port=st.session_state.server_port,
-                )
-                if client.connect():
-                    st.session_state.client = client
-                    st.session_state.client_connected = True
-                    st.success("Connected to server successfully. You can now log in or create an account.")
-                else:
-                    st.error("Failed to connect to the server. Please check the IP address and port.")
-                st.rerun()
+                st.session_state.error_message = ""  # Clear previous error messages
+
+                # Attempt to connect to the server without a username
+                try:
+                    client = ChatClient(
+                        username="",  # No username yet
+                        protocol_type="J" if st.session_state.protocol == "JSON" else "B",
+                        host=st.session_state.server_host,
+                        port=st.session_state.server_port,
+                    )
+                    connected = client.connect()
+                    if connected:
+                        st.session_state.server_connected = True
+                        st.session_state.client_connected = False  # Not authenticated yet
+                        st.session_state.client = None  # Disregard the unauthenticated client
+                        st.success("Connected to server successfully. You can now log in or create an account.")
+                    else:
+                        st.session_state.server_connected = False
+                        st.session_state.client_connected = False
+                        st.session_state.client = None
+                        st.session_state.error_message = "Failed to connect to the server. Please check the IP address and port."
+                except Exception as e:
+                    st.session_state.server_connected = False
+                    st.session_state.client_connected = False
+                    st.session_state.client = None
+                    st.session_state.error_message = f"An error occurred while connecting to the server: {e}"
+                # No rerun here to allow error_message to persist
 
     st.markdown("---")
 
@@ -149,14 +146,17 @@ def render_login_page() -> None:
         st.session_state.unread_map = {}
         st.session_state.client = None
         st.session_state.client_connected = False
+        st.session_state.server_connected = False
+        st.session_state.error_message = ""  # Clear error messages
         st.warning("Protocol changed. Please reconnect to the server.")
-        st.rerun()
+        # No rerun; user can reconnect manually
 
-    # Ensure the client is connected before allowing login or account creation
-    if not st.session_state.client_connected:
+    # Ensure the server is connected before allowing login or account creation
+    if not st.session_state.server_connected:
         st.warning("Please connect to the server before logging in or creating an account.")
         return
 
+    # Login and Create Account Sections
     col1, col2 = st.columns(2)
     with col1:
         st.header("Login")
@@ -164,19 +164,34 @@ def render_login_page() -> None:
         password_login = st.text_input("Password", type="password", key="login_password")
         if st.button("Login"):
             if username_login and password_login:
-                client = get_chat_client()
-                if client:
-                    client.username = username_login  # Ensure username is set
-                    success = client.login(password_login)
-                    if success:
-                        st.session_state.username = username_login
-                        st.session_state.logged_in = True
-                        st.success("Logged in successfully!")
-                        st.rerun()
+                # Initialize a new ChatClient for login
+                try:
+                    protocol_map = {"JSON": "J", "Binary": "B"}
+                    protocol_type = protocol_map.get(st.session_state.protocol, "J")
+                    client = ChatClient(
+                        username=username_login,
+                        protocol_type=protocol_type,
+                        host=st.session_state.server_host,
+                        port=st.session_state.server_port,
+                    )
+                    connected = client.connect()
+                    if connected:
+                        success = client.login(password_login)
+                        if success:
+                            st.session_state.username = username_login
+                            st.session_state.logged_in = True
+                            st.session_state.client = client
+                            st.session_state.client_connected = True
+                            st.session_state.error_message = ""  # Clear error messages
+                            st.success("Logged in successfully!")
+                        else:
+                            st.session_state.error_message = "Login failed. Please check your credentials."
+                            client.close()
                     else:
-                        st.error("Login failed. Please check your credentials.")
-                else:
-                    st.error("Cannot initialize client. Please check your protocol and server settings.")
+                        st.session_state.error_message = "Failed to connect to the server. Please check the IP address and port."
+                except Exception as e:
+                    st.session_state.error_message = f"An error occurred during login: {e}"
+                # No rerun to allow error_message to persist
             else:
                 st.warning("Please enter both username and password.")
 
@@ -193,32 +208,50 @@ def render_login_page() -> None:
             elif len(password_reg) < 6:
                 st.warning("Password must be at least 6 characters long.")
             else:
-                client = get_chat_client()
-                if client:
-                    client.username = username_reg  # Ensure username is set
-                    success = client.create_account(password_reg)
-                    if success:
-                        st.session_state.username = username_reg
-                        st.session_state.logged_in = True
-                        st.success("Account created and logged in successfully!")
-                        st.rerun()
+                # Initialize a new ChatClient for account creation
+                try:
+                    protocol_map = {"JSON": "J", "Binary": "B"}
+                    protocol_type = protocol_map.get(st.session_state.protocol, "J")
+                    client = ChatClient(
+                        username=username_reg,
+                        protocol_type=protocol_type,
+                        host=st.session_state.server_host,
+                        port=st.session_state.server_port,
+                    )
+                    connected = client.connect()
+                    if connected:
+                        success = client.create_account(password_reg)
+                        if success:
+                            st.session_state.username = username_reg
+                            st.session_state.logged_in = True
+                            st.session_state.client = client
+                            st.session_state.client_connected = True
+                            st.session_state.error_message = ""  # Clear error messages
+                            st.success("Account created and logged in successfully!")
+                        else:
+                            st.session_state.error_message = "Account creation failed. Username may already exist."
+                            client.close()
                     else:
-                        st.error("Account creation failed. Username may already exist.")
-                else:
-                    st.error("Cannot initialize client. Please check your protocol and server settings.")
+                        st.session_state.error_message = "Failed to connect to the server. Please check the IP address and port."
+                except Exception as e:
+                    st.session_state.error_message = f"An error occurred during account creation: {e}"
+                # No rerun to allow error_message to persist
 
 
 def fetch_accounts(pattern: str = "", page: int = 1) -> None:
     """Fetch and display user accounts matching a search pattern."""
     client = get_chat_client()
     if client:
-        response = client.list_accounts_sync(pattern, page)
-        if response and response.type == MessageType.SUCCESS:
-            st.session_state.search_results = response.payload.get("users", [])
-            st.success(f"Found {len(st.session_state.search_results)} user(s).")
-        else:
-            st.session_state.search_results = []
-            st.warning("No users found or an error occurred.")
+        try:
+            response = client.list_accounts_sync(pattern, page)
+            if response and response.type == MessageType.SUCCESS:
+                st.session_state.search_results = response.payload.get("users", [])
+                st.success(f"Found {len(st.session_state.search_results)} user(s).")
+            else:
+                st.session_state.search_results = []
+                st.warning("No users found or an error occurred.")
+        except Exception as e:
+            st.warning(f"An error occurred while fetching accounts: {e}")
     else:
         st.warning("Client is not connected.")
 
@@ -232,12 +265,15 @@ def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
     """
     client = get_chat_client()
     if client:
-        resp = client.list_chat_partners_sync()
-        if resp and resp.type == MessageType.SUCCESS:
-            partners = resp.payload.get("chat_partners", [])
-            unread_map = resp.payload.get("unread_map", {})
-            st.session_state.unread_map = unread_map
-            return partners, unread_map
+        try:
+            resp = client.list_chat_partners_sync()
+            if resp and resp.type == MessageType.SUCCESS:
+                partners = resp.payload.get("chat_partners", [])
+                unread_map = resp.payload.get("unread_map", {})
+                st.session_state.unread_map = unread_map
+                return partners, unread_map
+        except Exception as e:
+            st.warning(f"An error occurred while fetching chat partners: {e}")
     return [], {}
 
 
@@ -249,47 +285,50 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
     """
     client = get_chat_client()
     if client:
-        resp = client.read_conversation_sync(partner, offset, limit)
-        if resp and resp.type == MessageType.SUCCESS:
-            db_msgs = resp.payload.get("messages", [])
+        try:
+            resp = client.read_conversation_sync(partner, offset, limit)
+            if resp and resp.type == MessageType.SUCCESS:
+                db_msgs = resp.payload.get("messages", [])
 
-            # Ensure messages are sorted from oldest to newest
-            db_msgs_sorted = sorted(db_msgs, key=lambda x: x["timestamp"])
+                # Ensure messages are sorted from oldest to newest
+                db_msgs_sorted = sorted(db_msgs, key=lambda x: x["timestamp"])
 
-            new_messages = []
-            for m in db_msgs_sorted:
-                new_messages.append(
-                    {
-                        "sender": m["from"],
-                        "text": m["content"],
-                        "timestamp": m["timestamp"],
-                        "is_read": m.get("is_read", True),
-                        "is_delivered": m.get("is_delivered", True),
-                        "id": m["id"],
-                    }
-                )
+                new_messages = []
+                for m in db_msgs_sorted:
+                    new_messages.append(
+                        {
+                            "sender": m["from"],
+                            "text": m["content"],
+                            "timestamp": m["timestamp"],
+                            "is_read": m.get("is_read", True),
+                            "is_delivered": m.get("is_delivered", True),
+                            "id": m["id"],
+                        }
+                    )
 
-            with st.session_state.lock:
-                if offset == 0:
-                    # Reset messages for a new conversation
-                    st.session_state.messages = new_messages
-                else:
-                    # Prepend older messages
-                    st.session_state.messages = new_messages + st.session_state.messages
+                with st.session_state.lock:
+                    if offset == 0:
+                        # Reset messages for a new conversation
+                        st.session_state.messages = new_messages
+                    else:
+                        # Prepend older messages
+                        st.session_state.messages = new_messages + st.session_state.messages
 
-                st.session_state.messages_offset = offset
-                st.session_state.messages_limit = limit
-                st.session_state.scroll_to_bottom = False
-                st.session_state.scroll_to_top = True
+                    st.session_state.messages_offset = offset
+                    st.session_state.messages_limit = limit
+                    st.session_state.scroll_to_bottom = False
+                    st.session_state.scroll_to_top = True
 
-                # Reset unread count for this partner
-                st.session_state.unread_map[partner] = 0
-        else:
-            if offset == 0:
-                st.session_state.messages = []
-                st.warning("No messages found.")
+                    # Reset unread count for this partner
+                    st.session_state.unread_map[partner] = 0
             else:
-                st.warning("No more messages to load.")
+                if offset == 0:
+                    st.session_state.messages = []
+                    st.warning("No messages found.")
+                else:
+                    st.warning("No more messages to load.")
+        except Exception as e:
+            st.warning(f"An error occurred while loading conversation: {e}")
     else:
         st.warning("Client is not connected.")
 
@@ -301,39 +340,42 @@ def process_incoming_realtime_messages() -> None:
     """
     client = get_chat_client()
     if client:
-        while not client.incoming_messages_queue.empty():
-            msg = client.incoming_messages_queue.get()
-            if msg.type == MessageType.SEND_MESSAGE:
-                sender = msg.sender
-                text = msg.payload.get("text", "")
-                timestamp = msg.timestamp
+        try:
+            while not client.incoming_messages_queue.empty():
+                msg = client.incoming_messages_queue.get()
+                if msg.type == MessageType.SEND_MESSAGE:
+                    sender = msg.sender
+                    text = msg.payload.get("text", "")
+                    timestamp = msg.timestamp
 
-                with st.session_state.lock:
-                    if st.session_state.current_chat == sender:
-                        # If the current chat is open, append the message and mark as read
-                        st.session_state.messages.append(
-                            {
-                                "sender": sender,
-                                "text": text,
-                                "timestamp": timestamp,
-                                "is_read": True,
-                                "is_delivered": True,
-                            }
-                        )
-                        # Mark messages as read
-                        client.read_conversation_sync(st.session_state.current_chat, 0, 100000)
-                    else:
-                        # Increment unread count for the sender
-                        if sender in st.session_state.unread_map:
-                            st.session_state.unread_map[sender] += 1
+                    with st.session_state.lock:
+                        if st.session_state.current_chat == sender:
+                            # If the current chat is open, append the message and mark as read
+                            st.session_state.messages.append(
+                                {
+                                    "sender": sender,
+                                    "text": text,
+                                    "timestamp": timestamp,
+                                    "is_read": True,
+                                    "is_delivered": True,
+                                }
+                            )
+                            # Mark messages as read
+                            client.read_conversation_sync(st.session_state.current_chat, 0, 100000)
                         else:
-                            st.session_state.unread_map[sender] = 1
+                            # Increment unread count for the sender
+                            if sender in st.session_state.unread_map:
+                                st.session_state.unread_map[sender] += 1
+                            else:
+                                st.session_state.unread_map[sender] = 1
 
-                # Display alert for new message
-                st.success(f"New message from {sender}: {text}")
+                    # Display alert for new message
+                    st.success(f"New message from {sender}: {text}")
 
-                # Trigger a rerun to update the sidebar unread counts
-                st.rerun()
+                    # Trigger a rerun to update the sidebar unread counts
+                    st.rerun()
+        except Exception as e:
+            st.warning(f"An error occurred while processing incoming messages: {e}")
     else:
         st.warning("Client is not connected.")
 
@@ -361,7 +403,7 @@ def render_sidebar() -> None:
                         load_conversation(partner, 0, st.session_state.messages_limit)
                         st.session_state.scroll_to_bottom = True
                         st.session_state.scroll_to_top = False
-                        st.rerun()
+                        # No rerun needed; Streamlit will handle it
         else:
             st.write("No existing chats found.")
 
@@ -381,7 +423,6 @@ def render_sidebar() -> None:
                         load_conversation(user, 0, st.session_state.messages_limit)
                         st.session_state.scroll_to_bottom = True
                         st.session_state.scroll_to_top = False
-                        st.rerun()
 
     with st.sidebar.expander("Account Options", expanded=False):
         if st.button("Delete Account"):
@@ -391,19 +432,23 @@ def render_sidebar() -> None:
             if confirm:
                 client = get_chat_client()
                 if client:
-                    success = client.delete_account()
-                    if success:
-                        st.session_state.logged_in = False
-                        st.session_state.username = None
-                        st.session_state.current_chat = None
-                        st.session_state.messages = []
-                        st.session_state.unread_map = {}
-                        st.session_state.client = None
-                        st.session_state.client_connected = False
-                        st.success("Account deleted successfully.")
-                        st.rerun()
-                    else:
-                        st.error("Failed to delete account.")
+                    try:
+                        success = client.delete_account()
+                        if success:
+                            st.session_state.logged_in = False
+                            st.session_state.username = None
+                            st.session_state.current_chat = None
+                            st.session_state.messages = []
+                            st.session_state.unread_map = {}
+                            st.session_state.client = None
+                            st.session_state.client_connected = False
+                            st.session_state.server_connected = False
+                            st.session_state.error_message = ""  # Clear error messages
+                            st.success("Account deleted successfully.")
+                        else:
+                            st.error("Failed to delete account.")
+                    except Exception as e:
+                        st.error(f"An error occurred while deleting the account: {e}")
                 else:
                     st.error("Client is not connected.")
         if st.button("Logout"):
@@ -414,8 +459,9 @@ def render_sidebar() -> None:
             st.session_state.unread_map = {}
             st.session_state.client = None
             st.session_state.client_connected = False
+            st.session_state.server_connected = False
+            st.session_state.error_message = ""  # Clear error messages
             st.success("Logged out successfully.")
-            st.rerun()
 
 
 def render_chat_page() -> None:
@@ -441,7 +487,6 @@ def render_chat_page() -> None:
             load_conversation(partner, 0, new_limit)
             st.session_state.scroll_to_bottom = True
             st.session_state.scroll_to_top = False
-            st.rerun()
 
         # Scrollable chat container
         chat_html = """
@@ -464,7 +509,10 @@ def render_chat_page() -> None:
                     except ValueError:
                         epoch = time.time()
                 else:
-                    epoch = float(ts)
+                    try:
+                        epoch = float(ts)
+                    except (ValueError, TypeError):
+                        epoch = time.time()
 
                 formatted_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
                 sender_name = "You" if sender == st.session_state.username else sender
@@ -509,7 +557,6 @@ def render_chat_page() -> None:
             load_conversation(partner, new_offset, st.session_state.messages_limit)
             st.session_state.scroll_to_top = True
             st.session_state.scroll_to_bottom = False
-            st.rerun()
 
         if st.session_state.get("clear_message_area", False):
             st.session_state["input_text"] = ""
@@ -523,29 +570,31 @@ def render_chat_page() -> None:
             else:
                 client = get_chat_client()
                 if client:
-                    success = client.send_message(st.session_state.current_chat, new_msg)
-                    if success:
-                        st.success("Message sent.")
-                        st.session_state["clear_message_area"] = True
+                    try:
+                        success = client.send_message(st.session_state.current_chat, new_msg)
+                        if success:
+                            st.success("Message sent.")
+                            st.session_state["clear_message_area"] = True
 
-                        with st.session_state.lock:
-                            st.session_state.messages.append(
-                                {
-                                    "sender": st.session_state.username,
-                                    "text": new_msg,
-                                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                                    "is_read": True,
-                                    "is_delivered": True,
-                                }
-                            )
-                            if (
-                                st.session_state.unread_map.get(st.session_state.current_chat, 0)
-                                > 0
-                            ):
-                                st.session_state.unread_map[st.session_state.current_chat] = 0
-                        st.rerun()
-                    else:
-                        st.error("Failed to send message.")
+                            with st.session_state.lock:
+                                st.session_state.messages.append(
+                                    {
+                                        "sender": st.session_state.username,
+                                        "text": new_msg,
+                                        "timestamp": time.time(),
+                                        "is_read": True,
+                                        "is_delivered": True,
+                                    }
+                                )
+                                if (
+                                    st.session_state.unread_map.get(st.session_state.current_chat, 0)
+                                    > 0
+                                ):
+                                    st.session_state.unread_map[st.session_state.current_chat] = 0
+                        else:
+                            st.error("Failed to send message.")
+                    except Exception as e:
+                        st.error(f"An error occurred while sending the message: {e}")
                 else:
                     st.error("Client is not connected.")
     else:
@@ -565,39 +614,23 @@ def main() -> None:
         # Ensure the client is initialized if the user is logged in
         client = get_chat_client()
         if not client:
-            st.error("Failed to initialize the chat client. Please try logging in again.")
+            st.session_state.error_message = "Failed to initialize the chat client. Please try logging in again."
             st.session_state.logged_in = False
             st.session_state.username = None
+            st.session_state.client_connected = False
+            st.session_state.client = None
     else:
-        # Initialize the client only if not logged in
-        client = get_chat_client()
-        if not client and not st.session_state.logged_in:
-            # Attempt to initialize client for login or account creation
-            protocol_map = {"JSON": "J", "Binary": "B"}
-            protocol_type = protocol_map.get(st.session_state.protocol, "J")
-
-            host = st.session_state.server_host
-            port = st.session_state.server_port
-
-            if not host:
-                st.warning("Please connect to the server to proceed.")
-            else:
-                # Initialize ChatClient with selected protocol, host, and port
-                client = ChatClient(username="", protocol_type=protocol_type, host=host, port=port)
-                connected = client.connect()
-                if connected:
-                    st.session_state.client = client
-                    st.session_state.client_connected = True
-                else:
-                    st.session_state.client = None
-                    st.session_state.client_connected = False
-                    st.error("Failed to connect to server. Please check the server settings.")
+        # No action needed; login or account creation will handle client initialization
+        pass
 
     if not st.session_state.logged_in:
         render_login_page()
     else:
         if st.session_state.client_connected:
-            process_incoming_realtime_messages()
+            try:
+                process_incoming_realtime_messages()
+            except Exception as e:
+                st.warning(f"An error occurred while processing messages: {e}")
             render_sidebar()
             render_chat_page()
         else:
