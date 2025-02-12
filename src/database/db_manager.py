@@ -284,44 +284,44 @@ class DatabaseManager:
             print(f"Error deleting messages: {e}")
             return False
         
-    def get_messages_between_users(self, user1: str, user2: str, offset=0, limit=20):
-        """
-        Return the conversation between user1 and user2,
-        ordered by timestamp DESC, meaning the *newest* rows come first.
-        offset=0 => the newest 'limit' messages in the entire conversation.
-        offset=20 => the next 20 older than that, etc.
-        """
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                query = """
-                    SELECT id, sender, recipient, content, timestamp, read
-                    FROM messages
-                    WHERE (sender = ? AND recipient = ?)
-                    OR (sender = ? AND recipient = ?)
-                    ORDER BY timestamp DESC
-                    LIMIT ? OFFSET ?
-                """
-                cursor.execute(query, (user1, user2, user2, user1, limit, offset))
-                rows = cursor.fetchall()
+    # def get_messages_between_users(self, user1: str, user2: str, offset=0, limit=20):
+    #     """
+    #     Return the conversation between user1 and user2,
+    #     ordered by timestamp DESC, meaning the *newest* rows come first.
+    #     offset=0 => the newest 'limit' messages in the entire conversation.
+    #     offset=20 => the next 20 older than that, etc.
+    #     """
+    #     try:
+    #         with sqlite3.connect(self.db_path) as conn:
+    #             cursor = conn.cursor()
+    #             query = """
+    #                 SELECT id, sender, recipient, content, timestamp, read
+    #                 FROM messages
+    #                 WHERE (sender = ? AND recipient = ?)
+    #                 OR (sender = ? AND recipient = ?)
+    #                 ORDER BY timestamp DESC
+    #                 LIMIT ? OFFSET ?
+    #             """
+    #             cursor.execute(query, (user1, user2, user2, user1, limit, offset))
+    #             rows = cursor.fetchall()
 
-                messages = []
-                for row in rows:
-                    msg_id, sender, recipient, content, ts, read_status = row
-                    messages.append({
-                        "id": msg_id,
-                        "from": sender,
-                        "to": recipient,
-                        "content": content,
-                        "timestamp": ts,
-                        "is_read": bool(read_status),
-                    })
+    #             messages = []
+    #             for row in rows:
+    #                 msg_id, sender, recipient, content, ts, read_status = row
+    #                 messages.append({
+    #                     "id": msg_id,
+    #                     "from": sender,
+    #                     "to": recipient,
+    #                     "content": content,
+    #                     "timestamp": ts,
+    #                     "is_read": bool(read_status),
+    #                 })
 
-                return {"messages": messages, "total": len(messages)}
+    #             return {"messages": messages, "total": len(messages)}
 
-        except Exception as e:
-            print(f"Error in get_messages_between_users pagination: {e}")
-            return {"messages": [], "total": 0}
+    #     except Exception as e:
+    #         print(f"Error in get_messages_between_users pagination: {e}")
+    #         return {"messages": [], "total": 0}
         
     def get_chat_partners(self, me: str):
         """
@@ -349,5 +349,46 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting chat partners for {me}: {e}")
             return []
+
+    def get_messages_between_users(self, user1: str, user2: str, offset=0, limit=999999):
+        """
+        Return ALL messages between user1 and user2, ignoring offset/limit
+        or setting them big. We'll keep the query, but set a large default 
+        so we effectively get everything. ORDER BY timestamp DESC means 
+        newest messages come first in DB results.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # We'll keep DESC
+                query = """
+                    SELECT id, sender, recipient, content, timestamp, read
+                    FROM messages
+                    WHERE (sender = ? AND recipient = ?)
+                       OR (sender = ? AND recipient = ?)
+                    ORDER BY timestamp DESC
+                    -- effectively ignoring offset, limit
+                    LIMIT ? OFFSET ?
+                """
+                # We'll pass offset=0, limit=999999 from server side
+                cursor.execute(query, (user1, user2, user2, user1, limit, offset))
+                rows = cursor.fetchall()
+
+                messages = []
+                for row in rows:
+                    msg_id, sender, recipient, content, ts, read_status = row
+                    messages.append({
+                        "id": msg_id,
+                        "from": sender,
+                        "to": recipient,
+                        "content": content,
+                        "timestamp": ts,
+                        "is_read": bool(read_status),
+                    })
+                return {"messages": messages, "total": len(messages)}
+        except Exception as e:
+            print(f"Error in get_messages_between_users pagination: {e}")
+            return {"messages": [], "total": 0}
+
 
 

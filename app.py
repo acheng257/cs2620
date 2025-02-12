@@ -20,19 +20,10 @@ def init_session_state():
         st.session_state.current_chat = None
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "page" not in st.session_state:
-        st.session_state.page = 1
     if "search_results" not in st.session_state:
         st.session_state.search_results = []
-    if "new_message" not in st.session_state:
-        st.session_state.new_message = ""
     if "lock" not in st.session_state:
         st.session_state.lock = threading.Lock()
-
-    if "conversation_offset" not in st.session_state:
-        st.session_state.conversation_offset = 0
-    if "initialized_chat" not in st.session_state:
-        st.session_state.initialized_chat = None
 
 def render_login_page():
     st.title("Secure Chat - Login")
@@ -89,21 +80,20 @@ def fetch_accounts(pattern: str = "", page: int = 1):
         st.warning("No users found or an error occurred.")
 
 def fetch_chat_partners():
-    """
-    Wrapper that calls client.list_chat_partners_sync(),
-    returns the list of partner names or an empty list.
-    """
     resp = st.session_state.client.list_chat_partners_sync()
     if resp and resp.type == MessageType.SUCCESS:
         return resp.payload.get("chat_partners", [])
     return []
 
-def load_conversation(partner, offset=0, limit=20, load_older=False):
-    resp = st.session_state.client.read_conversation_sync(partner, offset=offset, limit=limit)
+def load_conversation(partner):
+    """
+    Fetch ALL messages for the conversation from the server,
+    then reverse them to display oldest->newest.
+    """
+    resp = st.session_state.client.read_conversation_sync(partner)
     if resp and resp.type == MessageType.SUCCESS:
         db_msgs = resp.payload.get("messages", [])
-        # db_msgs is newest->oldest for this chunk
-        db_msgs.reverse()  # oldest->newest
+        db_msgs.reverse()  # Now oldest->newest
 
         new_messages = []
         for m in db_msgs:
@@ -112,25 +102,11 @@ def load_conversation(partner, offset=0, limit=20, load_older=False):
                 "text": m["content"],
                 "timestamp": m["timestamp"]
             })
-
-        if load_older:
-            # If user clicked "Load older", prepend these older messages
-            # above the existing ones
-            st.session_state.messages = new_messages + st.session_state.messages
-        else:
-            # first load => just replace
-            st.session_state.messages = new_messages
+        st.session_state.messages = new_messages
     else:
         st.session_state.messages = []
 
-
-
 def process_incoming_realtime_messages():
-    """
-    Process any real-time push messages the server sends us.
-    If a new message arrives from 'sender' and our current_chat == sender,
-    we append it so we see it live.
-    """
     client = st.session_state.client
     while not client.incoming_messages_queue.empty():
         msg = client.incoming_messages_queue.get()
@@ -158,9 +134,7 @@ def render_sidebar():
             for partner in chat_partners:
                 if partner != st.session_state.username:
                     if st.button(partner, key=f"chat_partner_{partner}"):
-                        st.session_state.initialized_chat = partner
-                        st.session_state.conversation_offset = 0
-                        load_conversation(partner, offset=0, limit=20, load_older=False)
+                        load_conversation(partner)
                         st.session_state.current_chat = partner
                         st.rerun()
         else:
@@ -176,16 +150,14 @@ def render_sidebar():
             for user in st.session_state.search_results:
                 if user != st.session_state.username:
                     if st.button(user, key=f"user_{user}"):
-                        st.session_state.initialized_chat = user
-                        st.session_state.conversation_offset = 0
-                        load_conversation(user, offset=0, limit=20, load_older=False)
+                        load_conversation(user)
                         st.session_state.current_chat = user
                         st.rerun()
 
     with st.sidebar.expander("Account Options", expanded=False):
         if st.button("Delete Account"):
-            confirm = st.checkbox("Are you sure you want to delete your account?",
-                                  key="confirm_delete")
+            confirm = st.sidebar.checkbox("Are you sure you want to delete your account?",
+                                          key="confirm_delete")
             if confirm:
                 success = st.session_state.client.delete_account()
                 if success:
@@ -199,17 +171,16 @@ def render_sidebar():
                     st.error("Failed to delete account.")
 
 def render_chat_page():
-    """
-    Renders the main chat area (center of the page).
-    The sidebar is rendered separately by render_sidebar().
-    """
     st.title("Secure Chat")
 
     if st.session_state.current_chat:
         partner = st.session_state.current_chat
-
         st.subheader(f"Chat with {partner}")
 
+        # Scrollable chat container
+        chat_html = """
+        <div style="height:400px; overflow-y:scroll; padding:0.5rem;">
+        """
         if st.session_state.messages:
             for msg in st.session_state.messages:
                 sender = msg.get("sender")
@@ -226,37 +197,37 @@ def render_chat_page():
                     epoch = float(ts)
 
                 formatted_timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch))
-
-                if sender == st.session_state.username:
-                    st.markdown(f"**You** [{formatted_timestamp}]: {text}")
-                else:
-                    st.markdown(f"**{sender}** [{formatted_timestamp}]: {text}")
+                sender_name = "You" if sender == st.session_state.username else sender
+                chat_html += f"<p><strong>{sender_name}</strong> [{formatted_timestamp}]: {text}</p>"
         else:
-            st.info("No messages to display. Type below to send one.")
+            chat_html += "<p><em>No messages to display.</em></p>"
 
-        if st.button("Load older messages"):
-            st.session_state.conversation_offset += 20
-            load_conversation(
-                partner,
-                offset=st.session_state.conversation_offset,
-                limit=20,
-                load_older=True
-            )
-            st.rerun()
+        chat_html += "</div>"
+        st.markdown(chat_html, unsafe_allow_html=True)
 
-        new_msg = st.text_area("Type your message", key="new_message")
+        # Use a local variable, no key => we can clear it easily
+        if st.session_state.get("clear_message_area", False):
+            st.session_state["input_text"] = ""
+            st.session_state["clear_message_area"] = False
+
+        # 2) Now render the text area with a session-state key
+        new_msg = st.text_area("Type your message", key="input_text")
+
         if st.button("Send"):
             if new_msg.strip() == "":
                 st.warning("Cannot send an empty message.")
             else:
-                success = st.session_state.client.send_message(partner, new_msg)
+                success = st.session_state.client.send_message(st.session_state.current_chat, new_msg)
+                success = st.session_state.client.send_message(st.session_state.current_chat, new_msg)
                 if success:
                     st.success("Message sent.")
+                    st.session_state["clear_message_area"] = True
+
                     with st.session_state.lock:
                         st.session_state.messages.append({
                             "sender": st.session_state.username,
                             "text": new_msg,
-                            "timestamp": time.time(),
+                            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
                         })
                     st.rerun()
                 else:
@@ -274,7 +245,7 @@ def main():
     if not st.session_state.client:
         host = "127.0.0.1"
         port = 54400
-        protocol = "J"  # or "B" for binary
+        protocol = "J"
         st.session_state.client = ChatClient(username="", protocol_type=protocol,
                                              host=host, port=port)
         connected = st.session_state.client.connect()
@@ -286,9 +257,7 @@ def main():
         render_login_page()
     else:
         process_incoming_realtime_messages()
-
         render_sidebar()
-
         render_chat_page()
 
 if __name__ == "__main__":
