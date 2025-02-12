@@ -335,58 +335,48 @@ class DatabaseManager:
             print(f"Error getting chat partners for {me}: {e}")
             return []
 
-    def get_messages_between_users(
-        self, user1: str, user2: str, offset: int = 0, limit: int = 999999
-    ) -> Dict[str, Any]:
-        """
-        Return the conversation between user1 and user2, excluding messages deleted by user1.
-        """
+    def get_messages_between_users(self, user1: str, user2: str, offset: int = 0, limit: int = 999999) -> Dict[str, Any]:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-
-                # First, mark undelivered messages for user1 as delivered
+                
+                # First, mark any undelivered messages as delivered
                 cursor.execute(
-                    """
-                    UPDATE messages
-                    SET is_delivered = TRUE
-                    WHERE sender = ? AND recipient = ? AND is_delivered = FALSE
-                    """,
-                    (user2, user1),
+                    "UPDATE messages SET is_delivered = TRUE WHERE sender = ? AND recipient = ? AND is_delivered = FALSE",
+                    (user2, user1)
                 )
-
+                
                 query = """
                     SELECT id, sender, recipient, content, timestamp, is_read, is_delivered
                     FROM messages
                     WHERE (
-                        (sender = ? AND recipient = ? AND recipient_deleted = FALSE)
-                        OR
                         (sender = ? AND recipient = ? AND sender_deleted = FALSE)
+                        OR
+                        (sender = ? AND recipient = ? AND recipient_deleted = FALSE)
                     )
                     ORDER BY timestamp DESC
                     LIMIT ? OFFSET ?
                 """
                 cursor.execute(query, (user1, user2, user2, user1, limit, offset))
                 rows = cursor.fetchall()
-
+                
                 messages = []
                 for row in rows:
                     msg_id, sender, recipient, content, ts, read_status, is_delivered = row
-                    messages.append(
-                        {
-                            "id": msg_id,
-                            "from": sender,
-                            "to": recipient,
-                            "content": content,
-                            "timestamp": ts,
-                            "is_read": bool(read_status),
-                            "is_delivered": bool(is_delivered),
-                        }
-                    )
+                    messages.append({
+                        "id": msg_id,
+                        "from": sender,
+                        "to": recipient,
+                        "content": content,
+                        "timestamp": ts,
+                        "is_read": bool(read_status),
+                        "is_delivered": bool(is_delivered),
+                    })
                 return {"messages": messages, "total": len(messages)}
         except Exception as e:
-            print(f"Error in get_messages_between_users pagination: {e}")
+            print(f"Error in get_messages_between_users: {e}")
             return {"messages": [], "total": 0}
+
 
     def get_unread_between_users(self, user1: str, user2: str) -> int:
         """
