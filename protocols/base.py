@@ -15,6 +15,7 @@ class MessageType(Enum):
     DELETE_ACCOUNT = 6
     ERROR = 7
     SUCCESS = 8
+    LIST_CHAT_PARTNERS = 9
 
 
 # TODO(@ItamarRocha): need to make sure it should be optional

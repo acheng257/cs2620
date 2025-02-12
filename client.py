@@ -1,10 +1,12 @@
+# client.py
 import argparse
 import getpass
+import queue
 import socket
 import sys
 import threading
 import time
-from typing import Optional
+from typing import List, Optional
 
 from protocols.base import Message, MessageType, Protocol
 from protocols.binary_protocol import BinaryProtocol
@@ -15,13 +17,13 @@ class ChatClient:
     def __init__(
         self, username: str, protocol_type: str, host: str = "127.0.0.1", port: int = 54400
     ) -> None:
-        self.host = host
-        self.port = port
-        self.username = username
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.running = False
+        self.host: str = host
+        self.port: int = port
+        self.username: str = username
+        self.socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.running: bool = False
         self.receive_thread: Optional[threading.Thread] = None
-        self.logged_in = False
+        self.logged_in: bool = False
         self.protocol: Protocol
 
         if protocol_type.upper().startswith("J"):
@@ -30,6 +32,13 @@ class ChatClient:
         else:
             self.protocol_byte = b"B"
             self.protocol = BinaryProtocol()
+
+        # synchronous response waiting
+        self.response_lock = threading.Lock()
+        self.last_response: Optional[Message] = None
+
+        # queue to hold real-time pushed messages from the server
+        self.incoming_messages_queue: queue.Queue[Message] = queue.Queue()
 
     def connect(self) -> bool:
         try:
@@ -58,60 +67,122 @@ class ChatClient:
             print(f"Communication error: {e}")
             return False
 
+    def _send_message_and_wait(self, message: Message, timeout: float = 10.0) -> Optional[Message]:
+        """Send a message and wait for a response within a timeout."""
+        with self.response_lock:
+            self.last_response = None
+
+        ok = self._send_message_no_response(message)
+        if not ok:
+            return None
+
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            with self.response_lock:
+                if self.last_response is not None:
+                    response = self.last_response
+                    self.last_response = None
+                    return response
+            time.sleep(0.05)
+
+        print("Timed out waiting for server response.")
+        return None
+
+    def read_conversation_sync(
+        self, other_user: str, offset: int = 0, limit: int = 20
+    ) -> Optional[Message]:
+        msg = Message(
+            type=MessageType.READ_MESSAGES,
+            payload={
+                "otherUser": other_user,
+                "offset": offset,
+                "limit": limit,
+            },
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        return self._send_message_and_wait(msg, timeout=10.0)
+
+    def list_accounts_sync(self, pattern: str = "", page: int = 1) -> Optional[Message]:
+        """Send LIST_ACCOUNTS request and wait for the server's response."""
+        msg = Message(
+            type=MessageType.LIST_ACCOUNTS,
+            payload={"pattern": pattern, "page": page},
+            sender=self.username,
+            recipient="SERVER",
+        )
+        response = self._send_message_and_wait(msg)
+        return response
+
+    def list_chat_partners_sync(self) -> Optional[Message]:
+        """
+        Ask the server for a list of all chat partners for self.username.
+        Returns a Message or None.
+        """
+        msg = Message(
+            type=MessageType.LIST_CHAT_PARTNERS,
+            payload={},
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        return self._send_message_and_wait(msg)
+
     def create_account(self, password: str) -> bool:
-        """Create a new account."""
-        message = Message(
+        """Create a new account (fire-and-forget)."""
+        msg = Message(
             type=MessageType.CREATE_ACCOUNT,
             payload={"username": self.username, "password": password},
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
-        return self._send_message_no_response(message)
+        return self._send_message_no_response(msg)
 
     def login(self, password: str) -> bool:
-        """Log in to an existing account."""
-        message = Message(
+        """Log in to an existing account (fire-and-forget)."""
+        msg = Message(
             type=MessageType.LOGIN,
             payload={"username": self.username, "password": password},
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
-        return self._send_message_no_response(message)
+        return self._send_message_no_response(msg)
 
     def delete_account(self) -> bool:
-        """Delete the current account."""
+        """Delete the current account (fire-and-forget)."""
         if not self.logged_in:
-            print("Must be logged in to delete account")
+            print("Must be logged in to delete account.")
             return False
 
-        message = Message(
+        msg = Message(
             type=MessageType.DELETE_ACCOUNT,
             payload={},
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
-        return self._send_message_no_response(message)
+        return self._send_message_no_response(msg)
 
     def send_message(self, recipient: str, text: str) -> bool:
         """Send a message to another user."""
         if not self.logged_in:
-            print("Must be logged in to send messages")
+            print("Must be logged in to send messages.")
             return False
 
-        message = Message(
+        msg = Message(
             type=MessageType.SEND_MESSAGE,
             payload={"text": text},
             sender=self.username,
             recipient=recipient,
             timestamp=time.time(),
         )
-        return self._send_message_no_response(message)
+        return self._send_message_no_response(msg)
 
     def receive_messages(self) -> None:
-        """Continuously read inbound messages using length framing."""
+        """Continuously read inbound messages from the server (push + response)."""
         while self.running:
             try:
                 length_bytes = self.socket.recv(4)
@@ -135,10 +206,25 @@ class ChatClient:
                 message = self.protocol.deserialize(message_data)
                 text = message.payload.get("text", "")
 
+                if message.type in [
+                    MessageType.SUCCESS,
+                    MessageType.ERROR,
+                    MessageType.LIST_ACCOUNTS,
+                    MessageType.READ_MESSAGES,
+                    MessageType.DELETE_MESSAGES,
+                    MessageType.LIST_CHAT_PARTNERS,
+                ]:
+                    with self.response_lock:
+                        self.last_response = message
+
+                if message.type == MessageType.SEND_MESSAGE:
+                    self.incoming_messages_queue.put(message)
+
                 if message.type == MessageType.SUCCESS:
-                    print("message received is:", text)
-                    if "Login successful" or "Account created" in text:
+                    if ("Login successful" in text) or ("Account created" in text):
                         self.logged_in = True
+
+                if message.type == MessageType.SUCCESS:
                     print(f"[SUCCESS] {text}")
                 elif message.type == MessageType.ERROR:
                     print(f"[ERROR] {text}")
@@ -164,8 +250,40 @@ class ChatClient:
             print(f"Error closing connection: {e}")
 
 
+def list_accounts(client: ChatClient, pattern: str = "", page: int = 1) -> None:
+    msg = Message(
+        type=MessageType.LIST_ACCOUNTS,
+        payload={"pattern": pattern, "page": page},
+        sender=client.username,
+        recipient="SERVER",
+        timestamp=time.time(),
+    )
+    client._send_message_no_response(msg)
+
+
+def read_messages(client: ChatClient, offset: int = 0, limit: int = 10) -> None:
+    msg = Message(
+        type=MessageType.READ_MESSAGES,
+        payload={"offset": offset, "limit": limit},
+        sender=client.username,
+        recipient="SERVER",
+        timestamp=time.time(),
+    )
+    client._send_message_no_response(msg)
+
+
+def delete_messages(client: ChatClient, message_ids: List[int]) -> None:
+    msg = Message(
+        type=MessageType.DELETE_MESSAGES,
+        payload={"message_ids": message_ids},
+        sender=client.username,
+        recipient="SERVER",
+        timestamp=time.time(),
+    )
+    client._send_message_no_response(msg)
+
+
 def get_password(prompt: str) -> str:
-    """Securely get password from user."""
     while True:
         password = getpass.getpass(prompt)
         if len(password) >= 6:
@@ -213,24 +331,22 @@ if __name__ == "__main__":
             print("Press Ctrl+C to quit")
 
             while True:
-                message = input()
-                if not message:
+                msg_input = input()
+                if not msg_input:
                     break
 
-                if message.strip().lower() == "!delete":
-                    if (
-                        input("Are you sure you want to delete your account? (yes/no): ").lower()
-                        == "yes"
-                    ):
+                if msg_input.strip().lower() == "!delete":
+                    confirm = input("Are you sure you want to delete your account? (yes/no): ")
+                    if confirm.lower() == "yes":
                         client.delete_account()
                         break
                     continue
 
-                if "," not in message:
+                if "," not in msg_input:
                     print("Invalid format. Use: <recipient>,<message>")
                     continue
 
-                recipient, text = message.split(",", 1)
+                recipient, text = msg_input.split(",", 1)
                 client.send_message(recipient, text)
         else:
             print("Could not connect to server.")
