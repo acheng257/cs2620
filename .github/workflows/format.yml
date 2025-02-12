@@ -25,4 +25,4 @@ jobs:
         run: black . --config=./pyproject.toml --check
         
       - name: Check imports with isort
-        run: isort . --config=./pyproject.toml --check-only --profile black 
+        run: isort . --settings-file=./pyproject.toml --check-only --profile black 
