@@ -174,6 +174,14 @@ pytest --cov=protocols
 pytest --cov=protocols --cov-report=html
 ```
 
+| Name                              | Stmts | Miss | Cover |
+|-----------------------------------|-------|------|-------|
+| src/client.py                     |   135 |   23 |   83% |
+| src/protocols/base.py             |    32 |    0 |  100% |
+| src/protocols/binary_protocol.py  |    37 |    0 |  100% |
+| src/protocols/json_protocol.py    |    16 |    0 |  100% |
+| src/server.py                     |   315 |   87 |   72% |
+
 #### Running Specific Tests
 
 1. Run tests from a specific file:

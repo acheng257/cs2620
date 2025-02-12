@@ -7,7 +7,7 @@ import pytest
 
 from src.protocols.base import Message, MessageType
 from src.protocols.json_protocol import JsonProtocol
-from src.server import ChatServer, ClientConnection
+from src.server import ChatServer, ClientConnection, User
 
 
 @pytest.fixture
@@ -565,6 +565,170 @@ class TestChatServer:
             type=MessageType.LIST_CHAT_PARTNERS,
             payload={},
             sender=None,
+            recipient=None,
+        )
+
+        server.handle_list_chat_partners(client_socket, message)
+        assert client_socket.sendall.call_count == 2  # Error response sent
+
+    def test_user_dataclass(self) -> None:
+        """Test User dataclass functionality."""
+        user = User(username="test", password_hash=b"hash", messages=[])
+        assert user.username == "test"
+        assert user.password_hash == b"hash"
+        assert user.messages == []
+
+    def test_client_connection_dataclass(self) -> None:
+        """Test ClientConnection dataclass functionality."""
+        socket_mock = Mock()
+        protocol = JsonProtocol()
+        conn = ClientConnection(socket=socket_mock, protocol=protocol)
+        assert conn.socket == socket_mock
+        assert conn.protocol == protocol
+        assert conn.username is None
+
+    def test_receive_all_partial_data(self, server: ChatServer) -> None:
+        """Test receiving data in chunks."""
+        client_socket = Mock()
+        client_socket.recv.side_effect = [b"pa", b"rt", b"ial"]
+        data = server.receive_all(client_socket, 7)
+        assert data == b"partial"
+        assert client_socket.recv.call_count == 3
+
+    def test_receive_all_connection_error(self, server: ChatServer) -> None:
+        """Test receive_all with connection error."""
+        client_socket = Mock()
+        client_socket.recv.side_effect = ConnectionError("Connection lost")
+        data = server.receive_all(client_socket, 5)
+        assert data is None
+
+    def test_receive_all_empty_data(self, server: ChatServer) -> None:
+        """Test receive_all with empty data (connection closed)."""
+        client_socket = Mock()
+        client_socket.recv.return_value = b""
+        data = server.receive_all(client_socket, 5)
+        assert data is None
+
+    def test_handle_client_connection_lost(self, server: ChatServer) -> None:
+        """Test handling client when connection is lost."""
+        client_socket = Mock()
+        protocol = JsonProtocol()
+        server.active_connections[client_socket] = ClientConnection(
+            socket=client_socket, protocol=protocol, username="test_user"
+        )
+        client_socket.recv.return_value = b""  # Simulate connection closed
+
+        server.handle_client(client_socket)
+        assert client_socket not in server.active_connections
+
+    def test_deliver_undelivered_messages_invalid_timestamp(
+        self, server: ChatServer, mock_db: Mock
+    ) -> None:
+        """Test delivering messages with invalid timestamp."""
+        client_socket = Mock()
+        protocol = JsonProtocol()
+        server.active_connections[client_socket] = ClientConnection(
+            socket=client_socket, protocol=protocol, username="test_user"
+        )
+        server.username_to_socket["test_user"] = client_socket
+
+        mock_db.get_undelivered_messages.return_value = [
+            {"id": 1, "from": "sender", "content": "Hello!", "timestamp": "invalid"}
+        ]
+
+        server.deliver_undelivered_messages("test_user")
+        assert client_socket.sendall.call_count == 2  # Message still sent with current timestamp
+
+    def test_handle_client_protocol_error(self, server: ChatServer) -> None:
+        """Test handling protocol deserialization error."""
+        client_socket = Mock()
+        protocol = JsonProtocol()
+        server.active_connections[client_socket] = ClientConnection(
+            socket=client_socket, protocol=protocol, username="test_user"
+        )
+
+        # Mock receiving invalid protocol data
+        client_socket.recv.side_effect = [
+            (4).to_bytes(4, "big"),  # Length prefix
+            b"invalid",  # Invalid protocol data
+        ]
+
+        server.handle_client(client_socket)
+        assert client_socket not in server.active_connections
+
+    def test_send_message_to_socket_no_connection(self, server: ChatServer) -> None:
+        """Test sending message to socket with no connection."""
+        client_socket = Mock()
+        message = Message(
+            type=MessageType.SUCCESS,
+            payload={"text": "test"},
+            sender="SERVER",
+            recipient="test_user",
+        )
+
+        server.send_message_to_socket(client_socket, message)
+        client_socket.sendall.assert_not_called()
+
+    def test_handle_read_messages_db_error(
+        self, server: ChatServer, mock_socket: Mock, mock_db: Mock
+    ) -> None:
+        """Test handling database error during message reading."""
+        client_socket = Mock()
+        protocol = JsonProtocol()
+        server.active_connections[client_socket] = ClientConnection(
+            socket=client_socket, protocol=protocol, username="test_user"
+        )
+
+        mock_db.get_messages_between_users.side_effect = Exception("Database error")
+
+        message = Message(
+            type=MessageType.READ_MESSAGES,
+            payload={"otherUser": "other_user"},
+            sender="test_user",
+            recipient=None,
+        )
+
+        server.handle_read_messages(client_socket, message)
+        assert client_socket.sendall.call_count == 2  # Error response sent
+
+    def test_handle_delete_messages_db_error(
+        self, server: ChatServer, mock_socket: Mock, mock_db: Mock
+    ) -> None:
+        """Test handling database error during message deletion."""
+        client_socket = Mock()
+        protocol = JsonProtocol()
+        server.active_connections[client_socket] = ClientConnection(
+            socket=client_socket, protocol=protocol, username="test_user"
+        )
+
+        mock_db.delete_messages.side_effect = Exception("Database error")
+
+        message = Message(
+            type=MessageType.DELETE_MESSAGES,
+            payload={"message_ids": [1, 2, 3]},
+            sender="test_user",
+            recipient=None,
+        )
+
+        server.handle_delete_messages(client_socket, message)
+        assert client_socket.sendall.call_count == 2  # Error response sent
+
+    def test_handle_list_chat_partners_db_error(
+        self, server: ChatServer, mock_socket: Mock, mock_db: Mock
+    ) -> None:
+        """Test handling database error during chat partner listing."""
+        client_socket = Mock()
+        protocol = JsonProtocol()
+        server.active_connections[client_socket] = ClientConnection(
+            socket=client_socket, protocol=protocol, username="test_user"
+        )
+
+        mock_db.get_chat_partners.side_effect = Exception("Database error")
+
+        message = Message(
+            type=MessageType.LIST_CHAT_PARTNERS,
+            payload={},
+            sender="test_user",
             recipient=None,
         )
 
