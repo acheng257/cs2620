@@ -167,3 +167,171 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error marking messages as read: {e}")
             return False
+
+    def list_accounts(self, pattern: str = "", page: int = 1, per_page: int = 10):
+        """
+        Return a dict with keys {users, total, page, per_page},
+        where 'users' is a list of matching usernames.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                like_pattern = f"%{pattern}%"
+
+                # Count total
+                cursor.execute(
+                    "SELECT COUNT(*) FROM accounts WHERE username LIKE ?",
+                    (like_pattern,),
+                )
+                total_count = cursor.fetchone()[0]
+
+                offset = (page - 1) * per_page
+
+                cursor.execute(
+                    """
+                    SELECT username FROM accounts
+                    WHERE username LIKE ?
+                    ORDER BY username
+                    LIMIT ? OFFSET ?
+                    """,
+                    (like_pattern, per_page, offset),
+                )
+                rows = cursor.fetchall()
+
+                return {
+                    "users": [r[0] for r in rows],
+                    "total": total_count,
+                    "page": page,
+                    "per_page": per_page,
+                }
+        except Exception as e:
+            print(f"Error listing accounts: {e}")
+            return {"users": [], "total": 0, "page": page, "per_page": per_page}
+
+    def get_messages_for_user(self, username: str, offset: int = 0, limit: int = 10):
+        """
+        Return a dict with keys {messages, total}.
+        Each entry in 'messages' looks like:
+        {id, from, to, content, timestamp, is_read}.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+
+                # Count total
+                cursor.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM messages
+                    WHERE sender = ? OR recipient = ?
+                    """,
+                    (username, username),
+                )
+                total_count = cursor.fetchone()[0]
+
+                cursor.execute(
+                    """
+                    SELECT id, sender, recipient, content, timestamp, read
+                    FROM messages
+                    WHERE sender = ? OR recipient = ?
+                    ORDER BY timestamp ASC
+                    LIMIT ? OFFSET ?
+                    """,
+                    (username, username, limit, offset),
+                )
+                rows = cursor.fetchall()
+
+                messages = []
+                for row in rows:
+                    msg_id, sender, recipient, content, ts, read_status = row
+                    messages.append({
+                        "id": msg_id,
+                        "from": sender,
+                        "to": recipient,
+                        "content": content,
+                        "timestamp": ts,
+                        "is_read": bool(read_status),
+                    })
+
+                return {"messages": messages, "total": total_count}
+        except Exception as e:
+            print(f"Error getting messages for user: {e}")
+            return {"messages": [], "total": 0}
+
+    def delete_messages(self, username: str, message_ids: List[int]) -> bool:
+        """
+        Delete messages by ID if the user is either the sender or recipient.
+        """
+        if not message_ids:
+            return True
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+
+                placeholders = ",".join("?" for _ in message_ids)
+                query = f"""
+                    DELETE FROM messages
+                    WHERE id IN ({placeholders})
+                      AND (sender = ? OR recipient = ?)
+                """
+                params = list(message_ids) + [username, username]
+                cursor.execute(query, params)
+                conn.commit()
+
+                # rowcount is the number of rows actually deleted
+                return (cursor.rowcount > 0)
+        except Exception as e:
+            print(f"Error deleting messages: {e}")
+            return False
+        
+    def get_messages_between_users(self, user1: str, user2: str,
+                                   offset: int = 0, limit: int = 100):
+        """
+        Return a dict with { "messages": [...], "total": N } 
+        Only messages where (sender=user1, recipient=user2) or 
+        (sender=user2, recipient=user1).
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Count total
+                cursor.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM messages
+                    WHERE (sender = ? AND recipient = ?)
+                       OR (sender = ? AND recipient = ?)
+                    """,
+                    (user1, user2, user2, user1),
+                )
+                total_count = cursor.fetchone()[0]
+
+                # Fetch them in chronological order
+                cursor.execute(
+                    """
+                    SELECT id, sender, recipient, content, timestamp, read
+                    FROM messages
+                    WHERE (sender = ? AND recipient = ?)
+                       OR (sender = ? AND recipient = ?)
+                    ORDER BY timestamp ASC
+                    LIMIT ? OFFSET ?
+                    """,
+                    (user1, user2, user2, user1, limit, offset),
+                )
+                rows = cursor.fetchall()
+                messages = []
+                for row in rows:
+                    msg_id, sender, recipient, content, ts, read_status = row
+                    messages.append({
+                        "id": msg_id,
+                        "from": sender,
+                        "to": recipient,
+                        "content": content,
+                        "timestamp": ts,
+                        "is_read": bool(read_status),
+                    })
+                return {"messages": messages, "total": total_count}
+        except Exception as e:
+            print(f"Error getting messages between {user1} and {user2}: {e}")
+            return {"messages": [], "total": 0}
+
