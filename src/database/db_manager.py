@@ -1,6 +1,6 @@
 # db_manager.py
 import sqlite3
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 import bcrypt
 
@@ -131,13 +131,16 @@ class DatabaseManager:
             print(f"Error checking user existence: {e}")
             return False
 
-    def store_message(self, sender: str, recipient: str, content: str, is_delivered: bool = True) -> bool:
+    def store_message(
+        self, sender: str, recipient: str, content: str, is_delivered: bool = True
+    ) -> bool:
         """Store a message in the database, with option to mark as undelivered."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO messages (sender, recipient, content, is_delivered, is_read) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO messages (sender, recipient, content, is_delivered, \
+                        is_read) VALUES (?, ?, ?, ?, ?)",
                     (sender, recipient, content, is_delivered, False),
                 )
                 conn.commit()
@@ -146,9 +149,7 @@ class DatabaseManager:
             print(f"Error storing message: {e}")
             return False
 
-    def mark_messages_as_read(
-        self, username: str, message_ids: Optional[List[int]] = None
-    ) -> bool:
+    def mark_messages_as_read(self, username: str, message_ids: Optional[List[int]] = None) -> bool:
         """Mark messages as read. If no message_ids provided, mark all as read."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -156,7 +157,8 @@ class DatabaseManager:
                 if message_ids:
                     # Must build a parameterized query carefully
                     placeholder = ",".join("?" for _ in message_ids)
-                    query = f"UPDATE messages SET is_read = TRUE WHERE recipient = ? AND id IN ({placeholder})"
+                    query = f"UPDATE messages SET is_read = TRUE WHERE \
+                        recipient = ? AND id IN ({placeholder})"
                     params = [username] + message_ids
                     cursor.execute(query, params)
                 else:
@@ -320,7 +322,8 @@ class DatabaseManager:
         self, user1: str, user2: str, offset: int = 0, limit: int = 999999
     ) -> Dict[str, Any]:
         """
-        Return the conversation between user1 and user2, newest first in DB results (then we can reverse if desired).
+        Return the conversation between user1 and user2, newest first in \
+            DB results (then we can reverse if desired).
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -366,7 +369,7 @@ class DatabaseManager:
             print(f"Error in get_messages_between_users pagination: {e}")
             return {"messages": [], "total": 0}
 
-    def get_unread_between_users(self, user1: str, user2: str) -> int:
+    def get_unread_between_users(self, user1: str, user2: str) -> Any:
         """
         Return how many messages sent from user2 to user1 are still marked
         as unread for user1.
@@ -437,7 +440,7 @@ class DatabaseManager:
             print(f"Error marking message {message_id} as delivered: {e}")
             return False
 
-    def get_last_message_id(self, sender: str, recipient: str) -> int:
+    def get_last_message_id(self, sender: str, recipient: str) -> Any:
         """Get the ID of the most recent message between two users."""
         try:
             with sqlite3.connect(self.db_path) as conn:

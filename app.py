@@ -1,6 +1,7 @@
 import datetime
 import threading
 import time
+from typing import Dict, List, Tuple
 
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
@@ -43,7 +44,7 @@ def init_session_state() -> None:
         st.session_state.client_connected = False  # Track client connection status
 
 
-def get_chat_client() -> ChatClient:
+def get_chat_client() -> ChatClient | None:
     """
     Initialize and return a ChatClient based on the session state.
     This function ensures that the client is reinitialized upon refresh if needed.
@@ -60,7 +61,7 @@ def get_chat_client() -> ChatClient:
                 username=st.session_state.username,
                 protocol_type=protocol_type,
                 host=host,
-                port=port
+                port=port,
             )
             connected = client.connect()
             if connected:
@@ -167,7 +168,7 @@ def fetch_accounts(pattern: str = "", page: int = 1) -> None:
         st.warning("Client is not connected.")
 
 
-def fetch_chat_partners():
+def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
     """
     Fetch chat partners and their corresponding unread message counts.
     Updates the session state's unread_map.
@@ -265,9 +266,7 @@ def process_incoming_realtime_messages() -> None:
                             }
                         )
                         # Mark messages as read
-                        client.read_conversation_sync(
-                            st.session_state.current_chat, 0, 100000
-                        )
+                        client.read_conversation_sync(st.session_state.current_chat, 0, 100000)
                     else:
                         # Increment unread count for the sender
                         if sender in st.session_state.unread_map:
@@ -390,7 +389,7 @@ def render_chat_page() -> None:
             st.rerun()
 
         # Scrollable chat container
-        chat_html = f"""
+        chat_html = """
         <div style="height:400px; overflow-y:scroll; padding:0.5rem;" id="chat-container">
         """
         if st.session_state.messages:
@@ -399,9 +398,8 @@ def render_chat_page() -> None:
                 sender = msg.get("sender")
                 text = msg.get("text")
                 ts = msg.get("timestamp", time.time())
-                is_read = msg.get("is_read", True)
-                is_delivered = msg.get("is_delivered", True)
-                msg_id = msg.get("id")
+                # is_read = msg.get("is_read", True)
+                # is_delivered = msg.get("is_delivered", True)
 
                 # Convert timestamp to a readable string
                 if isinstance(ts, str):
@@ -413,12 +411,10 @@ def render_chat_page() -> None:
                 else:
                     epoch = float(ts)
 
-                formatted_timestamp = time.strftime(
-                    "%Y-%m-%d %H:%M:%S", time.localtime(epoch)
-                )
+                formatted_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
                 sender_name = "You" if sender == st.session_state.username else sender
-                read_indicator = "✓" if is_read else "✗"
-                delivered_indicator = "✓" if is_delivered else "☐"
+                # read_indicator = "✓" if is_read else "✗"
+                # delivered_indicator = "✓" if is_delivered else "☐"
 
                 chat_html += (
                     f"<p><strong>{sender_name}</strong> [{formatted_timestamp}]: {text}</p>"
@@ -472,9 +468,7 @@ def render_chat_page() -> None:
             else:
                 client = get_chat_client()
                 if client:
-                    success = client.send_message(
-                        st.session_state.current_chat, new_msg
-                    )
+                    success = client.send_message(st.session_state.current_chat, new_msg)
                     if success:
                         st.success("Message sent.")
                         st.session_state["clear_message_area"] = True
@@ -531,9 +525,7 @@ def main() -> None:
             port = 54400
 
             # Initialize ChatClient with selected protocol
-            client = ChatClient(
-                username="", protocol_type=protocol_type, host=host, port=port
-            )
+            client = ChatClient(username="", protocol_type=protocol_type, host=host, port=port)
             connected = client.connect()
             if connected:
                 st.session_state.client = client

@@ -6,7 +6,7 @@ import socket
 import sys
 import threading
 import time
-from typing import Optional, List, Union
+from typing import List, Optional
 
 from protocols.base import Message, MessageType, Protocol
 from protocols.binary_protocol import BinaryProtocol
@@ -67,9 +67,7 @@ class ChatClient:
             print(f"Communication error: {e}")
             return False
 
-    def _send_message_and_wait(
-        self, message: Message, timeout: float = 10.0
-    ) -> Optional[Message]:
+    def _send_message_and_wait(self, message: Message, timeout: float = 10.0) -> Optional[Message]:
         """Send a message and wait for a response within a timeout."""
         with self.response_lock:
             self.last_response = None

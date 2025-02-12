@@ -89,7 +89,7 @@ class ChatServer:
             with self.lock:
                 self.username_to_socket[username] = client_socket
 
-            #Deliver any undelivered messages
+            # Deliver any undelivered messages
             self.deliver_undelivered_messages(username)
 
             # Get unread message counts for all chat partners
@@ -175,15 +175,21 @@ class ChatServer:
                 target_socket.send(length.to_bytes(4, "big"))
                 target_socket.send(data)
 
-                self.db.store_message(sender_username, target_username, message_content, True) #Store message and set delivered to True
-                self.db.mark_message_as_delivered(self.db.get_last_message_id(sender_username, target_username)) #Mark message as delivered
+                self.db.store_message(
+                    sender_username, target_username, message_content, True
+                )  # Store message and set delivered to True
+                self.db.mark_message_as_delivered(
+                    self.db.get_last_message_id(sender_username, target_username)
+                )  # Mark message as delivered
             except Exception as e:
                 print(f"Error sending to user {target_username}: {e}")
                 self.remove_client(target_socket)
 
         else:
             # Store message as undelivered
-            self.db.store_message(sender_username, target_username, message_content, False) #Store message and set delivered to False
+            self.db.store_message(
+                sender_username, target_username, message_content, False
+            )  # Store message and set delivered to False
             print(f"User {target_username} is offline. Message stored as undelivered.")
 
     def handle_client(self, client_socket: socket.socket) -> None:
@@ -215,8 +221,9 @@ class ChatServer:
                     self.handle_create_account(client_socket, message)
                 elif message.type == MessageType.LOGIN:
                     self.handle_login(client_socket, message)
-                    connection = self.active_connections[client_socket] # re-acquire connection
-                    self.deliver_undelivered_messages(connection.username) # deliver messages
+                    connection = self.active_connections[client_socket]  # re-acquire connection
+                    username = connection.username if connection.username else ""
+                    self.deliver_undelivered_messages(username)  # deliver messages
                 elif message.type == MessageType.DELETE_ACCOUNT:
                     self.handle_delete_account(client_socket, message)
                 elif message.type == MessageType.SEND_MESSAGE:
