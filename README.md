@@ -1,6 +1,127 @@
-# CS262 Wire Protocols Project
+# Chat Application with Custom Wire Protocol
 
-This project implements a client-server chat application with support for multiple wire protocols (JSON and Binary).
+A client-server chat application that implements both a custom wire protocol and JSON-based communication for message exchange. This project was developed as part of Harvard's CS262 course.
+
+## Overview
+
+This chat application allows users to create accounts, send messages, and manage their communications through a centralized server. The system implements two different wire protocols for comparison: a custom binary protocol optimized for efficiency, and a JSON-based protocol for readability and compatibility.
+
+## Features
+
+- **Account Management**
+  - Create new accounts with password protection
+  - Login with secure password verification
+  - Delete accounts with configurable message handling
+  - List accounts with pattern matching
+
+- **Messaging Capabilities**
+  - Send messages to other users
+  - Real-time message delivery for online users
+  - Message queuing for offline users
+  - Configurable message retrieval (specify number of messages)
+  - Message deletion functionality
+
+## Technical Implementation
+
+### Architecture
+
+The application follows a client-server architecture with the following components:
+
+1. **Server**
+   - Handles multiple concurrent client connections
+   - Manages user authentication and session state
+   - Implements message routing and storage
+   - Supports both wire protocol implementations
+
+2. **Client**
+   - Provides a graphical user interface
+   - Handles user input and display
+   - Implements protocol serialization/deserialization
+   - Manages connection state and reconnection
+
+### Wire Protocols
+
+#### Custom Binary Protocol
+Our custom protocol is designed for efficiency with minimal overhead:
+- Fixed-length headers for quick parsing
+- Binary encoding for numeric values
+- Length-prefixed variable data
+- Optimized message types for common operations
+
+#### JSON Protocol
+The JSON implementation provides:
+- Human-readable message format
+- Standard encoding/decoding
+- Easy debugging and monitoring
+- Compatibility with existing tools
+
+### Security Features
+
+- Passwords are never transmitted in plaintext
+- Session-based authentication
+- Input validation and sanitization
+- Secure message storage
+
+## Getting Started
+
+### Prerequisites
+
+1. Install Pipenv if you haven't already:
+```bash
+pip install pipenv
+```
+
+2. Install project dependencies:
+```bash
+# Clone the repository
+git clone [repository-url]
+cd cs2620
+
+# Install dependencies using Pipenv
+pipenv install
+
+# Install development dependencies (for testing)
+pipenv install --dev
+```
+
+### Running the Server
+
+```bash
+# Activate the virtual environment
+pipenv shell
+
+# Run the server
+python server.py [--port PORT] [--protocol {binary,json}]
+```
+
+### Running the Client
+
+```bash
+# Activate the virtual environment (if not already activated)
+pipenv shell
+
+# Run the client
+python client.py [--host HOST] [--port PORT] [--protocol {binary,json}]
+```
+
+### Running the Streamlit Interface
+
+The application provides a modern web interface using Streamlit for a better user experience:
+
+```bash
+# Activate the virtual environment (if not already activated)
+pipenv shell
+
+# Run the Streamlit app
+streamlit run app.py
+
+# The app will automatically open in your default web browser
+# Default URL: http://localhost:8501
+```
+
+## Configuration
+
+The application can be configured through command-line arguments like shown in the previous section.
 
 ## Testing Guide
 
@@ -133,19 +254,12 @@ When adding new tests:
 
 The project uses GitHub Actions for CI/CD with three main workflows:
 
-1. **Test Workflow** (`test.yml`):
-   - Runs the test suite on all branches and PRs
-   - Generates and uploads coverage reports to Codecov
-   - Creates a dynamic coverage badge
-   - Archives test results as artifacts
-   - Runs on Python 3.13
-
-2. **Lint Workflow** (`lint.yml`):
+1. **Lint Workflow** (`lint.yml`):
    - Runs flake8 for code style checking
    - Performs type checking with mypy
    - Ensures code quality standards are met
 
-3. **Format Workflow** (`format.yml`):
+2. **Format Workflow** (`format.yml`):
    - Checks code formatting with black
    - Verifies import ordering with isort
    - Maintains consistent code style
@@ -153,12 +267,6 @@ The project uses GitHub Actions for CI/CD with three main workflows:
 The workflows run automatically on:
 - Every push to any branch
 - Pull request creation/updates to main branch
-
-Status badges:
-![Tests](https://github.com/YOUR_USERNAME/cs2620/actions/workflows/test.yml/badge.svg)
-![Coverage](https://img.shields.io/codecov/c/github/YOUR_USERNAME/cs2620)
-![Lint](https://github.com/YOUR_USERNAME/cs2620/actions/workflows/lint.yml/badge.svg)
-![Format](https://github.com/YOUR_USERNAME/cs2620/actions/workflows/format.yml/badge.svg)
 
 ### Common Issues and Solutions
 
@@ -182,3 +290,54 @@ Status badges:
 3. Write descriptive test names and docstrings
 4. Test both success and failure cases
 5. Keep tests independent and isolated
+
+## Linting and Formatting
+
+The project uses black and isort for code formatting, and flake8 and mypy for linting. The configuration is in `pyproject.toml`.
+
+```bash
+# Run code formatting
+black . --config=./pyproject.toml
+isort . --settings-file=./pyproject.toml
+
+# Run linting
+flake8 . --count --max-line-length=100 --statistics
+mypy . --config=./pyproject.toml --ignore-missing-imports
+```
+
+## Protocol Comparison (TODO)
+
+### Message Size Comparison
+| Operation          | Binary Protocol | JSON Protocol |
+|-------------------|-----------------|---------------|
+| Login Request     | XX bytes        | YY bytes      |
+| Message Send      | XX bytes        | YY bytes      |
+| Account List      | XX bytes        | YY bytes      |
+
+### Performance Implications
+- Binary protocol reduces network bandwidth
+- JSON protocol easier to debug and modify
+- Tradeoff between efficiency and maintainability
+
+## Project Structure
+
+```
+.
+├── pyproject.toml
+├── Pipfile
+├── Pipfile.lock
+├── tests/
+│   ├── test_server.py
+│   └── test_client.py
+├── README.md
+├── app.py
+├── server.py
+├── client.py
+├── protocols/
+│   ├── binary_protocol.py
+│   ├── json_protocol.py
+│   └── base.py
+└── src/
+    └── database/
+        └── db_manager.py
+```
