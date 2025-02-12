@@ -224,16 +224,6 @@ class ChatClient:
                     if ("Login successful" in text) or ("Account created" in text):
                         self.logged_in = True
 
-                # Remove the duplicated console output
-                # if message.type == MessageType.SUCCESS:
-                #     print(f"[SUCCESS] {text}")
-                # elif message.type == MessageType.ERROR:
-                #     print(f"[ERROR] {text}")
-                # elif message.sender == "SERVER":
-                #     print(f"[SERVER] {text}")
-                # else:
-                #     print(f"[{message.sender}] {text}")
-
             except Exception as e:
                 print(f"Error in receive thread: {e}")
                 break
@@ -301,9 +291,21 @@ if __name__ == "__main__":
         default="B",
         help="Which protocol to use: B = Binary, J = JSON",
     )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Server host to connect to (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=54400,
+        help="Server port to connect to (default: 54400)",
+    )
     args = parser.parse_args()
 
-    client = ChatClient(username=args.username, protocol_type=args.protocol)
+    client = ChatClient(username=args.username, protocol_type=args.protocol, host=args.host, port=args.port)
 
     try:
         if client.connect():

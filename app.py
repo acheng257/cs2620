@@ -42,6 +42,10 @@ def init_session_state() -> None:
         st.session_state.input_text = ""
     if "client_connected" not in st.session_state:
         st.session_state.client_connected = False  # Track client connection status
+    if "server_host" not in st.session_state:
+        st.session_state.server_host = ""  # Initialize as empty to enforce user input
+    if "server_port" not in st.session_state:
+        st.session_state.server_port = 54400  # Default port; users can change as needed
 
 
 def get_chat_client() -> ChatClient | None:
@@ -51,11 +55,15 @@ def get_chat_client() -> ChatClient | None:
     """
     if "client" not in st.session_state or st.session_state.client is None:
         if st.session_state.logged_in and st.session_state.username:
-            # Reinitialize the client with stored protocol and username
+            # Reinitialize the client with stored protocol, username, host, and port
             protocol_map = {"JSON": "J", "Binary": "B"}
             protocol_type = protocol_map.get(st.session_state.protocol, "J")
-            host = "127.0.0.1"
-            port = 54400
+            host = st.session_state.server_host
+            port = st.session_state.server_port
+
+            if not host:
+                st.error("Server host is not specified.")
+                return None
 
             client = ChatClient(
                 username=st.session_state.username,
@@ -81,6 +89,47 @@ def render_login_page() -> None:
     """Render the login and account creation interface."""
     st.title("Secure Chat - Login")
 
+    # Server Connection Settings
+    with st.expander("Server Settings", expanded=True):
+        server_host = st.text_input(
+            "Server Host",
+            value=st.session_state.server_host,
+            key="server_host_input",
+            help="Enter the server's IP address (e.g., 192.168.1.100)",
+        )
+        server_port = st.number_input(
+            "Server Port",
+            min_value=1,
+            max_value=65535,
+            value=st.session_state.server_port,
+            key="server_port_input",
+            help="Enter the server's port number (e.g., 54400)",
+        )
+        if st.button("Connect to Server"):
+            if not server_host:
+                st.warning("Please enter the server's IP address.")
+            else:
+                st.session_state.server_host = server_host
+                st.session_state.server_port = int(server_port)
+                st.session_state.client = None  # Reset client to force reinitialization
+                st.session_state.client_connected = False
+                # Attempt to connect immediately
+                client = ChatClient(
+                    username="",  # No username yet
+                    protocol_type="J" if st.session_state.protocol == "JSON" else "B",
+                    host=st.session_state.server_host,
+                    port=st.session_state.server_port,
+                )
+                if client.connect():
+                    st.session_state.client = client
+                    st.session_state.client_connected = True
+                    st.success("Connected to server successfully. You can now log in or create an account.")
+                else:
+                    st.error("Failed to connect to the server. Please check the IP address and port.")
+                st.rerun()
+
+    st.markdown("---")
+
     # Protocol Selection
     protocol_options = ["JSON", "Binary"]
     selected_protocol = st.selectbox(
@@ -100,7 +149,13 @@ def render_login_page() -> None:
         st.session_state.unread_map = {}
         st.session_state.client = None
         st.session_state.client_connected = False
+        st.warning("Protocol changed. Please reconnect to the server.")
         st.rerun()
+
+    # Ensure the client is connected before allowing login or account creation
+    if not st.session_state.client_connected:
+        st.warning("Please connect to the server before logging in or creating an account.")
+        return
 
     col1, col2 = st.columns(2)
     with col1:
@@ -121,7 +176,7 @@ def render_login_page() -> None:
                     else:
                         st.error("Login failed. Please check your credentials.")
                 else:
-                    st.error("Cannot initialize client. Please check your protocol settings.")
+                    st.error("Cannot initialize client. Please check your protocol and server settings.")
             else:
                 st.warning("Please enter both username and password.")
 
@@ -150,7 +205,7 @@ def render_login_page() -> None:
                     else:
                         st.error("Account creation failed. Username may already exist.")
                 else:
-                    st.error("Cannot initialize client. Please check your protocol settings.")
+                    st.error("Cannot initialize client. Please check your protocol and server settings.")
 
 
 def fetch_accounts(pattern: str = "", page: int = 1) -> None:
@@ -521,18 +576,22 @@ def main() -> None:
             protocol_map = {"JSON": "J", "Binary": "B"}
             protocol_type = protocol_map.get(st.session_state.protocol, "J")
 
-            host = "127.0.0.1"
-            port = 54400
+            host = st.session_state.server_host
+            port = st.session_state.server_port
 
-            # Initialize ChatClient with selected protocol
-            client = ChatClient(username="", protocol_type=protocol_type, host=host, port=port)
-            connected = client.connect()
-            if connected:
-                st.session_state.client = client
-                st.session_state.client_connected = True
+            if not host:
+                st.warning("Please connect to the server to proceed.")
             else:
-                st.error("Failed to connect to server.")
-                return
+                # Initialize ChatClient with selected protocol, host, and port
+                client = ChatClient(username="", protocol_type=protocol_type, host=host, port=port)
+                connected = client.connect()
+                if connected:
+                    st.session_state.client = client
+                    st.session_state.client_connected = True
+                else:
+                    st.session_state.client = None
+                    st.session_state.client_connected = False
+                    st.error("Failed to connect to server. Please check the server settings.")
 
     if not st.session_state.logged_in:
         render_login_page()
