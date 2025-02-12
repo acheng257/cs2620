@@ -124,6 +124,11 @@ class ChatServer:
             self.send_response(client_socket, MessageType.ERROR, "Username and password required.")
             return
 
+        # New: Check if the account exists before verifying the password.
+        if not self.db.user_exists(username):
+            self.send_response(client_socket, MessageType.ERROR, "Account does not exist.")
+            return
+
         if self.db.verify_login(username, password):
             with self.lock:
                 connection = self.active_connections.get(client_socket)
@@ -131,20 +136,17 @@ class ChatServer:
                     connection.username = username
                     self.username_to_socket[username] = client_socket
 
-            # Send login success before delivering messages to ensure prompt response
+            # Return login success message along with the unread message count.
             unread_count = self.db.get_unread_message_count(username)
-            self.send_response(
-                client_socket,
-                MessageType.SUCCESS,
-                f"Login successful. You have {unread_count} unread messages.",
-            )
+            self.send_response(client_socket, MessageType.SUCCESS, f"Login successful. You have {unread_count} unread messages.")
             print(f"[INFO] User '{username}' logged in successfully.")
 
-            # Deliver any undelivered messages
+            # Deliver any undelivered messages.
             self.deliver_undelivered_messages(username)
         else:
             self.send_response(client_socket, MessageType.ERROR, "Invalid username or password.")
             print(f"[WARNING] Failed login attempt for user: {username}")
+
 
     def handle_delete_account(self, client_socket: socket.socket, message: Message) -> None:
         """Handle account deletion request."""
