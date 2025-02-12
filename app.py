@@ -1,5 +1,3 @@
-# app.py
-
 import datetime
 import threading
 import time
@@ -58,6 +56,9 @@ def init_session_state() -> None:
         st.session_state.fetch_chat_partners = False  # New flag
     if "pending_deletions" not in st.session_state:
         st.session_state.pending_deletions = []  # List of message IDs pending deletion
+    # add a state to record the message ids being displayed currently
+    if "displayed_messages" not in st.session_state:
+        st.session_state.displayed_messages = []
 
 
 def get_chat_client() -> Optional[ChatClient]:
@@ -173,6 +174,7 @@ def render_login_page() -> None:
         st.session_state.error_message = ""  # Clear error messages
         st.session_state.fetch_chat_partners = False  # Reset flag
         st.session_state.pending_deletions = []  # Clear pending deletions
+        st.session_state.displayed_messages = []
         st.warning("Protocol changed. Please reconnect to the server.")
         # No rerun; user can reconnect manually
 
@@ -346,9 +348,11 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
                     if offset == 0:
                         # Reset messages for a new conversation
                         st.session_state.messages = new_messages
+                        st.session_state.displayed_messages = new_messages
                     else:
                         # Prepend older messages
                         st.session_state.messages = new_messages + st.session_state.messages
+                        st.session_state.displayed_messages = new_messages + st.session_state.displayed_messages
 
                     st.session_state.messages_offset = offset
                     st.session_state.messages_limit = limit
@@ -385,6 +389,16 @@ def process_incoming_realtime_messages() -> None:
                         if st.session_state.current_chat == sender:
                             # If the current chat is open, append the message and mark as read
                             st.session_state.messages.append(
+                                {
+                                    "sender": sender,
+                                    "text": text,
+                                    "timestamp": timestamp,
+                                    "is_read": True,
+                                    "is_delivered": True,
+                                    "id": msg_id,
+                                }
+                            )
+                            st.session_state.displayed_messages.append(
                                 {
                                     "sender": sender,
                                     "text": text,
@@ -497,6 +511,7 @@ def render_sidebar() -> None:
                             st.session_state.server_connected = False
                             st.session_state.error_message = ""  # Clear error messages
                             st.session_state.pending_deletions = []  # Clear pending deletions
+                            st.session_state.displayed_messages = []
                             st.success("Account deleted successfully.")
                         else:
                             st.error("Failed to delete account.")
@@ -517,6 +532,7 @@ def render_sidebar() -> None:
             st.session_state.server_connected = False
             st.session_state.error_message = ""  # Clear error messages
             st.session_state.pending_deletions = []  # Clear pending deletions
+            st.session_state.displayed_messages = []
             st.success("Logged out successfully.")
 
 
@@ -547,94 +563,101 @@ def render_chat_page_with_deletion() -> None:
         # Container for messages with deletion checkboxes on the side
         with st.container():
             # Step 1: Select messages to delete
-            if not st.session_state.pending_deletions:
-                with st.form("select_messages_form"):
-                    selected_message_ids = []
-                    for msg in st.session_state.messages:
-                        sender = msg.get("sender")
-                        text = msg.get("text")
-                        ts = msg.get("timestamp", time.time())
-                        msg_id = msg.get("id")
+            with st.form("select_messages_form"):
+                selected_message_ids = []
+                # Iterate through displayed_messages instead of messages
+                for msg in st.session_state.displayed_messages:
+                    sender = msg.get("sender")
+                    text = msg.get("text")
+                    ts = msg.get("timestamp", time.time())
+                    msg_id = msg.get("id")
 
-                        # Convert timestamp to a readable string
-                        if isinstance(ts, str):
+                    # Convert timestamp to a readable string
+                    if isinstance(ts, str):
+                        try:
+                            dt = datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+                            epoch = dt.timestamp()
+                        except ValueError:
+                            epoch = time.time()
+                    else:
+                        try:
+                            epoch = float(ts)
+                        except (ValueError, TypeError):
+                            epoch = time.time()
+
+                    formatted_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
+                    sender_name = "You" if sender == st.session_state.username else sender
+
+                    # Display the message with checkbox on the right
+                    cols = st.columns([4, 1])
+                    with cols[0]:
+                        st.markdown(f"**{sender_name}** [{formatted_timestamp}]: {text}")
+                    with cols[1]:
+                        delete_checkbox = st.checkbox(
+                            "🗑️",
+                            key=f"delete_{msg_id}",
+                            help="Select to delete this message.",
+                            label_visibility="collapsed",
+                        )
+                        if delete_checkbox:
+                            selected_message_ids.append(msg_id)
+
+                # Submit button for deletion
+                submit_button = st.form_submit_button(label="Delete Selected Messages")
+
+                if submit_button:
+                    if selected_message_ids:
+                        # Store the selected message IDs in session_state
+                        st.session_state.pending_deletions = selected_message_ids
+                    else:
+                        st.warning("No messages selected for deletion.")
+
+        # Step 2: Confirm deletion
+        if st.session_state.pending_deletions:
+            st.markdown("### Confirm Deletion")
+            with st.form("confirm_deletion_form"):
+                confirm = st.checkbox(
+                    "Are you sure you want to delete the selected messages?", key="confirm_deletion"
+                )
+                confirm_button = st.form_submit_button("Confirm Deletion")
+                cancel_button = st.form_submit_button("Cancel")
+
+                if confirm_button:
+                    if confirm:
+                        client = get_chat_client()
+                        if client:
                             try:
-                                dt = datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
-                                epoch = dt.timestamp()
-                            except ValueError:
-                                epoch = time.time()
+                                st.write(f"Attempting to delete messages: {st.session_state.pending_deletions}")  # Debug
+                                success = client.delete_messages_sync(st.session_state.pending_deletions)
+                                st.write(f"Deletion success: {success}")  # Debug
+                                if success:
+                                    st.success("Selected messages have been deleted.")
+                                    # Remove deleted messages from displayed_messages
+                                    st.session_state.displayed_messages = [
+                                        msg
+                                        for msg in st.session_state.displayed_messages
+                                        if msg["id"] not in st.session_state.pending_deletions
+                                    ]
+
+                                else:
+                                    st.error("Failed to delete selected messages.")
+                            except Exception as e:
+                                st.error(f"An error occurred while deleting messages: {e}")
                         else:
-                            try:
-                                epoch = float(ts)
-                            except (ValueError, TypeError):
-                                epoch = time.time()
-
-                        formatted_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
-                        sender_name = "You" if sender == st.session_state.username else sender
-
-                        # Display the message with checkbox on the right
-                        cols = st.columns([4, 1])
-                        with cols[0]:
-                            st.markdown(f"**{sender_name}** [{formatted_timestamp}]: {text}")
-                        with cols[1]:
-                            delete_checkbox = st.checkbox(
-                                "🗑️",
-                                key=f"delete_{msg_id}",
-                                help="Select to delete this message.",
-                                label_visibility="collapsed",
-                            )
-                            if delete_checkbox:
-                                selected_message_ids.append(msg_id)
-
-                    # Submit button for deletion
-                    submit_button = st.form_submit_button(label="Delete Selected Messages")
-
-                    if submit_button:
-                        if selected_message_ids:
-                            # Store the selected message IDs in session_state
-                            st.session_state.pending_deletions = selected_message_ids
-                        else:
-                            st.warning("No messages selected for deletion.")
-
-            # Step 2: Confirm deletion
-            if st.session_state.pending_deletions:
-                st.markdown("### Confirm Deletion")
-                with st.form("confirm_deletion_form"):
-                    confirm = st.checkbox("Are you sure you want to delete the selected messages?", key="confirm_deletion")
-                    confirm_button = st.form_submit_button("Confirm Deletion")
-                    cancel_button = st.form_submit_button("Cancel")
-
-                    if confirm_button:
-                        if confirm:
-                            client = get_chat_client()
-                            if client:
-                                try:
-                                    st.write(f"Attempting to delete messages: {st.session_state.pending_deletions}")  # Debug
-                                    success = client.delete_messages_sync(st.session_state.pending_deletions)
-                                    st.write(f"Deletion success: {success}")  # Debug
-                                    if success:
-                                        st.success("Selected messages have been deleted.")
-                                        # Reload the conversation to reflect deletions
-                                        load_conversation(partner, 0, st.session_state.messages_limit)
-                                    else:
-                                        st.error("Failed to delete selected messages.")
-                                except Exception as e:
-                                    st.error(f"An error occurred while deleting messages: {e}")
-                            else:
-                                st.error("Client is not connected.")
-                            # Clear pending deletions after action
-                            st.session_state.pending_deletions = []
-                        else:
-                            st.warning("Please confirm the deletion.")
-                    if cancel_button:
-                        st.warning("Deletion canceled.")
+                            st.error("Client is not connected.")
+                        # Clear pending deletions after action
                         st.session_state.pending_deletions = []
+                    else:
+                        st.warning("Please confirm the deletion.")
+                if cancel_button:
+                    st.warning("Deletion canceled.")
+                    st.session_state.pending_deletions = []
 
         # Informative Scrollable Container
         chat_html = """
         <div style="height:400px; overflow-y:scroll; padding:0.5rem;" id="chat-container">
         """
-        if st.session_state.messages:
+        if st.session_state.displayed_messages:
             # Messages are already displayed above with checkboxes
             chat_html += "<p><em>Use the checkboxes on the right to select messages for deletion.</em></p>"
         else:
@@ -701,7 +724,6 @@ def render_chat_page_with_deletion() -> None:
                     st.error("Client is not connected.")
     else:
         st.info("Select a user from the sidebar or search to begin chat.")
-
 
 def main() -> None:
     """Main function to run the Streamlit app."""
