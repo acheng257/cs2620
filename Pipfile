@@ -9,13 +9,12 @@ streamlit = "*"
 streamlit-autorefresh = "*"
 
 [dev-packages]
-black = ">=24.1.1"
-isort = ">=5.13.2"
-flake8 = ">=7.0.0"
+black = "*"
+isort = "*"
+flake8 = "*"
 flake8-pyproject = "*"
-mypy = ">=1.8.0"
-pytest = ">=7.4.4"
-pytest-cov = ">=4.1.0"
+mypy = "*"
+pre-commit = "*"
 
 [requires]
 python_version = "3.13"
