@@ -1,8 +1,8 @@
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
 from enum import Enum
-import time
+from typing import Any, Dict, Optional
 
 
 class MessageType(Enum):
@@ -18,12 +18,13 @@ class MessageType(Enum):
     LIST_CHAT_PARTNERS = 9
 
 
+# TODO(@ItamarRocha): need to make sure it should be optional
 @dataclass
 class Message:
     type: MessageType
-    payload: Any
-    sender: str
-    recipient: str
+    payload: Dict[str, Any]
+    sender: Optional[str]
+    recipient: Optional[str]
     timestamp: float = time.time()
 
 

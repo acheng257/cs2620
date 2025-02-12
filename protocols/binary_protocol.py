@@ -1,6 +1,7 @@
-import struct
 import json
-from protocols.base import Protocol, Message, MessageType
+import struct
+
+from protocols.base import Message, MessageType, Protocol
 
 
 class BinaryProtocol(Protocol):
@@ -12,9 +13,7 @@ class BinaryProtocol(Protocol):
         message_type = message.type.value
         payload_bytes = json.dumps(message.payload).encode("utf-8")
         sender_bytes = message.sender.encode("utf-8") if message.sender else b""
-        recipient_bytes = (
-            message.recipient.encode("utf-8") if message.recipient else b""
-        )
+        recipient_bytes = message.recipient.encode("utf-8") if message.recipient else b""
 
         header = struct.pack("!BL", message_type, len(payload_bytes))
         sender_header = struct.pack("!B", len(sender_bytes))
@@ -40,14 +39,10 @@ class BinaryProtocol(Protocol):
             payload = data[offset : offset + payload_length].decode("utf-8")
             offset += payload_length
 
-            sender_length = struct.unpack_from("!B", data, offset)[
-                0
-            ]  # unpack_from returns a tuple
+            sender_length = struct.unpack_from("!B", data, offset)[0]  # unpack_from returns a tuple
             offset += 1
             sender = (
-                data[offset : offset + sender_length].decode("utf-8")
-                if sender_length > 0
-                else None
+                data[offset : offset + sender_length].decode("utf-8") if sender_length > 0 else None
             )
             offset += sender_length
 
