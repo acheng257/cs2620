@@ -383,10 +383,9 @@ class ChatServer:
             )
             return
 
-        # Store message in database
         self.db.store_message(sender_username, target_username, message_content)
 
-        # If user is online, send message immediately
+        # if user is online, send message immediately
         if target_username in self.username_to_socket:
             target_socket = self.username_to_socket[target_username]
             connection = self.active_connections[target_socket]
@@ -526,15 +525,11 @@ class ChatServer:
         pattern = message.payload.get("pattern", "")
         print(f"DEBUG: pattern={pattern}")
         page = int(message.payload.get("page", 1))
-        per_page = 10  # hard-coded or pass from payload
+        per_page = 10 # TODO: pass through payload?
 
         result = self.db.list_accounts(pattern, page, per_page)
         print(f"DEBUG: DB returned: {result}")
 
-        # We'll embed them in the 'payload'
-        # But your current send_response just takes a 'content' string
-        # We can pass them as a string or skip the content param.
-        # For minimal changes, let's just do:
         from protocols.base import MessageType, Message
         connection = self.active_connections[client_socket]
         response = Message(
@@ -550,54 +545,23 @@ class ChatServer:
         client_socket.send(length.to_bytes(4, "big"))
         client_socket.send(data)
 
-    # def handle_read_messages(self, client_socket: socket.socket, message: Message):
-    #     offset = int(message.payload.get("offset", 0))
-    #     limit = int(message.payload.get("limit", 10))
-
-    #     connection = self.active_connections[client_socket]
-    #     username = connection.username
-    #     result = self.db.get_messages_for_user(username, offset, limit)
-    #     # result = {"messages": [...], "total": ...}
-
-    #     from protocols.base import MessageType, Message
-    #     response = Message(
-    #         type=MessageType.SUCCESS,
-    #         payload=result,
-    #         sender="SERVER",
-    #         recipient=username or "unknown",
-    #         timestamp=time.time(),
-    #     )
-    #     data = connection.protocol.serialize(response)
-    #     length = len(data)
-    #     client_socket.send(length.to_bytes(4, "big"))
-    #     client_socket.send(data)
-    def handle_read_messages(self, client_socket: socket.socket, message: Message):
-        """
-        Modified to handle 'otherUser' in payload.
-        If present, fetch only conversation between username & otherUser.
-        Otherwise, fetch all messages for username.
-        """
+    def handle_read_messages(self, client_socket, message: Message):
         offset = int(message.payload.get("offset", 0))
-        limit = int(message.payload.get("limit", 10))
-        other_user = message.payload.get("otherUser")  # NEW
-
+        limit = int(message.payload.get("limit", 20))  # default 20
+        other_user = message.payload.get("otherUser")
         connection = self.active_connections[client_socket]
         username = connection.username
-        if not username:
-            self.send_response(client_socket, MessageType.ERROR, "Not logged in")
-            return
 
         if other_user:
             # conversation between "username" and "other_user"
             result = self.db.get_messages_between_users(username, other_user, offset, limit)
         else:
-            # old fallback: all messages for this user
+            # fallback if no other_user given
             result = self.db.get_messages_for_user(username, offset, limit)
 
-        # Wrap in a SUCCESS message with a "messages" array
         response = Message(
             type=MessageType.SUCCESS,
-            payload=result,  # e.g. {"messages": [...], "total": ...}
+            payload=result,  # {"messages": [...], "total": N}
             sender="SERVER",
             recipient=username,
             timestamp=time.time(),
@@ -626,14 +590,12 @@ class ChatServer:
             self.send_response(client_socket, MessageType.ERROR, "Not logged in")
             return
         
-        # Query the DB
         partners = self.db.get_chat_partners(username)
 
-        # Build a response
         from protocols.base import MessageType, Message
         response = Message(
             type=MessageType.SUCCESS,
-            payload={"chat_partners": partners},  # your key name can be anything
+            payload={"chat_partners": partners},
             sender="SERVER",
             recipient=username,
             timestamp=time.time(),

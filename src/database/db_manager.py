@@ -284,41 +284,27 @@ class DatabaseManager:
             print(f"Error deleting messages: {e}")
             return False
         
-    def get_messages_between_users(self, user1: str, user2: str,
-                                   offset: int = 0, limit: int = 100):
+    def get_messages_between_users(self, user1: str, user2: str, offset=0, limit=20):
         """
-        Return a dict with { "messages": [...], "total": N } 
-        Only messages where (sender=user1, recipient=user2) or 
-        (sender=user2, recipient=user1).
+        Return the conversation between user1 and user2,
+        ordered by timestamp DESC, meaning the *newest* rows come first.
+        offset=0 => the newest 'limit' messages in the entire conversation.
+        offset=20 => the next 20 older than that, etc.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                # Count total
-                cursor.execute(
-                    """
-                    SELECT COUNT(*)
-                    FROM messages
-                    WHERE (sender = ? AND recipient = ?)
-                       OR (sender = ? AND recipient = ?)
-                    """,
-                    (user1, user2, user2, user1),
-                )
-                total_count = cursor.fetchone()[0]
-
-                # Fetch them in chronological order
-                cursor.execute(
-                    """
+                query = """
                     SELECT id, sender, recipient, content, timestamp, read
                     FROM messages
                     WHERE (sender = ? AND recipient = ?)
-                       OR (sender = ? AND recipient = ?)
-                    ORDER BY timestamp ASC
+                    OR (sender = ? AND recipient = ?)
+                    ORDER BY timestamp DESC
                     LIMIT ? OFFSET ?
-                    """,
-                    (user1, user2, user2, user1, limit, offset),
-                )
+                """
+                cursor.execute(query, (user1, user2, user2, user1, limit, offset))
                 rows = cursor.fetchall()
+
                 messages = []
                 for row in rows:
                     msg_id, sender, recipient, content, ts, read_status = row
@@ -330,9 +316,11 @@ class DatabaseManager:
                         "timestamp": ts,
                         "is_read": bool(read_status),
                     })
-                return {"messages": messages, "total": total_count}
+
+                return {"messages": messages, "total": len(messages)}
+
         except Exception as e:
-            print(f"Error getting messages between {user1} and {user2}: {e}")
+            print(f"Error in get_messages_between_users pagination: {e}")
             return {"messages": [], "total": 0}
         
     def get_chat_partners(self, me: str):

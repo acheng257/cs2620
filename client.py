@@ -5,7 +5,7 @@ import time
 import threading
 import sys
 import getpass
-import queue  # <-- NEW import for incoming message queue
+import queue 
 from protocols.base import Message, MessageType
 from protocols.json_protocol import JsonProtocol
 from protocols.binary_protocol import BinaryProtocol
@@ -20,7 +20,6 @@ class ChatClient:
         self.receive_thread = None
         self.logged_in = False
 
-        # Determine protocol
         if protocol_type.upper().startswith("J"):
             self.protocol_byte = b"J"
             self.protocol = JsonProtocol()
@@ -28,11 +27,11 @@ class ChatClient:
             self.protocol_byte = b"B"
             self.protocol = BinaryProtocol()
 
-        # For synchronous response waiting
+        # synchronous response waiting
         self.response_lock = threading.Lock()
         self.last_response = None
 
-        # NEW: For real-time pushed messages from the server
+        # queue to hold real-time pushed messages from the server
         self.incoming_messages_queue = queue.Queue()
 
     def connect(self) -> bool:
@@ -64,10 +63,10 @@ class ChatClient:
             print(f"Communication error: {e}")
             return False
 
-    def _send_message_and_wait(self, message: Message, timeout: float = 3.0):
+    def _send_message_and_wait(self, message: Message, timeout: float = 10.0):
         """Send a message and wait for a response within a timeout."""
         with self.response_lock:
-            self.last_response = None  # Reset the last response
+            self.last_response = None
 
         ok = self._send_message_no_response(message)
         if not ok:
@@ -85,23 +84,20 @@ class ChatClient:
         print("Timed out waiting for server response.")
         return None
     
-    def read_conversation_sync(self, other_user: str, offset=0, limit=100):
-        """
-        Send a READ_MESSAGES request with 'otherUser' to fetch
-        conversation between self.username and other_user.
-        """
+    def read_conversation_sync(self, other_user: str, offset=0, limit=20):
         msg = Message(
             type=MessageType.READ_MESSAGES,
             payload={
+                "otherUser": other_user,
                 "offset": offset,
                 "limit": limit,
-                "otherUser": other_user,
             },
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
-        return self._send_message_and_wait(msg)
+        return self._send_message_and_wait(msg, timeout=10.0)
+
 
     def list_accounts_sync(self, pattern="", page=1):
         """Send LIST_ACCOUNTS request and wait for the server's response."""
@@ -185,7 +181,6 @@ class ChatClient:
         """Continuously read inbound messages from the server (push + response)."""
         while self.running:
             try:
-                # Read 4-byte length
                 length_bytes = self.socket.recv(4)
                 if not length_bytes:
                     print("Server closed connection.")
@@ -193,7 +188,6 @@ class ChatClient:
 
                 msg_len = int.from_bytes(length_bytes, "big")
 
-                # Read the actual message
                 message_data = b""
                 while len(message_data) < msg_len:
                     chunk = self.socket.recv(msg_len - len(message_data))
@@ -205,11 +199,9 @@ class ChatClient:
                 if len(message_data) < msg_len:
                     break
 
-                # Deserialize
                 message = self.protocol.deserialize(message_data)
                 text = message.payload.get("text", "")
 
-                # If it's a server response that we might be waiting for:
                 if message.type in [
                     MessageType.SUCCESS,
                     MessageType.ERROR,
@@ -221,17 +213,13 @@ class ChatClient:
                     with self.response_lock:
                         self.last_response = message
 
-                # NEW: If it's a pushed chat message from the server:
                 if message.type == MessageType.SEND_MESSAGE:
-                    # Place it in our queue so Streamlit can pick it up
                     self.incoming_messages_queue.put(message)
 
-                # Check if it indicates successful login
                 if message.type == MessageType.SUCCESS:
                     if ("Login successful" in text) or ("Account created" in text):
                         self.logged_in = True
 
-                # Debug prints (optional)
                 if message.type == MessageType.SUCCESS:
                     print(f"[SUCCESS] {text}")
                 elif message.type == MessageType.ERROR:
@@ -239,7 +227,6 @@ class ChatClient:
                 elif message.sender == "SERVER":
                     print(f"[SERVER] {text}")
                 else:
-                    # e.g. a pushed SEND_MESSAGE from some user
                     print(f"[{message.sender}] {text}")
 
             except Exception as e:
@@ -257,12 +244,6 @@ class ChatClient:
             print("Connection closed.")
         except Exception as e:
             print(f"Error closing connection: {e}")
-
-
-################################################
-# Additional helper methods for listing/deleting
-# messages if needed (unchanged from your code).
-################################################
 
 def list_accounts(client: ChatClient, pattern: str = "", page: int = 1):
     msg = Message(
