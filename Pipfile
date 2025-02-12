@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 bcrypt = ">=4.1.2"
+streamlit = "*"
+streamlit-autorefresh = "*"
 
 [dev-packages]
 black = ">=24.1.1"
