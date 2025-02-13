@@ -259,7 +259,6 @@ def fetch_accounts(pattern: str = "", page: int = 1) -> None:
             response = client.list_accounts_sync(pattern, page)
             if response and response.type == MessageType.SUCCESS:
                 st.session_state.search_results = response.payload.get("users", [])
-                st.success(f"Found {len(st.session_state.search_results)} user(s).")
             else:
                 st.session_state.search_results = []
                 st.warning("No users found or an error occurred.")
