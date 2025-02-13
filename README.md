@@ -21,47 +21,6 @@ This chat application allows users to create accounts, send messages, and manage
   - Configurable message retrieval (specify number of messages)
   - Message deletion functionality
 
-## Technical Implementation
-
-### Architecture
-
-The application follows a client-server architecture with the following components:
-
-1. **Server**
-   - Handles multiple concurrent client connections
-   - Manages user authentication and session state
-   - Implements message routing and storage
-   - Supports both wire protocol implementations
-
-2. **Client**
-   - Provides a graphical user interface
-   - Handles user input and display
-   - Implements protocol serialization/deserialization
-   - Manages connection state and reconnection
-
-### Wire Protocols
-
-#### Custom Binary Protocol
-Our custom protocol is designed for efficiency with minimal overhead:
-- Fixed-length headers for quick parsing
-- Binary encoding for numeric values
-- Length-prefixed variable data
-- Optimized message types for common operations
-
-#### JSON Protocol
-The JSON implementation provides:
-- Human-readable message format
-- Standard encoding/decoding
-- Easy debugging and monitoring
-- Compatibility with existing tools
-
-### Security Features
-
-- Passwords are never transmitted in plaintext
-- Session-based authentication
-- Input validation and sanitization
-- Secure message storage
-
 ## Getting Started
 
 ### Prerequisites
