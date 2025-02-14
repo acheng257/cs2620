@@ -268,21 +268,42 @@ def fetch_accounts(pattern: str = "", page: int = 1) -> None:
         st.warning("Client is not connected.")
 
 
+# def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
+#     """
+#     Fetch chat partners and their corresponding unread message counts.
+#     Returns a tuple of (list_of_partners, unread_map).
+#     """
+#     client = get_chat_client()
+#     if client:
+#         try:
+#             resp = client.list_chat_partners_sync()
+#             if resp and resp.type == MessageType.SUCCESS:
+#                 partners = resp.payload.get("chat_partners", [])
+#                 unread_map = resp.payload.get("unread_map", {})
+#                 return partners, unread_map
+#         except Exception as e:
+#             st.warning(f"An error occurred while fetching chat partners: {e}")
+#     return [], {}
 def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
     """
     Fetch chat partners and their corresponding unread message counts.
-    Returns a tuple of (list_of_partners, unread_map).
+    Uses cached results from session state if available.
+    Returns:
+        Tuple[List[str], Dict[str, int]]: (list_of_partners, unread_map)
     """
+    # Only fetch if there are no cached chat partners or if a refresh flag is set
+    if "chat_partners" in st.session_state and st.session_state.chat_partners:
+        return st.session_state.chat_partners, st.session_state.unread_map
+
     client = get_chat_client()
     if client:
-        try:
-            resp = client.list_chat_partners_sync()
-            if resp and resp.type == MessageType.SUCCESS:
-                partners = resp.payload.get("chat_partners", [])
-                unread_map = resp.payload.get("unread_map", {})
-                return partners, unread_map
-        except Exception as e:
-            st.warning(f"An error occurred while fetching chat partners: {e}")
+        resp = client.list_chat_partners_sync()
+        if resp and resp.type == MessageType.SUCCESS:
+            partners = resp.payload.get("chat_partners", [])
+            unread_map = resp.payload.get("unread_map", {})
+            st.session_state.chat_partners = partners  # Cache the result
+            st.session_state.unread_map = unread_map
+            return partners, unread_map
     return [], {}
 
 
@@ -329,66 +350,119 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
         st.warning("Client is not connected.")
 
 
+# def process_incoming_realtime_messages() -> None:
+#     """
+#     Process incoming real-time messages from the server.
+#     Updates the chat interface and unread counts accordingly.
+#     """
+#     client = get_chat_client()
+#     if client:
+#         try:
+#             while not client.incoming_messages_queue.empty():
+#                 msg = client.incoming_messages_queue.get()
+#                 if msg.type == MessageType.SEND_MESSAGE:
+#                     sender = msg.sender
+#                     text = msg.payload.get("text", "")
+#                     timestamp = msg.timestamp
+#                     msg_id = msg.payload.get("id")
+#                     with st.session_state.lock:
+#                         if st.session_state.current_chat == sender:
+#                             st.session_state.messages.append({
+#                                 "sender": sender,
+#                                 "text": text,
+#                                 "timestamp": timestamp,
+#                                 "is_read": True,
+#                                 "is_delivered": True,
+#                                 "id": msg_id,
+#                             })
+#                             st.session_state.displayed_messages.append({
+#                                 "sender": sender,
+#                                 "text": text,
+#                                 "timestamp": timestamp,
+#                                 "is_read": True,
+#                                 "is_delivered": True,
+#                                 "id": msg_id,
+#                             })
+#                             # Mark the conversation as read
+#                             client.read_conversation_sync(st.session_state.current_chat, 0, 100000)
+#                         else:
+#                             if sender in st.session_state.unread_map:
+#                                 st.session_state.unread_map[sender] += 1
+#                             else:
+#                                 st.session_state.unread_map[sender] = 1
+#                     st.success(f"New message from {sender}: {text}")
+#         except Exception as e:
+#             st.warning(f"An error occurred while processing incoming messages: {e}")
+#     else:
+#         st.warning("Client is not connected.")
 def process_incoming_realtime_messages() -> None:
     """
     Process incoming real-time messages from the server.
-    Updates the chat interface and unread counts accordingly.
+    Updates the chat interface and unread_map accordingly.
+    If a message is received from a new chat partner, clear the cached
+    chat partners to force an update of the sidebar.
     """
     client = get_chat_client()
     if client:
-        try:
-            while not client.incoming_messages_queue.empty():
-                msg = client.incoming_messages_queue.get()
-                if msg.type == MessageType.SEND_MESSAGE:
-                    sender = msg.sender
-                    text = msg.payload.get("text", "")
-                    timestamp = msg.timestamp
-                    msg_id = msg.payload.get("id")
-                    with st.session_state.lock:
-                        if st.session_state.current_chat == sender:
-                            st.session_state.messages.append({
-                                "sender": sender,
-                                "text": text,
-                                "timestamp": timestamp,
-                                "is_read": True,
-                                "is_delivered": True,
-                                "id": msg_id,
-                            })
-                            st.session_state.displayed_messages.append({
-                                "sender": sender,
-                                "text": text,
-                                "timestamp": timestamp,
-                                "is_read": True,
-                                "is_delivered": True,
-                                "id": msg_id,
-                            })
-                            # Mark the conversation as read
-                            client.read_conversation_sync(st.session_state.current_chat, 0, 100000)
-                        else:
-                            if sender in st.session_state.unread_map:
-                                st.session_state.unread_map[sender] += 1
-                            else:
-                                st.session_state.unread_map[sender] = 1
-                    st.success(f"New message from {sender}: {text}")
-        except Exception as e:
-            st.warning(f"An error occurred while processing incoming messages: {e}")
-    else:
-        st.warning("Client is not connected.")
+        new_partner_detected = False
+        while not client.incoming_messages_queue.empty():
+            msg = client.incoming_messages_queue.get()
+            if msg.type == MessageType.SEND_MESSAGE:
+                sender = msg.sender
+                text = msg.payload.get("text", "")
+                timestamp = msg.timestamp
 
+                with st.session_state.lock:
+                    if st.session_state.current_chat == sender:
+                        # If the current chat is open, append the message and mark as read
+                        st.session_state.messages.append({
+                            "sender": sender,
+                            "text": text,
+                            "timestamp": timestamp,
+                            "is_read": True,
+                            "is_delivered": True,
+                        })
+                        # Optionally, mark conversation as read on the server
+                        client.read_conversation_sync(st.session_state.current_chat, 0, 100000)
+                    else:
+                        # Increment unread count for the sender
+                        if sender in st.session_state.unread_map:
+                            st.session_state.unread_map[sender] += 1
+                        else:
+                            st.session_state.unread_map[sender] = 1
+                        
+                        # If this sender isn't in the cached chat partners, mark it as new
+                        if "chat_partners" in st.session_state:
+                            if sender not in st.session_state.chat_partners:
+                                new_partner_detected = True
+                        else:
+                            new_partner_detected = True
+
+                # Optionally, display a brief notification
+                st.success(f"New message from {sender}: {text}")
+
+        # If a new partner was detected, clear the cached list so it gets refreshed
+        if new_partner_detected:
+            st.session_state.chat_partners = []
+            # Trigger a rerun to update the sidebar automatically
+            st.rerun()
 
 def render_sidebar() -> None:
-    """Render the sidebar with chat partners and account options."""
+    """Render the sidebar with chat partners and other options."""
     st.sidebar.title("Menu")
     st.sidebar.subheader(f"Logged in as: {st.session_state.username}")
 
-    # Always fetch the latest chat partners when displaying the sidebar.
+    # Option to refresh the chat partners list manually
+    if st.sidebar.button("Refresh Chats"):
+        st.session_state.chat_partners = []  # Clear cached partners
+        st.session_state.unread_map = {}
+
+    # Fetch chat partners and their unread counts (cached if available)
     chat_partners, unread_map = fetch_chat_partners()
-    st.session_state.chat_partners = chat_partners
-    st.session_state.unread_map = unread_map
 
     with st.sidebar.expander("Existing Chats", expanded=True):
-        if st.session_state.chat_partners:
-            for partner in st.session_state.chat_partners:
+        if chat_partners:
+            for partner in chat_partners:
                 if partner != st.session_state.username:
                     unread_count = st.session_state.unread_map.get(partner, 0)
                     label = f"{partner}"
@@ -397,9 +471,13 @@ def render_sidebar() -> None:
                     if st.button(label, key=f"chat_partner_{partner}"):
                         st.session_state.current_chat = partner
                         st.session_state.messages_offset = 0
+                        st.session_state.messages_limit = st.session_state.messages_limit
+                        # Clear cached chat partners so that they refresh after new chat is selected
+                        st.session_state.chat_partners = []
                         load_conversation(partner, 0, st.session_state.messages_limit)
                         st.session_state.scroll_to_bottom = True
                         st.session_state.scroll_to_top = False
+                        st.rerun()
         else:
             st.write("No existing chats found.")
 
@@ -422,7 +500,7 @@ def render_sidebar() -> None:
         st.write("---")
         if st.button("Refresh Chat Partners"):
             st.session_state.fetch_chat_partners = True  # Set flag (if needed)
-            st.experimental_rerun()
+            st.rerun()
         if st.button("Delete Account"):
             confirm = st.sidebar.checkbox("Are you sure you want to delete your account?", key="confirm_delete")
             if confirm:
