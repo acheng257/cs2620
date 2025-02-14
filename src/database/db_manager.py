@@ -362,7 +362,7 @@ class DatabaseManager:
                     (like_pattern, per_page, offset),
                 )
                 rows = cursor.fetchall()
-
+                print(rows)
                 return {
                     "users": [r[0] for r in rows],
                     "total": total_count,
@@ -406,17 +406,20 @@ class DatabaseManager:
 
                 cursor.execute(
                     """
-                    SELECT id, sender, recipient, content, timestamp, is_read, is_delivered
+                    SELECT id, sender, recipient,
+                    content, timestamp, is_read,
+                      is_delivered, sender_deleted,
+                      recipient_deleted
                     FROM messages
-                    WHERE (sender = ? OR recipient = ?)
-                      AND (sender_deleted = FALSE OR recipient_deleted = FALSE)
+                    WHERE (sender = ? AND sender_deleted = FALSE)
+                      OR (recipient = ? AND recipient_deleted = FALSE)
                     ORDER BY timestamp DESC
                     LIMIT ? OFFSET ?
                     """,
                     (username, username, limit, offset),
                 )
                 rows = cursor.fetchall()
-
+                print(rows)
                 messages = []
                 for row in rows:
                     messages.append(
@@ -448,6 +451,10 @@ class DatabaseManager:
             bool: True if all messages deleted successfully, False otherwise
         """
         try:
+            # First check if user exists
+            if not self.user_exists(username):
+                return False
+
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 for message_id in message_ids:
@@ -546,6 +553,15 @@ class DatabaseManager:
                 cursor.execute(query, (user1, user2, user2, user1, limit, offset))
                 rows = cursor.fetchall()
 
+                # Count total
+                cursor.execute(
+                    "SELECT COUNT(*) FROM messages WHERE (sender = ? \
+                        AND recipient = ? AND sender_deleted = FALSE) \
+                        OR (sender = ? AND recipient = ? AND recipient_deleted = FALSE)",
+                    (user1, user2, user1, user2),
+                )
+                total_count = cursor.fetchone()[0]
+
                 messages = []
                 for row in rows:
                     messages.append(
@@ -559,7 +575,7 @@ class DatabaseManager:
                             "is_delivered": bool(row[6]),
                         }
                     )
-                return {"messages": messages, "total": len(messages)}
+                return {"messages": messages, "total": total_count}
         except Exception as e:
             print(f"Error in get_messages_between_users: {e}")
             return {"messages": [], "total": 0}
@@ -650,36 +666,6 @@ class DatabaseManager:
             print(f"Error marking message as delivered: {e}")
             return False
 
-    def get_last_message_id(self, sender: str, recipient: str) -> Optional[int]:
-        """
-        Get the ID of the most recent message between two users.
-
-        Args:
-            sender (str): Username of sender
-            recipient (str): Username of recipient
-
-        Returns:
-            Optional[int]: ID of the most recent message, or None if no messages exist
-        """
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    SELECT id
-                    FROM messages
-                    WHERE sender = ? AND recipient = ?
-                    ORDER BY timestamp DESC
-                    LIMIT 1
-                    """,
-                    (sender, recipient),
-                )
-                result = cursor.fetchone()
-                return result[0] if result is not None else None
-        except Exception as e:
-            print(f"Error getting last message ID: {e}")
-            return None
-
     def get_message_limit(self, username: str) -> Any:
         """
         Retrieve the message limit for the given user.
@@ -710,30 +696,6 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error retrieving message limit for user {username}: {e}")
             return 50
-
-    def update_message_limit(self, username: str, limit: int) -> bool:
-        """
-        Update the message limit for the given user.
-
-        Args:
-            username (str): Username to update
-            limit (int): New message limit
-
-        Returns:
-            bool: True if updated successfully, False otherwise.
-        """
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE user_preferences SET message_limit = ? WHERE username = ?",
-                    (limit, username),
-                )
-                conn.commit()
-                return True
-        except Exception as e:
-            print(f"Error updating message limit for user {username}: {e}")
-            return False
 
     def get_chat_message_limit(self, username: str, partner: str) -> Any:
         """
