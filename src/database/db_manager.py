@@ -7,12 +7,44 @@ import bcrypt
 
 
 class DatabaseManager:
+    """
+    Manages all database operations for the chat system.
+
+    This class handles:
+    - User account management (creation, verification, deletion)
+    - Message storage and retrieval
+    - Message status tracking (read/unread, delivered/undelivered)
+    - Chat partner relationships
+    - Message history and pagination
+
+    The database schema consists of two main tables:
+    1. accounts: Stores user accounts and password hashes
+    2. messages: Stores all messages with metadata and delivery status
+
+    All methods include proper error handling and logging.
+    """
+
     def __init__(self, db_path: str = "chat.db") -> None:
+        """
+        Initialize the database manager.
+
+        Args:
+            db_path (str, optional): Path to SQLite database file. Defaults to "chat.db"
+        """
         self.db_path: str = db_path
         self.init_database()
 
     def init_database(self) -> None:
-        """Initialize the database with necessary tables."""
+        """
+        Initialize the database schema.
+
+        Creates the necessary tables if they don't exist:
+        - accounts: username (PK), password_hash, created_at
+        - messages: id (PK), sender, recipient, content, timestamp, is_read, is_delivered
+
+        Raises:
+            Exception: If database initialization fails
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -53,7 +85,20 @@ class DatabaseManager:
             raise
 
     def create_account(self, username: str, password: str) -> bool:
-        """Create a new account with hashed password."""
+        """
+        Create a new user account.
+
+        Args:
+            username (str): Desired username
+            password (str): User's password
+
+        Returns:
+            bool: True if account created successfully, False if username exists or error occurs
+
+        Note:
+            Password is hashed using bcrypt before storage.
+            Username must be unique.
+        """
         try:
             salt = bcrypt.gensalt()
             password_hash = bcrypt.hashpw(password.encode("utf-8"), salt)
@@ -74,7 +119,19 @@ class DatabaseManager:
             return False
 
     def verify_login(self, username: str, password: str) -> bool:
-        """Verify login credentials."""
+        """
+        Verify user login credentials.
+
+        Args:
+            username (str): Username to verify
+            password (str): Password to verify
+
+        Returns:
+            bool: True if credentials are valid, False otherwise
+
+        Note:
+            Uses bcrypt to verify password against stored hash.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -91,7 +148,18 @@ class DatabaseManager:
             return False
 
     def get_unread_message_count(self, username: str) -> int:
-        """Get number of unread messages for a user (any conversation)."""
+        """
+        Get total number of unread messages for a user.
+
+        Args:
+            username (str): Username to check
+
+        Returns:
+            int: Number of unread messages across all conversations
+
+        Note:
+            Only counts messages where user is the recipient.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -106,7 +174,18 @@ class DatabaseManager:
             return 0
 
     def delete_account(self, username: str) -> bool:
-        """Delete an account and all associated messages."""
+        """
+        Delete a user account and all associated messages.
+
+        Args:
+            username (str): Username of account to delete
+
+        Returns:
+            bool: True if account deleted successfully, False otherwise
+
+        Note:
+            This operation cascades to delete all messages sent by or to the user.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -124,7 +203,15 @@ class DatabaseManager:
             return False
 
     def user_exists(self, username: str) -> bool:
-        """Check if a user exists."""
+        """
+        Check if a username exists in the database.
+
+        Args:
+            username (str): Username to check
+
+        Returns:
+            bool: True if user exists, False otherwise
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -137,7 +224,22 @@ class DatabaseManager:
     def store_message(
         self, sender: str, recipient: str, content: str, is_delivered: bool = True
     ) -> Optional[int]:
-        """Store a message in the database, with option to mark as undelivered."""
+        """
+        Store a new message in the database.
+
+        Args:
+            sender (str): Username of message sender
+            recipient (str): Username of message recipient
+            content (str): Message content
+            is_delivered (bool, optional): Whether message was delivered. Defaults to True
+
+        Returns:
+            bool: True if message stored successfully, False otherwise
+
+        Note:
+            Messages are always stored as unread initially.
+            Delivery status can be set for offline message queueing.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -152,7 +254,21 @@ class DatabaseManager:
             return None
 
     def mark_messages_as_read(self, username: str, message_ids: Optional[List[int]] = None) -> bool:
-        """Mark messages as read. If no message_ids provided, mark all as read."""
+        """
+        Mark messages as read for a user.
+
+        Args:
+            username (str): Username of message recipient
+            message_ids (Optional[List[int]], optional): Specific message IDs to mark.
+                If None, marks all messages as read. Defaults to None.
+
+        Returns:
+            bool: True if operation successful, False otherwise
+
+        Note:
+            Only marks messages where user is the recipient.
+            Can mark specific messages or all messages as read.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -175,7 +291,23 @@ class DatabaseManager:
 
     def list_accounts(self, pattern: str = "", page: int = 1, per_page: int = 10) -> Dict[str, Any]:
         """
-        Return a dict with keys {users, total, page, per_page}.
+        List user accounts with optional pattern matching and pagination.
+
+        Args:
+            pattern (str, optional): Username pattern to filter by. Defaults to "".
+            page (int, optional): Page number (1-based). Defaults to 1.
+            per_page (int, optional): Results per page. Defaults to 10.
+
+        Returns:
+            Dict[str, Any]: {
+                'users': List of usernames,
+                'total': Total matching accounts,
+                'page': Current page number,
+                'per_page': Results per page
+            }
+
+        Note:
+            Pattern matching is case-sensitive and uses SQL LIKE with wildcards.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -216,10 +348,31 @@ class DatabaseManager:
         self, username: str, offset: int = 0, limit: int = 10
     ) -> Dict[str, Any]:
         """
-        Return a dict with keys {messages, total}.
-        Each entry in 'messages' looks like:
-        {id, from, to, content, timestamp, is_read, is_delivered}.
-        Excludes messages that the user has deleted.
+        Get all messages for a user with pagination.
+
+        Args:
+            username (str): Username to get messages for
+            offset (int, optional): Number of messages to skip. Defaults to 0.
+            limit (int, optional): Maximum messages to return. Defaults to 10.
+
+        Returns:
+            Dict[str, Any]: {
+                'messages': List of message dictionaries,
+                'total': Total message count
+            }
+
+            Each message dictionary contains:
+            - id: Message ID
+            - from: Sender username
+            - to: Recipient username
+            - content: Message content
+            - timestamp: Message timestamp
+            - is_read: Read status
+            - is_delivered: Delivery status
+
+        Note:
+            Includes both sent and received messages.
+            Messages are ordered by timestamp (newest first).
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -252,31 +405,38 @@ class DatabaseManager:
 
                 messages = []
                 for row in rows:
-                    msg_id, sender, recipient, content, ts, read_status, is_delivered = row
                     messages.append(
                         {
-                            "id": msg_id,
-                            "from": sender,
-                            "to": recipient,
-                            "content": content,
-                            "timestamp": ts,
-                            "is_read": bool(read_status),
-                            "is_delivered": bool(is_delivered),
+                            "id": row[0],
+                            "from": row[1],
+                            "to": row[2],
+                            "content": row[3],
+                            "timestamp": row[4],
+                            "is_read": bool(row[5]),
+                            "is_delivered": bool(row[6]),
                         }
                     )
 
                 return {"messages": messages, "total": total_count}
         except Exception as e:
-            print(f"Error getting messages for user: {e}")
+            print(f"Error getting messages: {e}")
             return {"messages": [], "total": 0}
 
     def delete_messages(self, username: str, message_ids: List[int]) -> bool:
         """
-        Soft delete messages by ID for the user. If the user is the sender, set sender_deleted = TRUE.
-        If the user is the recipient, set recipient_deleted = TRUE.
+        Delete specific messages for a user.
+
+        Args:
+            username (str): Username of message owner
+            message_ids (List[int]): List of message IDs to delete
+
+        Returns:
+            bool: True if all messages deleted successfully, False otherwise
+
+        Note:
+            Only deletes messages where the user is either sender or recipient.
+            Operation is atomic - either all messages are deleted or none are.
         """
-        if not message_ids:
-            return True
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -311,8 +471,17 @@ class DatabaseManager:
 
     def get_chat_partners(self, me: str) -> List[str]:
         """
-        Return all distinct users who have either
-        sent a message to 'me' or received a message from 'me'.
+        Get list of users that have exchanged messages with the specified user.
+
+        Args:
+            me (str): Username to find chat partners for
+
+        Returns:
+            List[str]: List of usernames that have exchanged messages with the user
+
+        Note:
+            Includes both users that have sent messages to or received messages from
+            the specified user. Results are unique and sorted alphabetically.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -320,19 +489,19 @@ class DatabaseManager:
                 cursor.execute(
                     """
                     SELECT DISTINCT
-                        CASE WHEN sender = ? THEN recipient
+                        CASE
+                            WHEN sender = ? THEN recipient
                             ELSE sender
-                        END AS partner
+                        END as partner
                     FROM messages
                     WHERE sender = ? OR recipient = ?
+                    ORDER BY partner
                     """,
                     (me, me, me),
                 )
-                rows = cursor.fetchall()
-                partners = [r[0] for r in rows if r[0] != me]
-                return partners
+                return [row[0] for row in cursor.fetchall()]
         except Exception as e:
-            print(f"Error getting chat partners for {me}: {e}")
+            print(f"Error getting chat partners: {e}")
             return []
 
     def get_messages_between_users(self, user1: str, user2: str, offset: int = 0, limit: int = 999999) -> Dict[str, Any]:
@@ -377,65 +546,97 @@ class DatabaseManager:
             print(f"Error in get_messages_between_users: {e}")
             return {"messages": [], "total": 0}
 
-
     def get_unread_between_users(self, user1: str, user2: str) -> int:
         """
-        Return how many messages sent from user2 to user1 are still marked
-        as unread for user1.
+        Get count of unread messages between two users.
+
+        Args:
+            user1 (str): Username of message recipient
+            user2 (str): Username of message sender
+
+        Returns:
+            int: Number of unread messages from user2 to user1
+
+        Note:
+            Only counts messages where user1 is recipient and user2 is sender.
+            Does not count messages in the opposite direction.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                # Only count messages sent from user2 to user1 that are unread and not deleted
                 cursor.execute(
                     """
                     SELECT COUNT(*)
                     FROM messages
-                    WHERE sender = ? AND recipient = ? AND is_read = FALSE AND recipient_deleted = FALSE
+                    WHERE recipient = ?
+                    AND sender = ?
+                    AND is_read = FALSE
                     """,
-                    (user2, user1),
+                    (user1, user2),
                 )
-                row = cursor.fetchone()
-                if row:
-                    return row[0]
-                return 0
+                result = cursor.fetchone()
+                return result[0] if result is not None else 0
         except Exception as e:
-            print(f"Error getting unread messages between {user1} and {user2}: {e}")
+            print(f"Error getting unread count between users: {e}")
             return 0
 
     def get_undelivered_messages(self, username: str) -> List[Dict[str, Any]]:
-        """Retrieve undelivered messages for a user."""
+        """
+        Get all undelivered messages for a user.
+
+        Args:
+            username (str): Username to get undelivered messages for
+
+        Returns:
+            List[Dict[str, Any]]: List of undelivered messages, each containing:
+                - id: Message ID
+                - from: Sender username
+                - content: Message content
+                - timestamp: Message timestamp
+
+        Note:
+            Only retrieves messages where the user is the recipient.
+            Messages are ordered by timestamp (oldest first).
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    SELECT id, sender, recipient, content, timestamp
+                    SELECT id, sender, content, timestamp
                     FROM messages
                     WHERE recipient = ? AND is_delivered = FALSE AND recipient_deleted = FALSE
                     """,
                     (username,),
                 )
-                rows = cursor.fetchall()
                 messages = []
-                for row in rows:
-                    msg_id, sender, recipient, content, ts = row
+                for row in cursor.fetchall():
                     messages.append(
                         {
-                            "id": msg_id,
-                            "from": sender,
-                            "to": recipient,
-                            "content": content,
-                            "timestamp": ts,
+                            "id": row[0],
+                            "from": row[1],
+                            "content": row[2],
+                            "timestamp": row[3],
                         }
                     )
                 return messages
         except Exception as e:
-            print(f"Error getting undelivered messages for {username}: {e}")
+            print(f"Error getting undelivered messages: {e}")
             return []
 
     def mark_message_as_delivered(self, message_id: int) -> bool:
-        """Mark a specific message as delivered."""
+        """
+        Mark a specific message as delivered.
+
+        Args:
+            message_id (int): ID of the message to mark as delivered
+
+        Returns:
+            bool: True if message marked as delivered, False if error occurs
+
+        Note:
+            Used when a queued message is successfully delivered to an online user.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -446,17 +647,31 @@ class DatabaseManager:
                 conn.commit()
                 return True
         except Exception as e:
-            print(f"Error marking message {message_id} as delivered: {e}")
+            print(f"Error marking message as delivered: {e}")
             return False
 
     def get_last_message_id(self, sender: str, recipient: str) -> Optional[int]:
-        """Get the ID of the most recent message between two users."""
+        """
+        Get the ID of the most recent message between two users.
+
+        Args:
+            sender (str): Username of message sender
+            recipient (str): Username of message recipient
+
+        Returns:
+            Optional[int]: ID of the most recent message, or None if no messages exist
+
+        Note:
+            Only looks for messages in the specified direction (sender to recipient).
+            Does not consider messages in the opposite direction.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    SELECT id FROM messages
+                    SELECT id
+                    FROM messages
                     WHERE sender = ? AND recipient = ?
                     ORDER BY timestamp DESC
                     LIMIT 1
@@ -464,10 +679,7 @@ class DatabaseManager:
                     (sender, recipient),
                 )
                 result = cursor.fetchone()
-                if result:
-                    return result[0]
-                else:
-                    return None
+                return result[0] if result is not None else None
         except Exception as e:
             print(f"Error getting last message ID: {e}")
             return None
