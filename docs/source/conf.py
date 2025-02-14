@@ -37,3 +37,13 @@ language = "en"
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
+
+# -- Options for autodoc extension ------------------------------------------
+autodoc_default_options = {
+    "member-order": "bysource",
+    "undoc-members": True,
+    "show-inheritance": True,
+}
+
+# Modify the module names to remove 'src' prefix
+modindex_common_prefix = ["src."]
