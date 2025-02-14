@@ -1,4 +1,3 @@
-import datetime
 import threading
 import time
 from typing import Dict, List, Optional, Tuple
@@ -488,53 +487,74 @@ def render_sidebar() -> None:
                     else:
                         st.warning("Please check the confirmation box to delete your account.")
 
-    # End of sidebar
-
 
 def render_chat_page_with_deletion() -> None:
-    """Render the main chat interface with message deletion functionality."""
+    """Render the main chat interface with message deletion functionality,
+    with conversation data stored per chat partner."""
     st.title("Secure Chat")
 
     if st.session_state.current_chat:
         partner = st.session_state.current_chat
         st.subheader(f"Chat with {partner}")
 
-        default_limit = st.session_state.messages_limit
+        # Initialize per-chat conversation data if it doesn't exist.
+        if "conversations" not in st.session_state:
+            st.session_state.conversations = {}
+        if partner not in st.session_state.conversations:
+            # Each conversation stores its own messages, offset, and limit.
+            st.session_state.conversations[partner] = {
+                "displayed_messages": [],
+                "offset": 0,
+                "limit": 50,  # default limit
+            }
+        conv = st.session_state.conversations[partner]
+
+        # If no messages have been loaded for this chat, load them.
+        if not conv["displayed_messages"]:
+            load_conversation(partner, conv["offset"], conv["limit"])
+            # Assume load_conversation sets st.session_state.displayed_messages globally.
+            # We copy them into our per-chat store.
+            conv["displayed_messages"] = st.session_state.displayed_messages.copy()
+
+        # Use a number input widget unique to this chat for the message limit.
         new_limit = st.number_input(
             "Number of recent messages to display",
             min_value=5,
             max_value=1000,
-            value=default_limit,
+            value=conv["limit"],
             step=5,
-            key="messages_limit_input",
+            key=f"messages_limit_input_{partner}",
         )
-        if new_limit != default_limit:
-            st.session_state.messages_limit = new_limit
-            st.session_state.messages_offset = 0
+        if new_limit != conv["limit"]:
+            conv["limit"] = new_limit
+            conv["offset"] = 0
             load_conversation(partner, 0, new_limit)
+            conv["displayed_messages"] = st.session_state.displayed_messages.copy()
             st.session_state.scroll_to_bottom = True
             st.session_state.scroll_to_top = False
+
+        messages = conv["displayed_messages"]
 
         with st.container():
             with st.form("select_messages_form"):
                 selected_message_ids = []
-                for msg in st.session_state.displayed_messages:
+                for msg in messages:
                     sender = msg.get("sender")
                     text = msg.get("text")
-                    ts = msg.get("timestamp", time.time())
+                    ts = msg.get("timestamp")
                     msg_id = msg.get("id")
+
                     if isinstance(ts, str):
-                        try:
-                            dt = datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
-                            epoch = dt.timestamp()
-                        except ValueError:
-                            epoch = time.time()
+                        formatted_timestamp = ts
                     else:
                         try:
-                            epoch = float(ts)
-                        except (ValueError, TypeError):
-                            epoch = time.time()
-                    formatted_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
+                            ts_float = float(ts)
+                            formatted_timestamp = time.strftime(
+                                "%Y-%m-%d %H:%M:%S", time.localtime(ts_float)
+                            )
+                        except Exception:
+                            formatted_timestamp = "Unknown Time"
+
                     sender_name = "You" if sender == st.session_state.username else sender
                     cols = st.columns([4, 1])
                     with cols[0]:
@@ -569,8 +589,8 @@ def render_chat_page_with_deletion() -> None:
                         if client:
                             try:
                                 st.write(
-                                    f"Attempting to delete messages: \
-                                        {st.session_state.pending_deletions}"
+                                    f"Attempting to delete messages:\
+                                          {st.session_state.pending_deletions}"
                                 )
                                 success = client.delete_messages_sync(
                                     st.session_state.pending_deletions
@@ -578,9 +598,10 @@ def render_chat_page_with_deletion() -> None:
                                 st.write(f"Deletion success: {success}")
                                 if success:
                                     st.success("Selected messages have been deleted.")
-                                    st.session_state.displayed_messages = [
+                                    # Remove deleted messages from the current conversation.
+                                    conv["displayed_messages"] = [
                                         msg
-                                        for msg in st.session_state.displayed_messages
+                                        for msg in conv["displayed_messages"]
                                         if msg["id"] not in st.session_state.pending_deletions
                                     ]
                                 else:
@@ -599,7 +620,7 @@ def render_chat_page_with_deletion() -> None:
         chat_html = """
         <div style="height:400px; overflow-y:scroll; padding:0.5rem;" id="chat-container">
         """
-        if st.session_state.displayed_messages:
+        if messages:
             chat_html += (
                 "<p><em>Use the checkboxes on the right to select messages for deletion.</em></p>"
             )
@@ -607,7 +628,7 @@ def render_chat_page_with_deletion() -> None:
             chat_html += "<p><em>No messages to display.</em></p>"
         chat_html += "</div>"
 
-        if st.session_state.scroll_to_top:
+        if st.session_state.get("scroll_to_top", False):
             scroll_js = """
             <script>
                 setTimeout(function(){
@@ -617,7 +638,7 @@ def render_chat_page_with_deletion() -> None:
             </script>
             """
             st.components.v1.html(scroll_js, height=0)
-        elif st.session_state.scroll_to_bottom:
+        elif st.session_state.get("scroll_to_bottom", False):
             scroll_js = """
             <script>
                 setTimeout(function(){
@@ -631,8 +652,10 @@ def render_chat_page_with_deletion() -> None:
         st.markdown(chat_html, unsafe_allow_html=True)
 
         if st.button("Load More Messages"):
-            new_offset = st.session_state.messages_offset + st.session_state.messages_limit
-            load_conversation(partner, new_offset, st.session_state.messages_limit)
+            new_offset = conv["offset"] + conv["limit"]
+            load_conversation(partner, new_offset, conv["limit"])
+            conv["offset"] = new_offset
+            conv["displayed_messages"] = st.session_state.displayed_messages.copy()
             st.session_state.scroll_to_top = True
             st.session_state.scroll_to_bottom = False
 
@@ -648,13 +671,13 @@ def render_chat_page_with_deletion() -> None:
                 client = get_chat_client()
                 if client:
                     try:
-                        success = client.send_message(st.session_state.current_chat, new_msg)
+                        success = client.send_message(partner, new_msg)
                         if success:
                             st.success("Message sent.")
                             st.session_state["clear_message_area"] = True
-                            load_conversation(
-                                st.session_state.current_chat, 0, st.session_state.messages_limit
-                            )
+                            load_conversation(partner, 0, conv["limit"])
+                            conv["offset"] = 0
+                            conv["displayed_messages"] = st.session_state.displayed_messages.copy()
                         else:
                             st.error("Failed to send message.")
                     except Exception as e:
