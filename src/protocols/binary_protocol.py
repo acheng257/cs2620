@@ -72,7 +72,8 @@ class BinaryProtocol(Protocol):
 
         # Log metrics
         logging.info(
-            f"Message Type: {message_type}, Binary Serialize Time: {serialization_time:.6f}s, Size: {message_size} bytes"
+            f"Message Type: {message_type}, Binary Serialize Time: \
+                {serialization_time:.6f}s, Size: {message_size} bytes"
         )
 
         return serialized
@@ -124,7 +125,10 @@ class BinaryProtocol(Protocol):
             deserialization_time = end_time - start_time
 
             # Log metrics
-            logging.info(f"Message Type: {message_type}, Binary Deserialize Time: {deserialization_time:.6f}s")
+            logging.info(
+                f"Message Type: {message_type}, Binary \
+                    Deserialize Time: {deserialization_time:.6f}s"
+            )
 
             return Message(
                 type=MessageType(message_type),

@@ -1,14 +1,16 @@
 import json
-from src.protocols.base import Message, MessageType, Protocol
 import logging
 import time
 
+from src.protocols.base import Message, MessageType, Protocol
+
 # Configure logging
 logging.basicConfig(
-    filename='protocol_performance.log',
+    filename="protocol_performance.log",
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
+
 
 class JsonProtocol(Protocol):
     """
@@ -42,12 +44,15 @@ class JsonProtocol(Protocol):
             "timestamp": message.timestamp,
         }
         start_time = time.perf_counter()
-        serialized = json.dumps(data).encode('utf-8')
+        serialized = json.dumps(data).encode("utf-8")
         end_time = time.perf_counter()
         serialization_time = end_time - start_time
         message_size = len(serialized)
 
-        logging.info(f"Message Type: {message.type}, JSON Serialize Time: {serialization_time:.6f}s, Size: {message_size} bytes")
+        logging.info(
+            f"Message Type: {message.type}, JSON Serialize Time:\
+                  {serialization_time:.6f}s, Size: {message_size} bytes"
+        )
         return serialized
 
     def deserialize(self, data: bytes) -> Message:
@@ -72,9 +77,12 @@ class JsonProtocol(Protocol):
             decoded = json.loads(data.decode("utf-8"))
             end_time = time.perf_counter()
             deserialization_time = end_time - start_time
-            
+
             # Log metrics
-            logging.info(f"Message Type: {MessageType(decoded['type'])}, JSON Deserialize Time: {deserialization_time:.6f}s")
+            logging.info(
+                f"Message Type: {MessageType(decoded['type'])},\
+                      JSON Deserialize Time: {deserialization_time:.6f}s"
+            )
             return Message(
                 type=MessageType(decoded["type"]),
                 payload=decoded["payload"],
