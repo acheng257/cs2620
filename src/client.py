@@ -1,3 +1,5 @@
+# client.py
+
 import argparse
 import getpass
 import queue
@@ -5,7 +7,7 @@ import socket
 import sys
 import threading
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from src.protocols.base import Message, MessageType, Protocol
 from src.protocols.binary_protocol import BinaryProtocol
@@ -64,11 +66,11 @@ class ChatClient:
             self.protocol_byte = b"B"
             self.protocol = BinaryProtocol()
 
-        # synchronous response waiting
+        # Synchronous response waiting
         self.response_lock = threading.Lock()
         self.last_response: Optional[Message] = None
 
-        # queue to hold real-time pushed messages from the server
+        # Queue to hold real-time pushed messages from the server
         self.incoming_messages_queue: queue.Queue[Message] = queue.Queue()
 
     def connect(self) -> bool:
@@ -197,6 +199,7 @@ class ChatClient:
             payload={"pattern": pattern, "page": page},
             sender=self.username,
             recipient="SERVER",
+            timestamp=time.time(),
         )
         response = self._send_message_and_wait(msg)
         return response
@@ -266,6 +269,28 @@ class ChatClient:
         )
         return self._send_message_no_response(msg)
 
+    def login_sync(self, password: str, timeout: float = 10.0) -> Tuple[bool, Optional[str]]:
+        """
+        Log in to an existing account synchronously.
+        Returns a tuple (success: bool, error_message: Optional[str]).
+        """
+        msg = Message(
+            type=MessageType.LOGIN,
+            payload={"username": self.username, "password": password},
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        response = self._send_message_and_wait(msg, timeout=timeout)
+        if response:
+            if response.type == MessageType.SUCCESS:
+                self.logged_in = True
+                return True, None
+            elif response.type == MessageType.ERROR:
+                error_text = response.payload.get("text", "Unknown error.")
+                return False, error_text
+        return False, "No response from server."
+
     def delete_account(self) -> bool:
         """
         Delete the current account from the server.
@@ -318,6 +343,29 @@ class ChatClient:
         )
         return self._send_message_no_response(msg)
 
+    def delete_messages_sync(self, message_ids: List[int], timeout: float = 10.0) -> bool:
+        """
+        Send a DELETE_MESSAGES request and wait for confirmation.
+        Returns True if deletion was successful, False otherwise.
+        """
+        if not self.logged_in:
+            print("Must be logged in to delete messages.")
+            return False
+
+        msg = Message(
+            type=MessageType.DELETE_MESSAGES,
+            payload={"message_ids": message_ids},
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        response = self._send_message_and_wait(msg, timeout=timeout)
+        if response and response.type == MessageType.SUCCESS:
+            return True
+        else:
+            print("Failed to delete messages.")
+            return False
+
     def receive_messages(self) -> None:
         """
         Continuously receive and process messages from the server.
@@ -368,6 +416,10 @@ class ChatClient:
                         self.last_response = message
 
                 if message.type == MessageType.SEND_MESSAGE:
+                    # Ensure 'id' is present in the payload
+                    if "id" not in message.payload:
+                        print("Received SEND_MESSAGE without 'id'.")
+                        continue
                     self.incoming_messages_queue.put(message)
 
                 if message.type == MessageType.SUCCESS:
@@ -481,14 +533,21 @@ if __name__ == "__main__":
                 client.create_account(password)
             elif choice == "2":
                 password = get_password("Enter password: ")
-                client.login(password)
+                # Use the new synchronous login method
+                success, error = client.login_sync(password)
+                if success:
+                    print("Login successful.")
+                else:
+                    print(f"Login failed: {error}")
+                    sys.exit(1)
             else:
                 print("Invalid choice")
                 sys.exit(1)
 
             print("\nCommands:")
             print("1. Send message: <recipient>,<message>")
-            print("2. Delete account: !delete")
+            print("2. Delete messages: !delete")
+            print("3. Delete account: !delete_account")
             print("Press Ctrl+C to quit")
 
             while True:
@@ -497,10 +556,44 @@ if __name__ == "__main__":
                     break
 
                 if msg_input.strip().lower() == "!delete":
+                    # Example command to delete messages by IDs
+                    try:
+                        ids_input = input("Enter message IDs to delete (comma-separated): ")
+                        message_ids = [
+                            int(id_.strip())
+                            for id_ in ids_input.split(",")
+                            if id_.strip().isdigit()
+                        ]
+                        if message_ids:
+                            confirm = input(
+                                "Are you sure you want to delete the selected messages? (yes/no): "
+                            )
+                            if confirm.lower() == "yes":
+                                success = client.delete_messages_sync(message_ids)
+                                if success:
+                                    print("Deletion successful.")
+                                else:
+                                    print("Deletion failed.")
+                            else:
+                                print("Deletion canceled.")
+                        else:
+                            print("No valid message IDs provided.")
+                    except Exception as e:
+                        print(f"Invalid input: {e}")
+                    continue
+
+                if msg_input.strip().lower() == "!delete_account":
                     confirm = input("Are you sure you want to delete your account? (yes/no): ")
                     if confirm.lower() == "yes":
-                        client.delete_account()
-                        break
+                        success = client.delete_messages_sync([])  # No message IDs to delete
+                        if success:
+                            client.delete_account()
+                            print("Account deletion request sent.")
+                            break
+                        else:
+                            print("Failed to delete account.")
+                    else:
+                        print("Account deletion canceled.")
                     continue
 
                 if "," not in msg_input:
@@ -508,7 +601,7 @@ if __name__ == "__main__":
                     continue
 
                 recipient, text = msg_input.split(",", 1)
-                client.send_message(recipient, text)
+                client.send_message(recipient.strip(), text.strip())
         else:
             print("Could not connect to server.")
     except KeyboardInterrupt:

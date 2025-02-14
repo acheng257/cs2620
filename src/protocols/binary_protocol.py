@@ -1,7 +1,16 @@
 import json
+import logging
 import struct
+import time
 
 from src.protocols.base import Message, MessageType, Protocol
+
+# Configure logging
+logging.basicConfig(
+    filename="protocol_performance.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 
 
 class BinaryProtocol(Protocol):
@@ -37,6 +46,7 @@ class BinaryProtocol(Protocol):
             Strings (sender, recipient) are UTF-8 encoded.
             Numeric values use network byte order (big-endian).
         """
+        start_time = time.perf_counter()
         message_type = message.type.value
         payload_bytes = json.dumps(message.payload).encode("utf-8")
         sender_bytes = message.sender.encode("utf-8") if message.sender else b""
@@ -46,8 +56,7 @@ class BinaryProtocol(Protocol):
         sender_header = struct.pack("!B", len(sender_bytes))
         recipient_header = struct.pack("!B", len(recipient_bytes))
         timestamp = struct.pack("!d", message.timestamp or 0.0)
-
-        return (
+        serialized = (
             header
             + payload_bytes
             + sender_header
@@ -56,6 +65,17 @@ class BinaryProtocol(Protocol):
             + recipient_bytes
             + timestamp
         )
+
+        end_time = time.perf_counter()
+        serialization_time = end_time - start_time
+        message_size = len(serialized)
+
+        # Log metrics
+        logging.info(
+            f"Binary Serialize Time: {serialization_time:.6f}s, Size: {message_size} bytes"
+        )
+
+        return serialized
 
     def deserialize(self, data: bytes) -> Message:
         """
@@ -75,6 +95,7 @@ class BinaryProtocol(Protocol):
             Validates message type against the MessageType enum.
         """
         try:
+            start_time = time.perf_counter()
             offset = 0
             message_type, payload_length = struct.unpack_from("!BL", data, offset)
             offset += 5  # message type and payload length take 5 bytes in total
@@ -99,6 +120,11 @@ class BinaryProtocol(Protocol):
             offset += recipient_length
 
             timestamp = struct.unpack_from("!d", data, offset)[0]
+            end_time = time.perf_counter()
+            deserialization_time = end_time - start_time
+
+            # Log metrics
+            logging.info(f"Binary Deserialize Time: {deserialization_time:.6f}s")
 
             return Message(
                 type=MessageType(message_type),
