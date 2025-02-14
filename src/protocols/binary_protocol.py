@@ -1,16 +1,16 @@
 import json
-import struct
 import logging
+import struct
 import time
+
+from src.protocols.base import Message, MessageType, Protocol
 
 # Configure logging
 logging.basicConfig(
-    filename='protocol_performance.log',
+    filename="protocol_performance.log",
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
-
-from src.protocols.base import Message, MessageType, Protocol
 
 
 class BinaryProtocol(Protocol):
@@ -56,14 +56,24 @@ class BinaryProtocol(Protocol):
         sender_header = struct.pack("!B", len(sender_bytes))
         recipient_header = struct.pack("!B", len(recipient_bytes))
         timestamp = struct.pack("!d", message.timestamp or 0.0)
-        serialized = header + payload_bytes + sender_header + sender_bytes + recipient_header + recipient_bytes + timestamp
+        serialized = (
+            header
+            + payload_bytes
+            + sender_header
+            + sender_bytes
+            + recipient_header
+            + recipient_bytes
+            + timestamp
+        )
 
         end_time = time.perf_counter()
         serialization_time = end_time - start_time
         message_size = len(serialized)
-        
+
         # Log metrics
-        logging.info(f"Binary Serialize Time: {serialization_time:.6f}s, Size: {message_size} bytes")
+        logging.info(
+            f"Binary Serialize Time: {serialization_time:.6f}s, Size: {message_size} bytes"
+        )
 
         return serialized
 
@@ -112,7 +122,7 @@ class BinaryProtocol(Protocol):
             timestamp = struct.unpack_from("!d", data, offset)[0]
             end_time = time.perf_counter()
             deserialization_time = end_time - start_time
-            
+
             # Log metrics
             logging.info(f"Binary Deserialize Time: {deserialization_time:.6f}s")
 

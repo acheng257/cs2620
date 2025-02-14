@@ -164,7 +164,8 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "SELECT COUNT(*) FROM messages WHERE recipient = ? AND is_read = FALSE AND recipient_deleted = FALSE",
+                    "SELECT COUNT(*) FROM messages WHERE recipient = ? \
+                        AND is_read = FALSE AND recipient_deleted = FALSE",
                     (username,),
                 )
                 result = cursor.fetchone()
@@ -244,7 +245,8 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO messages (sender, recipient, content, is_delivered, is_read) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO messages (sender, recipient, content, is_delivered, \
+                        is_read) VALUES (?, ?, ?, ?, ?)",
                     (sender, recipient, content, is_delivered, False),
                 )
                 conn.commit()
@@ -275,12 +277,14 @@ class DatabaseManager:
                 if message_ids:
                     # Must build a parameterized query carefully
                     placeholder = ",".join("?" for _ in message_ids)
-                    query = f"UPDATE messages SET is_read = TRUE WHERE recipient = ? AND id IN ({placeholder})"
+                    query = f"UPDATE messages SET is_read = TRUE WHERE recipient \
+                        = ? AND id IN ({placeholder})"
                     params = [username] + message_ids
                     cursor.execute(query, params)
                 else:
                     cursor.execute(
-                        "UPDATE messages SET is_read = TRUE WHERE recipient = ? AND recipient_deleted = FALSE",
+                        "UPDATE messages SET is_read = TRUE WHERE recipient = ? \
+                            AND recipient_deleted = FALSE",
                         (username,),
                     )
                 conn.commit()
@@ -504,17 +508,20 @@ class DatabaseManager:
             print(f"Error getting chat partners: {e}")
             return []
 
-    def get_messages_between_users(self, user1: str, user2: str, offset: int = 0, limit: int = 999999) -> Dict[str, Any]:
+    def get_messages_between_users(
+        self, user1: str, user2: str, offset: int = 0, limit: int = 999999
+    ) -> Dict[str, Any]:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                
+
                 # First, mark any undelivered messages as delivered
                 cursor.execute(
-                    "UPDATE messages SET is_delivered = TRUE WHERE sender = ? AND recipient = ? AND is_delivered = FALSE",
-                    (user2, user1)
+                    "UPDATE messages SET is_delivered = TRUE WHERE sender = ? AND \
+                        recipient = ? AND is_delivered = FALSE",
+                    (user2, user1),
                 )
-                
+
                 query = """
                     SELECT id, sender, recipient, content, timestamp, is_read, is_delivered
                     FROM messages
@@ -528,19 +535,21 @@ class DatabaseManager:
                 """
                 cursor.execute(query, (user1, user2, user2, user1, limit, offset))
                 rows = cursor.fetchall()
-                
+
                 messages = []
                 for row in rows:
                     msg_id, sender, recipient, content, ts, read_status, is_delivered = row
-                    messages.append({
-                        "id": msg_id,
-                        "from": sender,
-                        "to": recipient,
-                        "content": content,
-                        "timestamp": ts,
-                        "is_read": bool(read_status),
-                        "is_delivered": bool(is_delivered),
-                    })
+                    messages.append(
+                        {
+                            "id": msg_id,
+                            "from": sender,
+                            "to": recipient,
+                            "content": content,
+                            "timestamp": ts,
+                            "is_read": bool(read_status),
+                            "is_delivered": bool(is_delivered),
+                        }
+                    )
                 return {"messages": messages, "total": len(messages)}
         except Exception as e:
             print(f"Error in get_messages_between_users: {e}")

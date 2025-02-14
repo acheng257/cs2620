@@ -559,9 +559,15 @@ if __name__ == "__main__":
                     # Example command to delete messages by IDs
                     try:
                         ids_input = input("Enter message IDs to delete (comma-separated): ")
-                        message_ids = [int(id_.strip()) for id_ in ids_input.split(",") if id_.strip().isdigit()]
+                        message_ids = [
+                            int(id_.strip())
+                            for id_ in ids_input.split(",")
+                            if id_.strip().isdigit()
+                        ]
                         if message_ids:
-                            confirm = input("Are you sure you want to delete the selected messages? (yes/no): ")
+                            confirm = input(
+                                "Are you sure you want to delete the selected messages? (yes/no): "
+                            )
                             if confirm.lower() == "yes":
                                 success = client.delete_messages_sync(message_ids)
                                 if success:
