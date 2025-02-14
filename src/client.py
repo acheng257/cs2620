@@ -258,7 +258,7 @@ class ChatClient:
             try:
                 length_bytes = self.socket.recv(4)
                 if not length_bytes:
-                    print("Server closed connection.")
+                    print("\nServer closed connection.")
                     break
 
                 msg_len = int.from_bytes(length_bytes, "big")
@@ -267,7 +267,7 @@ class ChatClient:
                 while len(message_data) < msg_len:
                     chunk = self.socket.recv(msg_len - len(message_data))
                     if not chunk:
-                        print("Server closed connection in the middle of a message.")
+                        print("\nServer closed connection in the middle of a message.")
                         break
                     message_data += chunk
 
@@ -277,6 +277,7 @@ class ChatClient:
                 message = self.protocol.deserialize(message_data)
                 text = message.payload.get("text", "")
 
+                # Check for responses that need to be used by waiting operations.
                 if message.type in [
                     MessageType.SUCCESS,
                     MessageType.ERROR,
@@ -288,22 +289,28 @@ class ChatClient:
                     with self.response_lock:
                         self.last_response = message
 
+                # For incoming chat messages, print them in a way that doesn't block input.
                 if message.type == MessageType.SEND_MESSAGE:
                     if "id" not in message.payload:
-                        print("Received SEND_MESSAGE without 'id'.")
+                        print("\nReceived SEND_MESSAGE without 'id'.")
                         continue
-                    self.incoming_messages_queue.put(message)
+                    # Clear the current input line (if any) and print the incoming message.
+                    print(f"\nNew message from {message.sender}: {text}")
+                    # Reprint the input prompt.
+                    print("> ", end="", flush=True)
 
+                # If the success message indicates login or account creation, update status.
                 if message.type == MessageType.SUCCESS:
                     if ("Login successful" in text) or ("Account created" in text):
                         self.logged_in = True
 
             except Exception as e:
-                print(f"Error in receive thread: {e}")
+                print(f"\nError in receive thread: {e}")
                 break
 
         self.running = False
         self.close()
+
 
     def close(self) -> None:
         """
@@ -388,27 +395,46 @@ if __name__ == "__main__":
     try:
         if client.connect():
             print(f"Welcome, {args.username}!")
-            print("1. Create new account")
-            print("2. Login to existing account")
-            choice = input("Choose an option (1/2): ")
-
-            if choice == "1":
+            # Use a dummy login to check account existence.
+            _, check_error = client.login_sync("dummy_password")
+            if check_error == "Account does not exist.":
+                print("Account does not exist. Would you like to sign up? (yes/cancel)")
+                choice = input("> ").strip().lower()
+                if choice == "cancel":
+                    print("Signup canceled.")
+                    sys.exit(0)
                 password = get_password("Create password: ")
                 confirm = get_password("Confirm password: ")
                 if password != confirm:
                     print("Passwords don't match")
                     sys.exit(1)
-                client.create_account(password)
-            elif choice == "2":
+                # Create account and then automatically log in.
+                if client.create_account(password):
+                    # Optionally wait a moment for the server to process account creation.
+                    time.sleep(0.5)
+                    success, login_error = client.login_sync(password)
+                    if success:
+                        print("Account created and logged in successfully.")
+                    else:
+                        print(f"Account created but login failed: {login_error}")
+                        sys.exit(1)
+                else:
+                    print("Account creation failed.")
+                    sys.exit(1)
+            elif check_error == "Invalid password.":
+                print("Account exists. Please log in. (Type 'cancel' at the password prompt to exit.)")
                 password = get_password("Enter password: ")
-                success, error = client.login_sync(password)
+                if password.lower() == "cancel":
+                    print("Login canceled.")
+                    sys.exit(0)
+                success, login_error = client.login_sync(password)
                 if success:
                     print("Login successful.")
                 else:
-                    print(f"Login failed: {error}")
+                    print(f"Login failed: {login_error}")
                     sys.exit(1)
             else:
-                print("Invalid choice")
+                print("Unexpected response from server. Exiting.")
                 sys.exit(1)
 
             print("\nCommands:")
@@ -418,11 +444,11 @@ if __name__ == "__main__":
             print("Press Ctrl+C to quit")
 
             while True:
-                msg_input = input()
+                msg_input = input("> ").strip()
                 if not msg_input:
-                    break
+                    continue
 
-                if msg_input.strip().lower() == "!delete":
+                if msg_input.lower() == "!delete":
                     try:
                         ids_input = input("Enter message IDs to delete (comma-separated): ")
                         message_ids = [
@@ -431,9 +457,7 @@ if __name__ == "__main__":
                             if id_.strip().isdigit()
                         ]
                         if message_ids:
-                            confirm = input(
-                                "Are you sure you want to delete the selected messages? (yes/no): "
-                            )
+                            confirm = input("Are you sure you want to delete the selected messages? (yes/no): ")
                             if confirm.lower() == "yes":
                                 success = client.delete_messages_sync(message_ids)
                                 if success:
@@ -448,7 +472,7 @@ if __name__ == "__main__":
                         print(f"Invalid input: {e}")
                     continue
 
-                if msg_input.strip().lower() == "!delete_account":
+                if msg_input.lower() == "!delete_account":
                     confirm = input("Are you sure you want to delete your account? (yes/no): ")
                     if confirm.lower() == "yes":
                         success = client.delete_account()
@@ -466,10 +490,14 @@ if __name__ == "__main__":
                     continue
 
                 recipient, text = msg_input.split(",", 1)
-                client.send_message(recipient.strip(), text.strip())
+                if client.send_message(recipient.strip(), text.strip()):
+                    print("Message sent.")
+                else:
+                    print("Failed to send message.")
         else:
             print("Could not connect to server.")
     except KeyboardInterrupt:
         print("\nClient interrupted (Ctrl+C)")
     finally:
         client.close()
+

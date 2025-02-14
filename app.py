@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import threading
 import time
@@ -9,6 +10,13 @@ from streamlit_autorefresh import st_autorefresh
 from src.client import ChatClient
 from src.protocols.base import MessageType
 
+# --- Parse CLI arguments ---
+parser = argparse.ArgumentParser()
+parser.add_argument("--host", default="127.0.0.1", help="Server host to connect to.")
+parser.add_argument("--port", type=int, default=54400, help="Server port to connect to.")
+parser.add_argument("--protocol", default="JSON", choices=["JSON", "Binary"], help="Protocol type.")
+cli_args, unknown = parser.parse_known_args()
+# Note: When running under Streamlit, pass the arguments after a '--' on the command line.
 
 def init_session_state() -> None:
     """Initialize all necessary session states."""
@@ -16,8 +24,9 @@ def init_session_state() -> None:
         st.session_state.username = None
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
+    # Use the CLI protocol value as default if not already set.
     if "protocol" not in st.session_state:
-        st.session_state.protocol = "JSON"  # Default protocol
+        st.session_state.protocol = cli_args.protocol  # Default from CLI
     if "current_chat" not in st.session_state:
         st.session_state.current_chat = None
     if "messages" not in st.session_state:
@@ -42,10 +51,11 @@ def init_session_state() -> None:
         st.session_state.input_text = ""
     if "client_connected" not in st.session_state:
         st.session_state.client_connected = False  # Track user authentication status
+    # Set defaults from CLI for host and port if not already set.
     if "server_host" not in st.session_state:
-        st.session_state.server_host = ""  # Enforce user input
+        st.session_state.server_host = cli_args.host  
     if "server_port" not in st.session_state:
-        st.session_state.server_port = 54400  # Default port; users can change this
+        st.session_state.server_port = cli_args.port  
     if "server_connected" not in st.session_state:
         st.session_state.server_connected = False  # Track server connection status
     if "client" not in st.session_state:
@@ -106,40 +116,30 @@ def render_login_page() -> None:
             key="server_port_input",
             help="Enter the server's port number (e.g., 54400)",
         )
-        if st.button("Connect to Server"):
-            if not server_host:
-                st.warning("Please enter the server's IP address.")
-            else:
-                st.session_state.server_host = server_host
-                st.session_state.server_port = int(server_port)
-                st.session_state.server_connected = False
-                st.session_state.client = None
-                st.session_state.client_connected = False
-                st.session_state.error_message = ""
-                try:
-                    # Attempt a temporary connection without needing a username yet
-                    temp_client = ChatClient(
-                        username="",
-                        protocol_type="J" if st.session_state.protocol == "JSON" else "B",
-                        host=st.session_state.server_host,
-                        port=st.session_state.server_port,
-                    )
-                    if temp_client.connect():
-                        st.session_state.server_connected = True
-                        st.session_state.client_connected = False
-                        st.session_state.client = None
-                        st.success(
-                            "Connected to server successfully. You can now log\
-                                in or create an account."
-                        )
-                    else:
-                        st.session_state.error_message = "Failed to connect to the \
-                            server. Please check the IP address and port."
-                    temp_client.close()
-                except Exception as e:
-                    st.session_state.error_message = (
-                        f"An error occurred while connecting to the server: {e}"
-                    )
+        # Automatically attempt to connect if not already connected
+        if server_host and not st.session_state.server_connected:
+            st.session_state.server_host = server_host
+            st.session_state.server_port = int(server_port)
+            st.session_state.error_message = ""
+            try:
+                temp_client = ChatClient(
+                    username="",
+                    protocol_type="J" if st.session_state.protocol == "JSON" else "B",
+                    host=st.session_state.server_host,
+                    port=st.session_state.server_port,
+                )
+                if temp_client.connect():
+                    st.session_state.server_connected = True
+                    st.success("Connected to server successfully. You can now log in or create an account.")
+                else:
+                    st.session_state.error_message = "Failed to connect to the server. Please check the IP address and port."
+                temp_client.close()
+            except Exception as e:
+                st.session_state.error_message = f"An error occurred while connecting to the server: {e}"
+        # Manual reconnect option
+        if st.button("Reconnect to Server"):
+            st.session_state.server_connected = False
+            st.experimental_rerun()
 
     # --- Protocol Selection ---
     protocol_options = ["JSON", "Binary"]
@@ -227,9 +227,7 @@ def render_login_page() -> None:
                 else:
                     st.error("Failed to connect to the server.")
     else:
-        st.info(
-            "No account found for this username. Please create an account by choosing a password."
-        )
+        st.info("No account found for this username. Please create an account by choosing a password.")
         with st.form("signup_form"):
             password1 = st.text_input("Enter Password", type="password", key="signup_password1")
             password2 = st.text_input("Confirm Password", type="password", key="signup_password2")
@@ -248,11 +246,16 @@ def render_login_page() -> None:
                     if client.connect():
                         success = client.create_account(password1)
                         if success:
-                            st.session_state.username = username
-                            st.session_state.logged_in = True
-                            st.session_state.client = client
-                            st.session_state.client_connected = True
-                            st.success("Account created and logged in successfully!")
+                            # Automatically log in after account creation.
+                            login_success, login_error = client.login_sync(password1)
+                            if login_success:
+                                st.session_state.username = username
+                                st.session_state.logged_in = True
+                                st.session_state.client = client
+                                st.session_state.client_connected = True
+                                st.success("Account created and logged in successfully!")
+                            else:
+                                st.error(f"Account created but login failed: {login_error}")
                         else:
                             st.error("Account creation failed. Username may already exist.")
                     else:
@@ -451,9 +454,7 @@ def render_sidebar() -> None:
 
         if st.session_state.get("show_delete_form", False):
             with st.form("delete_account_form"):
-                confirm = st.checkbox(
-                    "Are you sure you want to delete your account?", key="confirm_delete"
-                )
+                confirm = st.checkbox("Are you sure you want to delete your account?", key="confirm_delete")
                 submitted = st.form_submit_button("Confirm Deletion")
                 if submitted:
                     if confirm:
@@ -558,9 +559,7 @@ def render_chat_page_with_deletion() -> None:
         if st.session_state.pending_deletions:
             st.markdown("### Confirm Deletion")
             with st.form("confirm_deletion_form"):
-                confirm = st.checkbox(
-                    "Are you sure you want to delete the selected messages?", key="confirm_deletion"
-                )
+                confirm = st.checkbox("Are you sure you want to delete the selected messages?", key="confirm_deletion")
                 confirm_button = st.form_submit_button("Confirm Deletion")
                 cancel_button = st.form_submit_button("Cancel")
                 if confirm_button:
@@ -568,20 +567,13 @@ def render_chat_page_with_deletion() -> None:
                         client = get_chat_client()
                         if client:
                             try:
-                                st.write(
-                                    f"Attempting to delete messages: \
-                                        {st.session_state.pending_deletions}"
-                                )
-                                success = client.delete_messages_sync(
-                                    st.session_state.pending_deletions
-                                )
+                                st.write(f"Attempting to delete messages: {st.session_state.pending_deletions}")
+                                success = client.delete_messages_sync(st.session_state.pending_deletions)
                                 st.write(f"Deletion success: {success}")
                                 if success:
                                     st.success("Selected messages have been deleted.")
                                     st.session_state.displayed_messages = [
-                                        msg
-                                        for msg in st.session_state.displayed_messages
-                                        if msg["id"] not in st.session_state.pending_deletions
+                                        msg for msg in st.session_state.displayed_messages if msg["id"] not in st.session_state.pending_deletions
                                     ]
                                 else:
                                     st.error("Failed to delete selected messages.")
@@ -600,9 +592,7 @@ def render_chat_page_with_deletion() -> None:
         <div style="height:400px; overflow-y:scroll; padding:0.5rem;" id="chat-container">
         """
         if st.session_state.displayed_messages:
-            chat_html += (
-                "<p><em>Use the checkboxes on the right to select messages for deletion.</em></p>"
-            )
+            chat_html += "<p><em>Use the checkboxes on the right to select messages for deletion.</em></p>"
         else:
             chat_html += "<p><em>No messages to display.</em></p>"
         chat_html += "</div>"
@@ -652,9 +642,7 @@ def render_chat_page_with_deletion() -> None:
                         if success:
                             st.success("Message sent.")
                             st.session_state["clear_message_area"] = True
-                            load_conversation(
-                                st.session_state.current_chat, 0, st.session_state.messages_limit
-                            )
+                            load_conversation(st.session_state.current_chat, 0, st.session_state.messages_limit)
                         else:
                             st.error("Failed to send message.")
                     except Exception as e:
@@ -677,9 +665,7 @@ def main() -> None:
     if st.session_state.logged_in:
         client = get_chat_client()
         if not client:
-            st.session_state.error_message = (
-                "Failed to initialize the chat client. Please try logging in again."
-            )
+            st.session_state.error_message = "Failed to initialize the chat client. Please try logging in again."
             st.session_state.logged_in = False
             st.session_state.username = None
             st.session_state.client_connected = False
