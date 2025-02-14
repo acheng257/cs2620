@@ -337,7 +337,7 @@ class DatabaseManager:
                     (like_pattern, per_page, offset),
                 )
                 rows = cursor.fetchall()
-
+                print(rows)
                 return {
                     "users": [r[0] for r in rows],
                     "total": total_count,
@@ -396,17 +396,20 @@ class DatabaseManager:
 
                 cursor.execute(
                     """
-                    SELECT id, sender, recipient, content, timestamp, is_read, is_delivered
+                    SELECT id, sender, recipient,
+                    content, timestamp, is_read,
+                      is_delivered, sender_deleted,
+                      recipient_deleted
                     FROM messages
-                    WHERE (sender = ? OR recipient = ?)
-                      AND (sender_deleted = FALSE OR recipient_deleted = FALSE)
+                    WHERE (sender = ? AND sender_deleted = FALSE)
+                      OR (recipient = ? AND recipient_deleted = FALSE)
                     ORDER BY timestamp DESC
                     LIMIT ? OFFSET ?
                     """,
                     (username, username, limit, offset),
                 )
                 rows = cursor.fetchall()
-
+                print(rows)
                 messages = []
                 for row in rows:
                     messages.append(
@@ -440,8 +443,13 @@ class DatabaseManager:
         Note:
             Only deletes messages where the user is either sender or recipient.
             Operation is atomic - either all messages are deleted or none are.
+            Returns False if the user doesn't exist.
         """
         try:
+            # First check if user exists
+            if not self.user_exists(username):
+                return False
+
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
 
@@ -536,6 +544,15 @@ class DatabaseManager:
                 cursor.execute(query, (user1, user2, user2, user1, limit, offset))
                 rows = cursor.fetchall()
 
+                # Count total
+                cursor.execute(
+                    "SELECT COUNT(*) FROM messages WHERE (sender = ? \
+                        AND recipient = ? AND sender_deleted = FALSE) \
+                        OR (sender = ? AND recipient = ? AND recipient_deleted = FALSE)",
+                    (user1, user2, user1, user2),
+                )
+                total_count = cursor.fetchone()[0]
+
                 messages = []
                 for row in rows:
                     msg_id, sender, recipient, content, ts, read_status, is_delivered = row
@@ -550,7 +567,7 @@ class DatabaseManager:
                             "is_delivered": bool(is_delivered),
                         }
                     )
-                return {"messages": messages, "total": len(messages)}
+                return {"messages": messages, "total": total_count}
         except Exception as e:
             print(f"Error in get_messages_between_users: {e}")
             return {"messages": [], "total": 0}
@@ -658,37 +675,3 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error marking message as delivered: {e}")
             return False
-
-    def get_last_message_id(self, sender: str, recipient: str) -> Optional[int]:
-        """
-        Get the ID of the most recent message between two users.
-
-        Args:
-            sender (str): Username of message sender
-            recipient (str): Username of message recipient
-
-        Returns:
-            Optional[int]: ID of the most recent message, or None if no messages exist
-
-        Note:
-            Only looks for messages in the specified direction (sender to recipient).
-            Does not consider messages in the opposite direction.
-        """
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    SELECT id
-                    FROM messages
-                    WHERE sender = ? AND recipient = ?
-                    ORDER BY timestamp DESC
-                    LIMIT 1
-                    """,
-                    (sender, recipient),
-                )
-                result = cursor.fetchone()
-                return result[0] if result is not None else None
-        except Exception as e:
-            print(f"Error getting last message ID: {e}")
-            return None
