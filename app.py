@@ -133,8 +133,8 @@ def render_login_page() -> None:
                                 or create an account."
                         )
                     else:
-                        st.session_state.error_message = "Failed to connect to the server. Please check the IP \
-                                address and port."
+                        st.session_state.error_message = "Failed to connect to the server. \
+                            Please check the IP address and port."
                     temp_client.close()
                 except Exception as e:
                     st.session_state.error_message = (
