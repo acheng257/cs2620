@@ -60,6 +60,9 @@ def init_session_state() -> None:
         st.session_state.displayed_messages = []
     if "pending_username" not in st.session_state:
         st.session_state.pending_username = ""
+    # New flag for delete account UI
+    if "show_delete_form" not in st.session_state:
+        st.session_state.show_delete_form = False
 
 
 def get_chat_client() -> Optional[ChatClient]:
@@ -276,22 +279,6 @@ def fetch_accounts(pattern: str = "", page: int = 1) -> None:
         st.warning("Client is not connected.")
 
 
-# def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
-#     """
-#     Fetch chat partners and their corresponding unread message counts.
-#     Returns a tuple of (list_of_partners, unread_map).
-#     """
-#     client = get_chat_client()
-#     if client:
-#         try:
-#             resp = client.list_chat_partners_sync()
-#             if resp and resp.type == MessageType.SUCCESS:
-#                 partners = resp.payload.get("chat_partners", [])
-#                 unread_map = resp.payload.get("unread_map", {})
-#                 return partners, unread_map
-#         except Exception as e:
-#             st.warning(f"An error occurred while fetching chat partners: {e}")
-#     return [], {}
 def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
     """
     Fetch chat partners and their corresponding unread message counts.
@@ -366,8 +353,6 @@ def process_incoming_realtime_messages() -> None:
     """
     Process incoming real-time messages from the server.
     Updates the chat interface and unread_map accordingly.
-    If a message is received from a new chat partner, clear the cached
-    chat partners to force an update of the sidebar.
     """
     client = get_chat_client()
     if client:
@@ -381,7 +366,6 @@ def process_incoming_realtime_messages() -> None:
 
                 with st.session_state.lock:
                     if st.session_state.current_chat == sender:
-                        # If the current chat is open, append the message and mark as read
                         st.session_state.messages.append(
                             {
                                 "sender": sender,
@@ -391,29 +375,21 @@ def process_incoming_realtime_messages() -> None:
                                 "is_delivered": True,
                             }
                         )
-                        # Optionally, mark conversation as read on the server
                         client.read_conversation_sync(st.session_state.current_chat, 0, 100000)
                     else:
-                        # Increment unread count for the sender
                         if sender in st.session_state.unread_map:
                             st.session_state.unread_map[sender] += 1
                         else:
                             st.session_state.unread_map[sender] = 1
-
-                        # If this sender isn't in the cached chat partners, mark it as new
                         if "chat_partners" in st.session_state:
                             if sender not in st.session_state.chat_partners:
                                 new_partner_detected = True
                         else:
                             new_partner_detected = True
-
-                # Optionally, display a brief notification
                 st.success(f"New message from {sender}: {text}")
 
-        # If a new partner was detected, clear the cached list so it gets refreshed
         if new_partner_detected:
             st.session_state.chat_partners = []
-            # Trigger a rerun to update the sidebar automatically
             st.rerun()
 
 
@@ -422,12 +398,10 @@ def render_sidebar() -> None:
     st.sidebar.title("Menu")
     st.sidebar.subheader(f"Logged in as: {st.session_state.username}")
 
-    # Option to refresh the chat partners list manually
     if st.sidebar.button("Refresh Chats"):
         st.session_state.chat_partners = []  # Clear cached partners
         st.session_state.unread_map = {}
 
-    # Fetch chat partners and their unread counts (cached if available)
     chat_partners, unread_map = fetch_chat_partners()
 
     with st.sidebar.expander("Existing Chats", expanded=True):
@@ -442,7 +416,6 @@ def render_sidebar() -> None:
                         st.session_state.current_chat = partner
                         st.session_state.messages_offset = 0
                         st.session_state.messages_limit = st.session_state.messages_limit
-                        # Clear cached chat partners so that they refresh after new chat is selected
                         st.session_state.chat_partners = []
                         load_conversation(partner, 0, st.session_state.messages_limit)
                         st.session_state.scroll_to_bottom = True
@@ -469,53 +442,53 @@ def render_sidebar() -> None:
     with st.sidebar.expander("Account Options", expanded=False):
         st.write("---")
         if st.button("Refresh Chat Partners"):
-            st.session_state.fetch_chat_partners = True  # Set flag (if needed)
+            st.session_state.fetch_chat_partners = True
             st.rerun()
+
+        # --- Delete Account UI using a form and session flag ---
         if st.button("Delete Account"):
-            confirm = st.sidebar.checkbox(
-                "Are you sure you want to delete your account?", key="confirm_delete"
-            )
-            if confirm:
-                client = get_chat_client()
-                if client:
-                    try:
-                        success = client.delete_account()
-                        if success:
-                            st.session_state.logged_in = False
-                            st.session_state.username = None
-                            st.session_state.current_chat = None
-                            st.session_state.messages = []
-                            st.session_state.unread_map = {}
-                            st.session_state.chat_partners = []
-                            st.session_state.search_results = []
-                            st.session_state.client = None
-                            st.session_state.client_connected = False
-                            st.session_state.server_connected = False
-                            st.session_state.error_message = ""
-                            st.session_state.pending_deletions = []
-                            st.session_state.displayed_messages = []
-                            st.success("Account deleted successfully.")
+            st.session_state.show_delete_form = True
+
+        if st.session_state.get("show_delete_form", False):
+            with st.form("delete_account_form"):
+                confirm = st.checkbox(
+                    "Are you sure you want to delete your account?", key="confirm_delete"
+                )
+                submitted = st.form_submit_button("Confirm Deletion")
+                if submitted:
+                    if confirm:
+                        client = get_chat_client()
+                        if client:
+                            try:
+                                success = client.delete_account()
+                                if success:
+                                    st.session_state.logged_in = False
+                                    st.session_state.username = None
+                                    st.session_state.current_chat = None
+                                    st.session_state.messages = []
+                                    st.session_state.unread_map = {}
+                                    st.session_state.chat_partners = []
+                                    st.session_state.search_results = []
+                                    st.session_state.client = None
+                                    st.session_state.client_connected = False
+                                    st.session_state.server_connected = False
+                                    st.session_state.error_message = ""
+                                    st.session_state.pending_username = ""
+                                    st.session_state.pending_deletions = []
+                                    st.session_state.displayed_messages = []
+                                    st.success("Account deleted successfully.")
+                                    st.session_state.show_delete_form = False
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to delete account.")
+                            except Exception as e:
+                                st.error(f"An error occurred while deleting the account: {e}")
                         else:
-                            st.error("Failed to delete account.")
-                    except Exception as e:
-                        st.error(f"An error occurred while deleting the account: {e}")
-                else:
-                    st.error("Client is not connected.")
-        if st.button("Logout"):
-            st.session_state.logged_in = False
-            st.session_state.username = None
-            st.session_state.current_chat = None
-            st.session_state.messages = []
-            st.session_state.unread_map = {}
-            st.session_state.chat_partners = []
-            st.session_state.search_results = []
-            st.session_state.client = None
-            st.session_state.client_connected = False
-            st.session_state.server_connected = False
-            st.session_state.error_message = ""
-            st.session_state.pending_deletions = []
-            st.session_state.displayed_messages = []
-            st.success("Logged out successfully.")
+                            st.error("Client is not connected.")
+                    else:
+                        st.warning("Please check the confirmation box to delete your account.")
+
+    # End of sidebar
 
 
 def render_chat_page_with_deletion() -> None:
@@ -542,7 +515,6 @@ def render_chat_page_with_deletion() -> None:
             st.session_state.scroll_to_bottom = True
             st.session_state.scroll_to_top = False
 
-        # Container for messages with deletion checkboxes on the side
         with st.container():
             with st.form("select_messages_form"):
                 selected_message_ids = []
@@ -551,8 +523,6 @@ def render_chat_page_with_deletion() -> None:
                     text = msg.get("text")
                     ts = msg.get("timestamp", time.time())
                     msg_id = msg.get("id")
-
-                    # Convert timestamp to a readable string
                     if isinstance(ts, str):
                         try:
                             dt = datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
@@ -564,10 +534,8 @@ def render_chat_page_with_deletion() -> None:
                             epoch = float(ts)
                         except (ValueError, TypeError):
                             epoch = time.time()
-
                     formatted_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
                     sender_name = "You" if sender == st.session_state.username else sender
-
                     cols = st.columns([4, 1])
                     with cols[0]:
                         st.markdown(f"**{sender_name}** [{formatted_timestamp}]: {text}")
@@ -601,8 +569,8 @@ def render_chat_page_with_deletion() -> None:
                         if client:
                             try:
                                 st.write(
-                                    f"Attempting to delete messages:\
-                                          {st.session_state.pending_deletions}"
+                                    f"Attempting to delete messages: \
+                                        {st.session_state.pending_deletions}"
                                 )
                                 success = client.delete_messages_sync(
                                     st.session_state.pending_deletions

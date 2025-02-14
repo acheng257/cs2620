@@ -1,5 +1,3 @@
-# client.py
-
 import argparse
 import getpass
 import queue
@@ -17,25 +15,6 @@ from src.protocols.json_protocol import JsonProtocol
 class ChatClient:
     """
     A client implementation for the chat system.
-
-    This class handles all client-side operations including:
-    - Connection management with the server
-    - Protocol negotiation (JSON or Binary)
-    - Message sending and receiving
-    - Account management (creation, login, deletion)
-    - Chat operations (sending messages, reading conversations)
-
-    The client maintains a separate thread for receiving messages, allowing for
-    both synchronous operations (like login) and asynchronous message reception.
-
-    Attributes:
-        host (str): Server hostname or IP address
-        port (int): Server port number
-        username (str): Client's username
-        socket (socket.socket): TCP socket connection to server
-        running (bool): Flag indicating if client is running
-        logged_in (bool): Flag indicating if user is authenticated
-        protocol (Protocol): Protocol implementation (JSON or Binary)
     """
 
     def __init__(
@@ -43,12 +22,6 @@ class ChatClient:
     ) -> None:
         """
         Initialize a new chat client.
-
-        Args:
-            username (str): Username for this client
-            protocol_type (str): Protocol type ("J" for JSON, "B" for Binary)
-            host (str, optional): Server hostname. Defaults to "127.0.0.1"
-            port (int, optional): Server port. Defaults to 54400
         """
         self.host: str = host
         self.port: int = port
@@ -66,33 +39,20 @@ class ChatClient:
             self.protocol_byte = b"B"
             self.protocol = BinaryProtocol()
 
-        # Synchronous response waiting
         self.response_lock = threading.Lock()
         self.last_response: Optional[Message] = None
-
-        # Queue to hold real-time pushed messages from the server
         self.incoming_messages_queue: queue.Queue[Message] = queue.Queue()
 
     def connect(self) -> bool:
         """
         Connect to the chat server and start the message receiving thread.
-
-        Returns:
-            bool: True if connection successful, False otherwise
-
-        Note:
-            This method performs protocol negotiation with the server
-            and starts a background thread for receiving messages.
         """
         try:
             self.socket.connect((self.host, self.port))
             self.socket.sendall(self.protocol_byte)
             self.running = True
-
-            # Start thread that continuously reads incoming messages
             self.receive_thread = threading.Thread(target=self.receive_messages, daemon=True)
             self.receive_thread.start()
-
             return True
         except Exception as e:
             print(f"Failed to connect: {e}")
@@ -101,16 +61,6 @@ class ChatClient:
     def _send_message_no_response(self, message: Message) -> bool:
         """
         Send a message to the server without waiting for a response.
-
-        Args:
-            message (Message): The message to send
-
-        Returns:
-            bool: True if send successful, False if error occurred
-
-        Note:
-            This is used for fire-and-forget operations where
-            immediate response is not required.
         """
         try:
             data = self.protocol.serialize(message)
@@ -125,17 +75,6 @@ class ChatClient:
     def _send_message_and_wait(self, message: Message, timeout: float = 10.0) -> Optional[Message]:
         """
         Send a message and wait for server response.
-
-        Args:
-            message (Message): The message to send
-            timeout (float, optional): Maximum time to wait for response. Defaults to 10.0
-
-        Returns:
-            Optional[Message]: Server response message, or None if timeout/error
-
-        Note:
-            Used for operations requiring immediate server response
-            like account listing or message reading.
         """
         with self.response_lock:
             self.last_response = None
@@ -161,14 +100,6 @@ class ChatClient:
     ) -> Optional[Message]:
         """
         Read messages from a conversation with another user.
-
-        Args:
-            other_user (str): Username of the other participant
-            offset (int, optional): Starting point in message history. Defaults to 0
-            limit (int, optional): Maximum messages to retrieve. Defaults to 20
-
-        Returns:
-            Optional[Message]: Server response containing messages, or None if error
         """
         msg = Message(
             type=MessageType.READ_MESSAGES,
@@ -186,13 +117,6 @@ class ChatClient:
     def list_accounts_sync(self, pattern: str = "", page: int = 1) -> Optional[Message]:
         """
         Request list of user accounts from server.
-
-        Args:
-            pattern (str, optional): Username pattern to filter by. Defaults to ""
-            page (int, optional): Page number for pagination. Defaults to 1
-
-        Returns:
-            Optional[Message]: Server response with account list, or None if error
         """
         msg = Message(
             type=MessageType.LIST_ACCOUNTS,
@@ -207,12 +131,6 @@ class ChatClient:
     def list_chat_partners_sync(self) -> Optional[Message]:
         """
         Request list of users this client has chatted with.
-
-        Returns:
-            Optional[Message]: Server response with chat partner list, or None if error
-
-        Note:
-            Response includes unread message counts for each chat partner.
         """
         msg = Message(
             type=MessageType.LIST_CHAT_PARTNERS,
@@ -226,16 +144,6 @@ class ChatClient:
     def create_account(self, password: str) -> bool:
         """
         Create a new account on the server.
-
-        Args:
-            password (str): Password for the new account
-
-        Returns:
-            bool: True if request sent successfully, False if error
-
-        Note:
-            This is a fire-and-forget operation. Success/failure
-            will be reported via the message receiving thread.
         """
         msg = Message(
             type=MessageType.CREATE_ACCOUNT,
@@ -249,16 +157,6 @@ class ChatClient:
     def login(self, password: str) -> bool:
         """
         Log in to an existing account.
-
-        Args:
-            password (str): Account password
-
-        Returns:
-            bool: True if request sent successfully, False if error
-
-        Note:
-            This is a fire-and-forget operation. Success/failure
-            will be reported via the message receiving thread.
         """
         msg = Message(
             type=MessageType.LOGIN,
@@ -272,7 +170,6 @@ class ChatClient:
     def login_sync(self, password: str, timeout: float = 10.0) -> Tuple[bool, Optional[str]]:
         """
         Log in to an existing account synchronously.
-        Returns a tuple (success: bool, error_message: Optional[str]).
         """
         msg = Message(
             type=MessageType.LOGIN,
@@ -291,16 +188,10 @@ class ChatClient:
                 return False, error_text
         return False, "No response from server."
 
-    def delete_account(self) -> bool:
+    def delete_account(self, timeout: float = 10.0) -> bool:
         """
         Delete the current account from the server.
-
-        Returns:
-            bool: True if request sent successfully, False if error
-
-        Note:
-            Requires user to be logged in.
-            This is a fire-and-forget operation.
+        Now waits for a response from the server.
         """
         if not self.logged_in:
             print("Must be logged in to delete account.")
@@ -313,22 +204,16 @@ class ChatClient:
             recipient="SERVER",
             timestamp=time.time(),
         )
-        return self._send_message_no_response(msg)
+        response = self._send_message_and_wait(msg, timeout=timeout)
+        if response and response.type == MessageType.SUCCESS:
+            return True
+        else:
+            print("Failed to delete account.")
+            return False
 
     def send_message(self, recipient: str, text: str) -> bool:
         """
         Send a chat message to another user.
-
-        Args:
-            recipient (str): Username of message recipient
-            text (str): Message content
-
-        Returns:
-            bool: True if message sent successfully, False if error
-
-        Note:
-            Requires user to be logged in.
-            This is a fire-and-forget operation.
         """
         if not self.logged_in:
             print("Must be logged in to send messages.")
@@ -346,7 +231,6 @@ class ChatClient:
     def delete_messages_sync(self, message_ids: List[int], timeout: float = 10.0) -> bool:
         """
         Send a DELETE_MESSAGES request and wait for confirmation.
-        Returns True if deletion was successful, False otherwise.
         """
         if not self.logged_in:
             print("Must be logged in to delete messages.")
@@ -369,17 +253,6 @@ class ChatClient:
     def receive_messages(self) -> None:
         """
         Continuously receive and process messages from the server.
-
-        This method runs in a separate thread and handles:
-        - Response messages for synchronous operations
-        - Real-time chat messages from other users
-        - Login/logout status updates
-        - Error messages
-
-        Note:
-            This method runs until self.running is False or connection is lost.
-            Messages are processed based on their type and either stored as
-            responses or pushed to the incoming message queue.
         """
         while self.running:
             try:
@@ -416,7 +289,6 @@ class ChatClient:
                         self.last_response = message
 
                 if message.type == MessageType.SEND_MESSAGE:
-                    # Ensure 'id' is present in the payload
                     if "id" not in message.payload:
                         print("Received SEND_MESSAGE without 'id'.")
                         continue
@@ -436,10 +308,6 @@ class ChatClient:
     def close(self) -> None:
         """
         Close the connection to the server and clean up resources.
-
-        Note:
-            This method ensures proper cleanup of socket and thread resources.
-            It can be called multiple times safely.
         """
         self.running = False
         try:
@@ -533,7 +401,6 @@ if __name__ == "__main__":
                 client.create_account(password)
             elif choice == "2":
                 password = get_password("Enter password: ")
-                # Use the new synchronous login method
                 success, error = client.login_sync(password)
                 if success:
                     print("Login successful.")
@@ -556,7 +423,6 @@ if __name__ == "__main__":
                     break
 
                 if msg_input.strip().lower() == "!delete":
-                    # Example command to delete messages by IDs
                     try:
                         ids_input = input("Enter message IDs to delete (comma-separated): ")
                         message_ids = [
@@ -585,9 +451,8 @@ if __name__ == "__main__":
                 if msg_input.strip().lower() == "!delete_account":
                     confirm = input("Are you sure you want to delete your account? (yes/no): ")
                     if confirm.lower() == "yes":
-                        success = client.delete_messages_sync([])  # No message IDs to delete
+                        success = client.delete_account()
                         if success:
-                            client.delete_account()
                             print("Account deletion request sent.")
                             break
                         else:
