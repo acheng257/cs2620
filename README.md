@@ -313,6 +313,61 @@ flake8 . --count --max-line-length=100 --statistics
 mypy . --config=./pyproject.toml --ignore-missing-imports
 ```
 
+## Documentation
+
+### Generating Documentation
+
+The project uses Sphinx to automatically generate documentation from the codebase. To generate the documentation:
+
+1. Install documentation dependencies:
+```bash
+pipenv install --dev sphinx sphinx-rtd-theme
+```
+
+2. Build the documentation:
+```bash
+cd docs
+pipenv run make html
+```
+
+3. View the documentation by opening `docs/build/html/index.html` in your web browser.
+
+### Documentation Structure
+
+The documentation includes:
+- Complete API reference
+- Module listings
+- Class and function documentation with source code links
+- Full text search functionality
+- Index of all modules, classes, and functions
+
+### Updating Documentation
+
+When adding new code or making changes:
+
+1. Add Google-style docstrings to your Python functions and classes:
+```python
+def function_name(param1: type1, param2: type2) -> return_type:
+    """Short description of what the function does.
+
+    Args:
+        param1: Description of param1
+        param2: Description of param2
+
+    Returns:
+        Description of return value
+
+    Raises:
+        ErrorType: Description of when this error is raised
+    """
+```
+
+2. Rebuild the documentation to reflect your changes:
+```bash
+cd docs
+pipenv run make html
+```
+
 ## Protocol Comparison (TODO)
 
 ### Message Size Comparison
