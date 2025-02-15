@@ -259,6 +259,9 @@ class ChatServer:
 
             try:
                 self.send_message_to_socket(target_socket, message)
+                self.db.mark_message_as_delivered(
+                    message_id
+                )  # Mark message as delivered after successful send
                 print(f"[INFO] Sent message from '{sender_username}' to '{target_username}'.")
             except Exception as e:
                 print(f"[ERROR] Error sending message to '{target_username}': {e}")
@@ -397,25 +400,35 @@ class ChatServer:
             self.send_response(client_socket, MessageType.ERROR, "Not logged in.")
             return
 
-        if other_user:
-            result = self.db.get_messages_between_users(username, other_user, offset, limit)
-        else:
-            result = self.db.get_messages_for_user(username, offset, limit)
+        try:
+            if other_user:
+                result = self.db.get_messages_between_users(username, other_user, offset, limit)
+            else:
+                result = self.db.get_messages_for_user(username, offset, limit)
 
-        msg_ids = [m["id"] for m in result.get("messages", [])]
-        if msg_ids:
-            self.db.mark_messages_as_read(username, msg_ids)
-            print(f"[INFO] Marked messages as read for user '{username}'. Message IDs: {msg_ids}")
+            msg_ids = [m["id"] for m in result.get("messages", [])]
+            if msg_ids:
+                self.db.mark_messages_as_read(username, msg_ids)
+                print(
+                    f"[INFO] Marked messages as read for user '{username}'. Message IDs: {msg_ids}"
+                )
 
-        response = Message(
-            type=MessageType.SUCCESS,
-            payload=result,
-            sender="SERVER",
-            recipient=username,
-            timestamp=time.time(),
-        )
-        self.send_message_to_socket(client_socket, response)
-        print(f"[INFO] Sent READ_MESSAGES response to {username}.")
+            response = Message(
+                type=MessageType.SUCCESS,
+                payload=result,
+                sender="SERVER",
+                recipient=username,
+                timestamp=time.time(),
+            )
+            self.send_message_to_socket(client_socket, response)
+            print(f"[INFO] Sent READ_MESSAGES response to {username}.")
+        except Exception as e:
+            print(f"[ERROR] Database error while reading messages for '{username}': {e}")
+            self.send_response(
+                client_socket,
+                MessageType.ERROR,
+                f"Failed to read messages: {str(e)}",
+            )
 
     def handle_delete_messages(self, client_socket: socket.socket, message: Message) -> None:
         """Handle DELETE_MESSAGES request."""
@@ -430,19 +443,29 @@ class ChatServer:
             print(f"[WARNING] Invalid 'message_ids' format from user '{connection.username}'.")
             return
 
-        success = self.db.delete_messages(connection.username, message_ids)
+        try:
+            success = self.db.delete_messages(connection.username, message_ids)
 
-        if success:
-            self.send_response(client_socket, MessageType.SUCCESS, "Messages deleted for you.")
+            if success:
+                self.send_response(client_socket, MessageType.SUCCESS, "Messages deleted for you.")
+                print(
+                    f"[INFO] Deleted messages for user '{connection.username}'. \
+                        Message IDs: {message_ids}"
+                )
+            else:
+                self.send_response(client_socket, MessageType.ERROR, "Failed to delete messages.")
+                print(
+                    f"[ERROR] Failed to delete messages for user '{connection.username}'. \
+                        Message IDs: {message_ids}"
+                )
+        except Exception as e:
             print(
-                f"[INFO] Deleted messages for user '{connection.username}'. \
-                    Message IDs: {message_ids}"
+                f"[ERROR] Database error while deleting messages for '{connection.username}': {e}"
             )
-        else:
-            self.send_response(client_socket, MessageType.ERROR, "Failed to delete messages.")
-            print(
-                f"[ERROR] Failed to delete messages for user '{connection.username}'. \
-                    Message IDs: {message_ids}"
+            self.send_response(
+                client_socket,
+                MessageType.ERROR,
+                f"Failed to delete messages: {str(e)}",
             )
 
     def handle_list_chat_partners(self, client_socket: socket.socket, message: Message) -> None:
@@ -456,24 +479,32 @@ class ChatServer:
             return
 
         username = connection.username
-        partners = self.db.get_chat_partners(username)
-        unread_map = {}
-        for p in partners:
-            # Assuming get_unread_between_users returns the number of unread messages
-            unread_map[p] = self.db.get_unread_between_users(username, p)
+        try:
+            partners = self.db.get_chat_partners(username)
+            unread_map = {}
+            for p in partners:
+                # Assuming get_unread_between_users returns the number of unread messages
+                unread_map[p] = self.db.get_unread_between_users(username, p)
 
-        response = Message(
-            type=MessageType.SUCCESS,
-            payload={
-                "chat_partners": partners,  # e.g., ["alice", "bob"]
-                "unread_map": unread_map,  # e.g., {"alice": 3, "bob": 1}
-            },
-            sender="SERVER",
-            recipient=username,
-            timestamp=time.time(),
-        )
-        self.send_message_to_socket(client_socket, response)
-        print(f"[INFO] Sent LIST_CHAT_PARTNERS response to {username}.")
+            response = Message(
+                type=MessageType.SUCCESS,
+                payload={
+                    "chat_partners": partners,  # e.g., ["alice", "bob"]
+                    "unread_map": unread_map,  # e.g., {"alice": 3, "bob": 1}
+                },
+                sender="SERVER",
+                recipient=username,
+                timestamp=time.time(),
+            )
+            self.send_message_to_socket(client_socket, response)
+            print(f"[INFO] Sent LIST_CHAT_PARTNERS response to {username}.")
+        except Exception as e:
+            print(f"[ERROR] Database error while listing chat partners for '{username}': {e}")
+            self.send_response(
+                client_socket,
+                MessageType.ERROR,
+                f"Failed to list chat partners: {str(e)}",
+            )
 
     def receive_all(self, client_socket: socket.socket, length: int) -> Optional[bytes]:
         """Helper function to receive exactly `length` bytes from the socket."""
