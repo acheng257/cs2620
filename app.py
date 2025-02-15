@@ -217,10 +217,12 @@ def render_login_page() -> None:
                         st.session_state.client = client
                         st.session_state.client_connected = True
                         db_manager = DatabaseManager()
-                        st.session_state.global_message_limit = db_manager.get_message_limit(username)
+                        st.session_state.global_message_limit = db_manager.get_message_limit(
+                            username
+                        )
                         st.success("Logged in successfully!")
                     else:
-                        if "password" in error.lower():
+                        if error and "password" in error.lower():
                             st.error("Incorrect password. Please try again.")
                         else:
                             st.error(f"Login failed: {error}")
