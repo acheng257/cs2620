@@ -167,6 +167,7 @@ The project uses pytest for testing with the following structure:
 tests/
 ├── conftest.py           # Shared test fixtures and configurations
 ├── test_server.py        # Server endpoint and protocol tests
+├── test_protocols.py     # Protocol tests
 ├── test_client.py        # Client communication tests
 └── test_database.py      # Database operation tests
 ```
@@ -190,6 +191,51 @@ tests/
    - Transaction management
    - Concurrent access
    - Data integrity
+
+4. **Protocol Tests**
+   - Message serialization/deserialization
+   - Protocol message processing
+   - Error handling
+
+### Running Tests
+
+1. Run all tests:
+```bash
+pipenv run pytest
+```
+
+2. Run specific test file:
+```bash
+pipenv run pytest tests/test_server.py
+```
+
+3. Run specific test case:
+```bash
+pipenv run pytest tests/test_server.py::test_function_name
+```
+
+4. Run tests with coverage:
+```bash
+pipenv run pytest --cov=src tests/
+```
+
+5. Generate HTML coverage report:
+```bash
+pipenv run pytest --cov=src --cov-report=html
+```
+The report will be available in `htmlcov/index.html`
+
+### Coverage Metrics
+
+| Module | Miss | Coverage |
+|--------|-----------|----------|
+| src/client.py | 27 | 82% |
+| src/database/db_manager.py | 50 | 79% |
+| src/protocols/base.py | 0 | 100% |
+| src/protocols/binary_protocol.py | 0 | 100% |
+| src/protocols/json_protocol.py | 0 | 100% |
+| src/server.py | 86 | 75% |
+| **Overall** | **163** | **81%** |
 
 ## Configuration
 
@@ -229,6 +275,8 @@ pipenv run make html
 3. View the documentation by opening `docs/build/html/index.html` in your web browser.
 
 ### Documentation Structure
+
+![](assets/docs.png)
 
 The documentation includes:
 - Complete API reference
