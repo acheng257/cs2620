@@ -216,16 +216,17 @@ def render_login_page() -> None:
                         st.session_state.logged_in = True
                         st.session_state.client = client
                         st.session_state.client_connected = True
-                        # Load user's default message limit from the database.
                         db_manager = DatabaseManager()
-                        st.session_state.global_message_limit = db_manager.get_message_limit(
-                            username
-                        )
+                        st.session_state.global_message_limit = db_manager.get_message_limit(username)
                         st.success("Logged in successfully!")
                     else:
-                        st.error(f"Login failed: {error}")
+                        if "password" in error.lower():
+                            st.error("Incorrect password. Please try again.")
+                        else:
+                            st.error(f"Login failed: {error}")
                 else:
                     st.error("Failed to connect to the server.")
+
     else:
         st.info(
             "No account found for this username. Please create an account by choosing a password."
