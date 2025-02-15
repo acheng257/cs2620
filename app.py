@@ -1,3 +1,4 @@
+import argparse
 import threading
 import time
 from typing import Dict, List, Optional, Tuple
@@ -336,24 +337,31 @@ def process_incoming_realtime_messages() -> None:
     client = get_chat_client()
     if client:
         new_partner_detected = False
+        new_message_received = False
         while not client.incoming_messages_queue.empty():
             msg = client.incoming_messages_queue.get()
             if msg.type == MessageType.SEND_MESSAGE:
                 sender = msg.sender
                 text = msg.payload.get("text", "")
                 timestamp = msg.timestamp
-
+                new_message = {
+                    "sender": sender,
+                    "text": text,
+                    "timestamp": timestamp,
+                    "is_read": True,
+                    "is_delivered": True,
+                }
                 with st.session_state.lock:
                     if st.session_state.current_chat == sender:
-                        st.session_state.messages.append(
-                            {
-                                "sender": sender,
-                                "text": text,
-                                "timestamp": timestamp,
-                                "is_read": True,
-                                "is_delivered": True,
-                            }
-                        )
+                        st.session_state.messages.append(new_message)
+                        new_message_received = True
+                        if (
+                            "conversations" in st.session_state
+                            and st.session_state.current_chat in st.session_state.conversations
+                        ):
+                            st.session_state.conversations[st.session_state.current_chat][
+                                "displayed_messages"
+                            ].append(new_message)
                         client.read_conversation_sync(st.session_state.current_chat, 0, 100000)
                     else:
                         if sender in st.session_state.unread_map:
@@ -366,9 +374,7 @@ def process_incoming_realtime_messages() -> None:
                         else:
                             new_partner_detected = True
                 st.success(f"New message from {sender}: {text}")
-
-        if new_partner_detected:
-            st.session_state.chat_partners = []
+        if new_partner_detected or new_message_received:
             st.rerun()
 
 
@@ -674,9 +680,50 @@ def render_chat_page_with_deletion() -> None:
 
 
 def main() -> None:
+    # Parse command-line arguments.
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", type=str, default="", help="Server host address")
+    parser.add_argument("--port", type=int, default=54400, help="Server port number")
+    parser.add_argument(
+        "--protocol",
+        type=str,
+        choices=["JSON", "Binary"],
+        default="JSON",
+        help="Communication protocol",
+    )
+    args, unknown = parser.parse_known_args()
+
     st.set_page_config(page_title="Secure Chat", layout="wide")
     st_autorefresh(interval=3000, key="auto_refresh_chat")
     init_session_state()
+
+    # Override session state with CLI arguments if provided.
+    if args.host:
+        st.session_state.server_host = args.host
+    if args.port:
+        st.session_state.server_port = args.port
+    if args.protocol:
+        st.session_state.protocol = args.protocol
+
+    # Automatically attempt to connect to the server if host is provided and not already connected.
+    if st.session_state.server_host and not st.session_state.server_connected:
+        try:
+            temp_client = ChatClient(
+                username="",
+                protocol_type="J" if st.session_state.protocol == "JSON" else "B",
+                host=st.session_state.server_host,
+                port=st.session_state.server_port,
+            )
+            if temp_client.connect():
+                st.session_state.server_connected = True
+                st.success("Automatically connected to the server.")
+            else:
+                st.session_state.error_message = (
+                    "Failed to connect to the server automatically. Please check the host and port."
+                )
+            temp_client.close()
+        except Exception as e:
+            st.session_state.error_message = f"Error auto connecting to server: {e}"
 
     if st.session_state.logged_in:
         client = get_chat_client()
