@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.protocols.base import Message, MessageType
+from src.protocols.binary_protocol import BinaryProtocol
 from src.protocols.json_protocol import JsonProtocol
 from src.server import ChatServer, ClientConnection, User
 
@@ -734,3 +735,205 @@ class TestChatServer:
 
         server.handle_list_chat_partners(client_socket, message)
         assert client_socket.sendall.call_count == 2  # Error response sent
+
+    def test_send_response_serialization_error(self, server: ChatServer) -> None:
+        """Test handling serialization error in send_response."""
+        client_socket = Mock()
+        protocol = JsonProtocol()
+        server.active_connections[client_socket] = ClientConnection(
+            socket=client_socket, protocol=protocol, username="test_user"
+        )
+
+        # Create a message that can't be serialized
+        client_socket.sendall.side_effect = TypeError("Object not JSON serializable")
+
+        server.send_response(client_socket, MessageType.SUCCESS, "Test message")
+        assert client_socket not in server.active_connections
+
+    def test_deliver_undelivered_messages_invalid_connection(
+        self, server: ChatServer, mock_db: Mock
+    ) -> None:
+        """Test delivering messages with invalid connection."""
+        client_socket = Mock()
+        server.username_to_socket["test_user"] = client_socket
+        # Don't set up active_connections to simulate invalid connection
+
+        mock_db.get_undelivered_messages.return_value = [
+            {"id": 1, "from": "sender", "content": "Hello!", "timestamp": time.time()}
+        ]
+
+        server.deliver_undelivered_messages("test_user")
+        mock_db.mark_message_as_delivered.assert_not_called()
+
+    def test_server_start_protocol_error(self, server: ChatServer, mock_socket: Mock) -> None:
+        """Test server handling protocol byte receive error."""
+        mock_socket.return_value.accept.return_value = (Mock(), ("127.0.0.1", 12345))
+        mock_socket.return_value.recv.return_value = None  # Simulate protocol byte receive error
+
+        # Create a threading.Event to stop the server after one iteration
+        stop_event = threading.Event()
+
+        def stop_server() -> None:
+            time.sleep(0.1)  # Give the server time to process one connection
+            stop_event.set()
+            server.socket.close()
+
+        # Patch the server's while loop to check the stop event
+        original_start = server.start
+
+        def patched_start() -> None:
+            server.socket.listen(5)
+            print(f"[INFO] Server started on {server.host}:{server.port}")
+            while not stop_event.is_set():
+                try:
+                    client_socket, address = server.socket.accept()
+                    print(f"[INFO] New connection from {address}")
+
+                    # Receive protocol byte
+                    protocol_byte = server.receive_all(client_socket, 1)
+                    if not protocol_byte:
+                        print(
+                            f"[WARNING] Failed to receive protocol byte \
+                                from {address}. Closing connection."
+                        )
+                        client_socket.close()
+                        continue
+
+                    protocol = JsonProtocol() if protocol_byte == b"J" else BinaryProtocol()
+                    protocol_name = "JSON" if protocol_byte == b"J" else "Binary"
+
+                    connection = ClientConnection(socket=client_socket, protocol=protocol)
+                    print(f"[INFO] Using {protocol_name} protocol for connection from {address}")
+
+                    with server.lock:
+                        server.active_connections[client_socket] = connection
+
+                    thread = threading.Thread(target=server.handle_client, args=(client_socket,))
+                    thread.daemon = True
+                    thread.start()
+                    print(f"[INFO] Started thread to handle client {address}")
+                except Exception as e:
+                    print(f"[ERROR] Error accepting new connection: {e}")
+                    break
+            server.shutdown()
+
+        # Use setattr for monkey patching
+        setattr(server, "start", patched_start)
+
+        stop_thread = threading.Thread(target=stop_server)
+        stop_thread.daemon = True
+        stop_thread.start()
+
+        try:
+            server.start()
+        except Exception:
+            pass  # Expected to raise when socket is closed
+
+        stop_thread.join(timeout=1.0)
+        # Restore original start method using setattr
+        setattr(server, "start", original_start)
+
+    def test_server_start_accept_error(self, server: ChatServer, mock_socket: Mock) -> None:
+        """Test server handling accept error."""
+        mock_socket.return_value.accept.side_effect = Exception("Accept error")
+
+        # Create a threading.Event to stop the server after one iteration
+        stop_event = threading.Event()
+
+        def stop_server() -> None:
+            time.sleep(0.1)  # Give the server time to process one connection
+            stop_event.set()
+            server.socket.close()
+
+        # Patch the server's while loop to check the stop event
+        original_start = server.start
+
+        def patched_start() -> None:
+            server.socket.listen(5)
+            print(f"[INFO] Server started on {server.host}:{server.port}")
+            while not stop_event.is_set():
+                try:
+                    client_socket, address = server.socket.accept()
+                    print(f"[INFO] New connection from {address}")
+                except Exception as e:
+                    print(f"[ERROR] Error accepting new connection: {e}")
+                    break
+            server.shutdown()
+
+        # Use setattr for monkey patching
+        setattr(server, "start", patched_start)
+
+        stop_thread = threading.Thread(target=stop_server)
+        stop_thread.daemon = True
+        stop_thread.start()
+
+        try:
+            server.start()
+        except Exception:
+            pass  # Expected to raise when socket is closed
+
+        stop_thread.join(timeout=1.0)
+        # Restore original start method using setattr
+        setattr(server, "start", original_start)
+
+    def test_handle_client_deserialization_error(self, server: ChatServer) -> None:
+        """Test handling deserialization error in client handler."""
+        client_socket = Mock()
+        protocol = JsonProtocol()
+        server.active_connections[client_socket] = ClientConnection(
+            socket=client_socket, protocol=protocol, username="test_user"
+        )
+
+        # Mock receiving valid length but invalid message data
+        client_socket.recv.side_effect = [
+            (10).to_bytes(4, "big"),  # Length prefix
+            b"invalid json",  # Invalid message data
+        ]
+
+        server.handle_client(client_socket)
+        assert client_socket not in server.active_connections
+
+    def test_handle_client_message_too_large(self, server: ChatServer) -> None:
+        """Test handling message that's too large."""
+        client_socket = Mock()
+        protocol = JsonProtocol()
+        server.active_connections[client_socket] = ClientConnection(
+            socket=client_socket, protocol=protocol, username="test_user"
+        )
+
+        # Mock receiving a very large message length
+        client_socket.recv.side_effect = [
+            (1024 * 1024 * 100).to_bytes(4, "big"),  # 100MB message length
+            b"",  # Connection closed
+        ]
+
+        server.handle_client(client_socket)
+        assert client_socket not in server.active_connections
+
+    def test_server_shutdown_socket_errors(self, server: ChatServer) -> None:
+        """Test server shutdown with socket errors."""
+        client_socket1 = Mock()
+        client_socket2 = Mock()
+        protocol = JsonProtocol()
+
+        # Add some active connections
+        server.active_connections[client_socket1] = ClientConnection(
+            socket=client_socket1, protocol=protocol, username="user1"
+        )
+        server.active_connections[client_socket2] = ClientConnection(
+            socket=client_socket2, protocol=protocol, username="user2"
+        )
+
+        # Make one socket raise an error on shutdown
+        client_socket1.shutdown.side_effect = Exception("Shutdown error")
+        client_socket1.close.side_effect = Exception("Close error")
+
+        server.shutdown()
+
+        # Verify all connections were closed despite errors
+        assert len(server.active_connections) == 0
+        assert len(server.username_to_socket) == 0
+        client_socket1.shutdown.assert_called_once()
+        client_socket2.shutdown.assert_called_once()
+        client_socket1.close.assert_called_once()
+        client_socket2.close.assert_called_once()

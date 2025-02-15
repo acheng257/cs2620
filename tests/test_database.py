@@ -391,3 +391,57 @@ def test_database_initialization_error(tmp_path: Path) -> None:
     read_only_path.touch(mode=0o444)  # Create read-only file
     with pytest.raises(Exception):
         DatabaseManager(db_path=str(read_only_path))
+
+
+def test_get_message_limit(db_manager: DatabaseManager) -> None:
+    """Test retrieving message limit for a user."""
+    # Create test account
+    db_manager.create_account("test_user", "pass")
+
+    # Test default limit for new user
+    limit = db_manager.get_message_limit("test_user")
+    assert limit == 50
+
+    # Test nonexistent user
+    limit = db_manager.get_message_limit("nonexistent")
+    assert limit == 50
+
+
+def test_get_chat_message_limit(db_manager: DatabaseManager) -> None:
+    """Test retrieving message limit for a specific chat."""
+    # Create test accounts
+    db_manager.create_account("user1", "pass")
+    db_manager.create_account("user2", "pass")
+
+    # Test default limit for new chat
+    limit = db_manager.get_chat_message_limit("user1", "user2")
+    assert limit == 50
+
+    # Test nonexistent users
+    limit = db_manager.get_chat_message_limit("nonexistent1", "nonexistent2")
+    assert limit == 50
+
+
+def test_message_limit_database_error(db_manager: DatabaseManager) -> None:
+    """Test message limit handling with database errors."""
+    # Create test account
+    db_manager.create_account("test_user", "pass")
+
+    # Corrupt database path temporarily
+    original_path = db_manager.db_path
+    db_manager.db_path = "nonexistent/path/chat.db"
+
+    # Test error handling in get_message_limit
+    limit = db_manager.get_message_limit("test_user")
+    assert limit == 50  # Should return default value
+
+    # Test error handling in get_chat_message_limit
+    limit = db_manager.get_chat_message_limit("test_user", "partner")
+    assert limit == 50  # Should return default value
+
+    # Test error handling in update_chat_message_limit
+    success = db_manager.update_chat_message_limit("test_user", "partner", 100)
+    assert not success  # Should return False on error
+
+    # Restore database path
+    db_manager.db_path = original_path

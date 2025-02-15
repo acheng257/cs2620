@@ -220,6 +220,10 @@ class DatabaseManager:
             This operation cascades to delete all messages sent by or to the user.
         """
         try:
+            # Check if account exists first
+            if not self.user_exists(username):
+                return False
+
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 # Delete all messages sent by or to the user
@@ -304,10 +308,20 @@ class DatabaseManager:
             Only marks messages where user is the recipient.
         """
         try:
+            if not self.user_exists(username):
+                return False
+
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 if message_ids:
+                    # Check if any of the messages exist
                     placeholder = ",".join("?" for _ in message_ids)
+                    cursor.execute(
+                        f"SELECT COUNT(*) FROM messages WHERE id IN ({placeholder})", message_ids
+                    )
+                    if cursor.fetchone()[0] == 0:
+                        return False
+
                     query = f"UPDATE messages SET is_read = TRUE \
                         WHERE recipient = ? AND id IN ({placeholder})"
                     params = [username] + message_ids
@@ -341,6 +355,10 @@ class DatabaseManager:
                 'per_page': Results per page
         """
         try:
+            # Return empty results for invalid parameters
+            if page < 1 or per_page < 1:
+                return {"users": [], "total": 0, "page": page, "per_page": per_page}
+
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 like_pattern = f"%{pattern}%"
@@ -448,7 +466,7 @@ class DatabaseManager:
             message_ids (List[int]): List of message IDs to delete
 
         Returns:
-            bool: True if all messages deleted successfully, False otherwise
+            bool: True if operation completed successfully, False if user doesn't exist
         """
         try:
             # First check if user exists
@@ -457,6 +475,7 @@ class DatabaseManager:
 
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
+
                 for message_id in message_ids:
                     cursor.execute(
                         "SELECT sender, recipient FROM messages WHERE id = ?", (message_id,)
@@ -529,6 +548,13 @@ class DatabaseManager:
                 'total': Total number of messages
         """
         try:
+            # Handle negative offset by treating it as 0
+            if offset < 0:
+                offset = 0
+            # Handle negative limit by treating it as 0
+            if limit < 0:
+                limit = 0
+
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
 
