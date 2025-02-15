@@ -203,7 +203,7 @@ class TestChatServer:
         server.username_to_socket["target"] = target_socket
 
         mock_db.user_exists.return_value = True
-        mock_db.get_last_message_id.return_value = 1
+        mock_db.store_message.return_value = 1  # Set the return value for store_message
 
         server.send_direct_message("target", "Hello!", "sender")
 
