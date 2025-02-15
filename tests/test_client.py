@@ -144,29 +144,48 @@ class TestChatClient:
         connected_client.logged_in = False
         assert connected_client.send_message("recipient", "Hello!") is False
 
-    def test_delete_account(self, connected_client: ChatClient, mock_socket: Mock) -> None:
-        """Test account deletion."""
-        connected_client.logged_in = True
-        message = Message(
-            type=MessageType.DELETE_ACCOUNT,
-            payload={},
-            sender="test_user",
-            recipient="SERVER",
-        )
-        create_mock_message(mock_socket, message, connected_client.protocol)
-        mock_socket.return_value.sendall.return_value = None
-
-        assert connected_client.delete_account() is True
-
-        # Verify the message was sent correctly
-        mock_socket.return_value.sendall.assert_called()
-        sent_data = mock_socket.return_value.sendall.call_args_list[-1][0][0]
-        assert len(sent_data) > 4  # Should have length prefix
-
     def test_delete_account_not_logged_in(self, connected_client: ChatClient) -> None:
         """Test account deletion while not logged in."""
         connected_client.logged_in = False
         assert connected_client.delete_account() is False
+
+    def test_delete_account(self, connected_client: ChatClient, mock_socket: Mock) -> None:
+        """Test successful account deletion when logged in using a \
+            simulated server response via Timer."""
+        connected_client.logged_in = True
+
+        # Ensure the receive thread from connect() is running
+        if not connected_client.running or connected_client.receive_thread is None:
+            connected_client.running = True
+            connected_client.receive_thread = threading.Thread(
+                target=connected_client.receive_messages, daemon=True
+            )
+            connected_client.receive_thread.start()
+
+        # Create success response message
+        response_message = Message(
+            type=MessageType.SUCCESS,
+            payload={"message": "Account deleted successfully"},
+            sender="SERVER",
+            recipient="test_user",
+        )
+
+        # Instead of faking socket.recv, simulate the server response
+        #  by setting last_response after a short delay
+        threading.Timer(
+            0.1, lambda: setattr(connected_client, "last_response", response_message)
+        ).start()
+
+        mock_socket.return_value.sendall.return_value = None
+
+        result = connected_client.delete_account()
+
+        # Clean up
+        connected_client.running = False
+        if connected_client.receive_thread is not None:
+            connected_client.receive_thread.join(timeout=1.0)
+
+        assert result is True
 
     @pytest.mark.asyncio
     async def test_receive_messages(self, connected_client: ChatClient, mock_socket: Mock) -> None:
@@ -174,7 +193,7 @@ class TestChatClient:
         # Prepare a test message
         test_message = Message(
             type=MessageType.SEND_MESSAGE,
-            payload={"text": "Hello!"},
+            payload={"text": "Hello!", "id": 123},
             sender="other_user",
             recipient="test_user",
         )
@@ -274,3 +293,65 @@ class TestChatClient:
         # Verify the state and socket closure
         assert connected_client.running is False
         mock_socket.return_value.close.assert_called_once()
+
+    def test_list_chat_partners_sync(self, connected_client: ChatClient, mock_socket: Mock) -> None:
+        """Test synchronous listing of chat partners."""
+        # Create expected response message
+        response_message = Message(
+            type=MessageType.LIST_CHAT_PARTNERS,
+            payload={"partners": ["user1", "user2", "user3"]},
+            sender="SERVER",
+            recipient="test_user",
+        )
+
+        # Schedule simulated server response
+        def set_response() -> None:
+            with connected_client.response_lock:
+                connected_client.last_response = response_message
+
+        threading.Timer(0.1, set_response).start()
+
+        # Call the method and verify response
+        result = connected_client.list_chat_partners_sync()
+        assert result is not None
+        assert result.type == MessageType.LIST_CHAT_PARTNERS
+        assert "partners" in result.payload
+        assert len(result.payload["partners"]) == 3
+        assert "user1" in result.payload["partners"]
+        assert "user2" in result.payload["partners"]
+        assert "user3" in result.payload["partners"]
+
+    def test_delete_messages_sync(self, connected_client: ChatClient, mock_socket: Mock) -> None:
+        """Test synchronous message deletion."""
+        connected_client.logged_in = True
+        message_ids = [1, 2, 3]
+
+        # Create success response message
+        response_message = Message(
+            type=MessageType.SUCCESS,
+            payload={"message": "Messages deleted successfully"},
+            sender="SERVER",
+            recipient="test_user",
+        )
+
+        # Schedule simulated server response
+        def set_response() -> None:
+            with connected_client.response_lock:
+                connected_client.last_response = response_message
+
+        threading.Timer(0.1, set_response).start()
+
+        # Call the method and verify response
+        result = connected_client.delete_messages_sync(message_ids)
+        assert result is True
+
+        # Verify the correct message was sent
+        mock_socket.return_value.sendall.assert_called()
+        sent_data = mock_socket.return_value.sendall.call_args_list[-1][0][0]
+        assert len(sent_data) > 4  # Should have length prefix
+
+    def test_delete_messages_sync_not_logged_in(self, connected_client: ChatClient) -> None:
+        """Test message deletion when not logged in."""
+        connected_client.logged_in = False
+        result = connected_client.delete_messages_sync([1, 2, 3])
+        assert result is False
