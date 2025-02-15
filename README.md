@@ -142,7 +142,7 @@ python -m src.server [--port PORT] [--protocol {binary,json}]
 pipenv shell
 
 # Run the Streamlit app (default port: 8501)
-streamlit run app.py
+streamlit run app.py -- [—host HOST] [—port PORT] [—protocol {JSON, Binary}]
 ```
 
 You can run multiple streamlit clients to simulate different clients connecting to the server. Each instance will maintain its own connection and state.
