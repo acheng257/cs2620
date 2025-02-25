@@ -73,9 +73,16 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             )
             return response
         else:
-            context.set_code(grpc.StatusCode.ALREADY_EXISTS)
-            context.set_details("Username already exists.")
-            return chat_pb2.ChatMessage()
+            # Instead of setting an error, instruct the client to login.
+            response_payload = {"text": "Username already exists. Please login instead."}
+            response = chat_pb2.ChatMessage(
+                type=chat_pb2.MessageType.SUCCESS,
+                payload=ParseDict(response_payload, Struct()),
+                sender="SERVER",
+                recipient=username,
+                timestamp=time.time(),
+            )
+            return response
 
     def Login(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
@@ -204,8 +211,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         """
         # Client should provide its username in the 'recipient' field.
         username = request.recipient
-        # Register subscriber by creating a new Queue for this user.
-        q: queue.Queue = queue.Queue()
+        q: queue.Queue[chat_pb2.ChatMessage] = queue.Queue()
         with self.lock:
             self.active_subscribers[username] = q
 
@@ -213,13 +219,19 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             # Deliver any undelivered messages from the database.
             undelivered = self.db.get_undelivered_messages(username)
             for msg in undelivered:
+                timestamp_val = msg.get("timestamp", time.time())
+                try:
+                    timestamp_val = float(timestamp_val)
+                except (ValueError, TypeError):
+                    timestamp_val = time.time()
+
                 response_payload = {"text": msg["content"], "id": msg["id"]}
                 chat_msg = chat_pb2.ChatMessage(
                     type=chat_pb2.MessageType.SEND_MESSAGE,
                     payload=ParseDict(response_payload, Struct()),
                     sender=msg["from"],
                     recipient=username,
-                    timestamp=msg.get("timestamp", time.time()),
+                    timestamp=timestamp_val,
                 )
                 yield chat_msg
                 self.db.mark_message_as_delivered(msg["id"])
@@ -227,7 +239,6 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             # Continuously process new messages as they arrive.
             while True:
                 try:
-                    # Wait up to 60 seconds for a new message.
                     message = q.get(timeout=60)
                     yield message
                 except queue.Empty:
@@ -372,6 +383,7 @@ def serve() -> None:
     Creates a gRPC server with max 10 worker threads and starts it on port 50051.
     The server runs indefinitely until terminated.
     """
+    print("Starting gRPC server on port 50051...")
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     chat_pb2_grpc.add_ChatServerServicer_to_server(ChatServer(), server)
     server.add_insecure_port("[::]:50051")
