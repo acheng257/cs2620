@@ -5,9 +5,9 @@ import queue
 import threading
 from concurrent import futures
 from google.protobuf.json_format import MessageToDict, ParseDict
+from google.protobuf.struct_pb2 import Struct
 
-import chat_pb2
-import chat_pb2_grpc
+from src.protocols.grpc import chat_pb2, chat_pb2_grpc
 from src.database.db_manager import DatabaseManager
 
 class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
@@ -31,16 +31,24 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             response_payload = {"text": "Account created successfully."}
             response = chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.SUCCESS,
-                payload=ParseDict(response_payload, chat_pb2.Struct()),
+                payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=username,
                 timestamp=time.time()
             )
             return response
         else:
-            context.set_code(grpc.StatusCode.ALREADY_EXISTS)
-            context.set_details("Username already exists.")
-            return chat_pb2.ChatMessage()
+            # Instead of setting an error, instruct the client to login.
+            response_payload = {"text": "Username already exists. Please login instead."}
+            response = chat_pb2.ChatMessage(
+                type=chat_pb2.MessageType.SUCCESS,
+                payload=ParseDict(response_payload, Struct()),
+                sender="SERVER",
+                recipient=username,
+                timestamp=time.time()
+            )
+            return response
+
 
     def Login(self, request, context):
         payload = MessageToDict(request.payload)
@@ -69,7 +77,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             }
             response = chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.SUCCESS,
-                payload=ParseDict(response_payload, chat_pb2.Struct()),
+                payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=username,
                 timestamp=time.time()
@@ -111,7 +119,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
         response_payload = {"text": "Message sent successfully."}
         response = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
-            payload=ParseDict(response_payload, chat_pb2.Struct()),
+            payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=sender,
             timestamp=time.time()
@@ -119,9 +127,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
         return response
 
     def ReadMessages(self, request, context):
-        # Client should provide its username in the 'recipient' field.
         username = request.recipient
-        # Register subscriber by creating a new Queue for this user.
         q = queue.Queue()
         with self.lock:
             self.active_subscribers[username] = q
@@ -130,13 +136,19 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             # Deliver any undelivered messages from the database.
             undelivered = self.db.get_undelivered_messages(username)
             for msg in undelivered:
+                timestamp_val = msg.get("timestamp", time.time())
+                try:
+                    timestamp_val = float(timestamp_val)
+                except (ValueError, TypeError):
+                    timestamp_val = time.time()
+                
                 response_payload = {"text": msg["content"], "id": msg["id"]}
                 chat_msg = chat_pb2.ChatMessage(
                     type=chat_pb2.MessageType.SEND_MESSAGE,
-                    payload=ParseDict(response_payload, chat_pb2.Struct()),
+                    payload=ParseDict(response_payload, Struct()),
                     sender=msg["from"],
                     recipient=username,
-                    timestamp=msg.get("timestamp", time.time())
+                    timestamp=timestamp_val
                 )
                 yield chat_msg
                 self.db.mark_message_as_delivered(msg["id"])
@@ -144,7 +156,6 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             # Continuously process new messages as they arrive.
             while True:
                 try:
-                    # Wait up to 60 seconds for a new message.
                     message = q.get(timeout=60)
                     yield message
                 except queue.Empty:
@@ -165,7 +176,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
         result = self.db.list_accounts(pattern, page, per_page)
         response = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
-            payload=ParseDict(result, chat_pb2.Struct()),
+            payload=ParseDict(result, Struct()),
             sender="SERVER",
             recipient=request.sender,
             timestamp=time.time()
@@ -190,7 +201,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
 
         response = chat_pb2.ChatMessage(
             type=msg_type,
-            payload=ParseDict(response_payload, chat_pb2.Struct()),
+            payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=request.sender,
             timestamp=time.time()
@@ -203,7 +214,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             response_payload = {"text": "Account deleted successfully."}
             response = chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.SUCCESS,
-                payload=ParseDict(response_payload, chat_pb2.Struct()),
+                payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=username,
                 timestamp=time.time()
@@ -223,7 +234,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
         response_payload = {"chat_partners": partners, "unread_map": unread_map}
         response = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
-            payload=ParseDict(response_payload, chat_pb2.Struct()),
+            payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=username,
             timestamp=time.time()
