@@ -12,7 +12,6 @@ from google.protobuf.struct_pb2 import Struct
 import src.protocols.grpc.chat_pb2 as chat_pb2
 import src.protocols.grpc.chat_pb2_grpc as chat_pb2_grpc
 from src.database.db_manager import DatabaseManager
-import grpc
 
 
 class ChatServer(chat_pb2_grpc.ChatServerServicer):
@@ -375,7 +374,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             timestamp=time.time(),
         )
         return response
-    
+
     def ReadConversation(self, request, context):
         # Expect payload to include 'partner', 'offset', and 'limit'
         payload = MessageToDict(request.payload)
@@ -384,9 +383,11 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         limit = int(payload.get("limit", 50))
         username = request.sender
 
-        # Use your existing db_manager function to get messages between users.
         conversation = self.db.get_messages_between_users(username, partner, offset, limit)
-        response_payload = {"messages": conversation.get("messages", []), "total": conversation.get("total", 0)}
+        response_payload = {
+            "messages": conversation.get("messages", []),
+            "total": conversation.get("total", 0),
+        }
 
         return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
@@ -395,7 +396,6 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             recipient=username,
             timestamp=time.time(),
         )
-
 
 
 def serve() -> None:

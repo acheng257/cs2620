@@ -1,7 +1,7 @@
 import argparse
+import queue
 import threading
 import time
-import queue
 from typing import Any, Dict, List, Optional, Tuple
 
 import grpc
