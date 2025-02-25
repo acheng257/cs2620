@@ -96,6 +96,39 @@ The JSON implementation provides:
 - Easy debugging and monitoring
 - Compatibility with existing tools
 
+#### Protocol Buffers (gRPC)
+The application also implements a gRPC-based protocol using Protocol Buffers:
+- Strongly typed message definitions
+- Efficient binary serialization
+- Built-in service definitions
+- Bidirectional streaming support
+- Cross-language compatibility
+
+To generate the gRPC code from the proto definitions:
+```bash
+# Generate Python gRPC code
+python -m grpc_tools.protoc \
+    -I./src/protocols/grpc \
+    --python_out=./src/protocols/grpc \
+    --pyi_out=./src/protocols/grpc \
+    --grpc_python_out=./src/protocols/grpc \
+    ./src/protocols/grpc/chat.proto
+```
+
+The proto definition includes:
+- Message type enums for all operations
+- ChatMessage structure for all communications
+- Service definitions for all API endpoints
+- Bidirectional streaming for real-time messages
+- Type-safe payload handling using google.protobuf.Struct
+
+Benefits of the gRPC implementation:
+- Automatic client/server code generation
+- Type safety and validation
+- Efficient binary protocol
+- Built-in streaming support
+- Language-agnostic API definition
+
 ### Security Features
 
 - Passwords are never transmitted in plaintext

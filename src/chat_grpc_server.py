@@ -1,23 +1,26 @@
 import logging
-import time
-import grpc
 import queue
 import threading
+import time
 from concurrent import futures
+from typing import Any
 from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.struct_pb2 import Struct
 
 from src.protocols.grpc import chat_pb2, chat_pb2_grpc
 from src.database.db_manager import DatabaseManager
 
-class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
-    def __init__(self, db_path="chat.db"):
-        self.db = DatabaseManager(db_path)
-        # Maintain a mapping of logged-in users to a Queue for pushing messages.
-        self.active_subscribers = {}  # {username: queue.Queue}
-        self.lock = threading.Lock()
 
-    def CreateAccount(self, request, context):
+class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
+    def __init__(self, db_path: str = "chat.db") -> None:
+        self.db: DatabaseManager = DatabaseManager(db_path)
+        # Maintain a mapping of logged-in users to a Queue for pushing messages.
+        self.active_subscribers: Dict[str, queue.Queue] = {}  # {username: queue.Queue}
+        self.lock: threading.Lock = threading.Lock()
+
+    def CreateAccount(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         # Extract username and password from the Struct payload.
         payload = MessageToDict(request.payload)
         username = payload.get("username")
@@ -34,7 +37,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                 payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=username,
-                timestamp=time.time()
+                timestamp=time.time(),
             )
             return response
         else:
@@ -50,7 +53,9 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             return response
 
 
-    def Login(self, request, context):
+    def Login(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         payload = MessageToDict(request.payload)
         username = payload.get("username")
         password = payload.get("password")
@@ -80,7 +85,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                 payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=username,
-                timestamp=time.time()
+                timestamp=time.time(),
             )
             return response
         else:
@@ -88,7 +93,9 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             context.set_details("Invalid username or password.")
             return chat_pb2.ChatMessage()
 
-    def SendMessage(self, request, context):
+    def SendMessage(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         payload = MessageToDict(request.payload)
         sender = request.sender
         recipient = request.recipient
@@ -107,13 +114,13 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                     payload=request.payload,
                     sender=sender,
                     recipient=recipient,
-                    timestamp=time.time()
+                    timestamp=time.time(),
                 )
                 self.active_subscribers[recipient].put(new_msg)
 
         # Store the message in the database. Mark as delivered if we pushed it immediately.
         message_id = self.db.store_message(sender, recipient, message_text, delivered)
-        if delivered:
+        if delivered and message_id:
             self.db.mark_message_as_delivered(message_id)
 
         response_payload = {"text": "Message sent successfully."}
@@ -122,11 +129,11 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
         return response
 
-    def ReadMessages(self, request, context):
+    def ReadMessages(self, request, context) -> Any:
         username = request.recipient
         q = queue.Queue()
         with self.lock:
@@ -168,7 +175,9 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                 if username in self.active_subscribers:
                     del self.active_subscribers[username]
 
-    def ListAccounts(self, request, context):
+    def ListAccounts(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         payload = MessageToDict(request.payload)
         pattern = payload.get("pattern", "")
         page = int(payload.get("page", 1))
@@ -179,11 +188,13 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             payload=ParseDict(result, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
         return response
 
-    def DeleteMessages(self, request, context):
+    def DeleteMessages(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         payload = MessageToDict(request.payload)
         message_ids = payload.get("message_ids", [])
         if not isinstance(message_ids, list):
@@ -204,11 +215,13 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
         return response
 
-    def DeleteAccount(self, request, context):
+    def DeleteAccount(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         username = request.sender
         if self.db.delete_account(username):
             response_payload = {"text": "Account deleted successfully."}
@@ -217,7 +230,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                 payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=username,
-                timestamp=time.time()
+                timestamp=time.time(),
             )
             return response
         else:
@@ -225,7 +238,9 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             context.set_details("Failed to delete account.")
             return chat_pb2.ChatMessage()
 
-    def ListChatPartners(self, request, context):
+    def ListChatPartners(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         username = request.sender
         partners = self.db.get_chat_partners(username)
         unread_map = {}
@@ -237,17 +252,19 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=username,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
         return response
 
-def serve():
+
+def serve() -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     chat_pb2_grpc.add_ChatServiceServicer_to_server(ChatServiceServicer(), server)
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port("[::]:50051")
     server.start()
     server.wait_for_termination()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     logging.basicConfig()
     serve()
