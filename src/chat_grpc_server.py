@@ -224,7 +224,6 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                     timestamp_val = float(timestamp_val)
                 except (ValueError, TypeError):
                     timestamp_val = time.time()
-
                 response_payload = {"text": msg["content"], "id": msg["id"]}
                 chat_msg = chat_pb2.ChatMessage(
                     type=chat_pb2.MessageType.SEND_MESSAGE,
