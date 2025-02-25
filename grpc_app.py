@@ -140,14 +140,26 @@ def render_login_page() -> None:
             port=st.session_state.server_port,
         )
         if temp_client.connect():
-            success, error = temp_client.login_sync("dummy_password")
-            if error and "does not exist" in error.lower():
-                account_exists = False
-            else:
+            try:
+                # Try logging in with a dummy password.
+                success, error = temp_client.login_sync("dummy_password")
                 account_exists = True
-            temp_client.close()
+            except Exception as e:
+                error_str = str(e).lower()
+                if "invalid password" in error_str:
+                    # This indicates the account exists but the password is wrong, which is
+                    # expected since we use a dummy password.
+                    account_exists = True
+                elif "does not exist" in error_str:
+                    account_exists = False
+                else:
+                    st.error(f"Unexpected error during account check: {e}")
+                    temp_client.close()
+                    return
+        temp_client.close()
     except Exception as e:
         st.error(f"Error checking account existence: {e}")
+
 
     if account_exists:
         st.info("Account found. Please log in by entering your password.")
@@ -303,6 +315,13 @@ def process_incoming_realtime_messages() -> None:
                     if st.session_state.current_chat == sender:
                         st.session_state.messages.append(new_message)
                         new_message_received = True
+                        if ("conversations" in st.session_state 
+                                and st.session_state.current_chat in st.session_state.conversations):
+                            conv = st.session_state.conversations[st.session_state.current_chat]
+                            conv["displayed_messages"].append(new_message)
+
+                            if len(conv["displayed_messages"]) > conv["limit"]:
+                                conv["displayed_messages"] = conv["displayed_messages"][-conv["limit"]:]
                     else:
                         st.session_state.unread_map[sender] = (
                             st.session_state.unread_map.get(sender, 0) + 1
@@ -518,11 +537,11 @@ def render_chat_page_with_deletion() -> None:
                                     != -1
                                 ):
                                     st.success("Selected messages have been deleted.")
-                                    conv["displayed_messages"] = [
-                                        msg
-                                        for msg in conv["displayed_messages"]
-                                        if msg["id"] not in st.session_state.pending_deletions
-                                    ]
+                                    # Re-fetch the conversation so that the UI refills to the set limit.
+                                    load_conversation(partner, 0, conv["limit"])
+                                    conv["offset"] = 0
+                                    conv["displayed_messages"] = st.session_state.displayed_messages.copy()
+
                                 else:
                                     st.error("Failed to delete selected messages.")
                             except Exception as e:
