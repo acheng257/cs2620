@@ -107,12 +107,7 @@ The application also implements a gRPC-based protocol using Protocol Buffers:
 To generate the gRPC code from the proto definitions:
 ```bash
 # Generate Python gRPC code
-python -m grpc_tools.protoc \
-    -I./src/protocols/grpc \
-    --python_out=./src/protocols/grpc \
-    --pyi_out=./src/protocols/grpc \
-    --grpc_python_out=./src/protocols/grpc \
-    ./src/protocols/grpc/chat.proto
+python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. src/protocols/grpc/chat.proto
 ```
 
 The proto definition includes:

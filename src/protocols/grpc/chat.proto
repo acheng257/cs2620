@@ -28,7 +28,7 @@ message ChatMessage {
 }
 
 // gRPC service definition for chat operations.
-service ChatService {
+service ChatServer {
   // RPC for sending a message.
   rpc SendMessage(ChatMessage) returns (ChatMessage);
 

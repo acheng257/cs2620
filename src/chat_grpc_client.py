@@ -3,11 +3,11 @@ import getpass
 import sys
 import threading
 import time
-from typing import Any, Dict, List
-from google.protobuf.json_format import ParseDict, MessageToDict
-from google.protobuf.struct_pb2 import Struct
 
 import grpc
+from google.protobuf.json_format import MessageToDict, ParseDict
+from google.protobuf.struct_pb2 import Struct
+
 from src.protocols.grpc import chat_pb2, chat_pb2_grpc
 
 
@@ -21,9 +21,9 @@ class ChatClient:
         self.host = host
         self.port = port
         self.channel = grpc.insecure_channel(f"{host}:{port}")
-        self.stub = chat_pb2_grpc.ChatServiceStub(self.channel)
+        self.stub = chat_pb2_grpc.ChatServerStub(self.channel)
         self.logged_in = False
-        self.read_thread = None
+        self.read_thread: threading.Thread | None = None
         self.running = True
 
     def create_account(self, password: str) -> None:
@@ -41,7 +41,7 @@ class ChatClient:
         else:
             # The server may have set an error status.
             print("Account creation failed.")
-    
+
     def login(self, password: str) -> bool:
         payload = {"username": self.username, "password": password}
         message = chat_pb2.ChatMessage(
@@ -86,7 +86,6 @@ class ChatClient:
             print(f"RPC error while sending message: {e.details()}")
             return False
 
-
     def read_messages(self) -> None:
         """
         Listen for incoming messages using the streaming ReadMessages RPC.
@@ -110,8 +109,9 @@ class ChatClient:
             print("Message stream closed:", e)
 
     def start_read_thread(self) -> None:
-        self.read_thread = threading.Thread(target=self.read_messages, daemon=True)
-        self.read_thread.start()
+        if self.read_thread is None:
+            self.read_thread = threading.Thread(target=self.read_messages, daemon=True)
+            self.read_thread.start()
 
     def list_accounts(self, pattern: str = "", page: int = 1) -> None:
         payload = {"pattern": pattern, "page": page}
@@ -296,7 +296,9 @@ if __name__ == "__main__":
             if cmd.lower() == "!delete":
                 ids_input = input("Enter message IDs to delete (comma-separated): ").strip()
                 try:
-                    message_ids = [int(x.strip()) for x in ids_input.split(",") if x.strip().isdigit()]
+                    message_ids = [
+                        int(x.strip()) for x in ids_input.split(",") if x.strip().isdigit()
+                    ]
                     if message_ids:
                         client.delete_messages(message_ids)
                     else:
@@ -306,7 +308,11 @@ if __name__ == "__main__":
                 continue
 
             if cmd.lower() == "!delete_account":
-                confirm = input("Are you sure you want to delete your account? (yes/no): ").strip().lower()
+                confirm = (
+                    input("Are you sure you want to delete your account? (yes/no): ")
+                    .strip()
+                    .lower()
+                )
                 if confirm == "yes":
                     client.delete_account()
                     break
@@ -334,4 +340,3 @@ if __name__ == "__main__":
         print("\nClient interrupted.")
     finally:
         client.close()
-

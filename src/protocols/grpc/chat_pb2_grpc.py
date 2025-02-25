@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from . import chat_pb2 as chat__pb2
+from src.protocols.grpc import chat_pb2 as src_dot_protocols_dot_grpc_dot_chat__pb2
 
 GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
@@ -18,14 +18,14 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in chat_pb2_grpc.py depends on'
+        + f' but the generated code in src/protocols/grpc/chat_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class ChatServiceStub(object):
+class ChatServerStub(object):
     """gRPC service definition for chat operations.
     """
 
@@ -36,53 +36,53 @@ class ChatServiceStub(object):
             channel: A grpc.Channel.
         """
         self.SendMessage = channel.unary_unary(
-                '/chat.ChatService/SendMessage',
-                request_serializer=chat__pb2.ChatMessage.SerializeToString,
-                response_deserializer=chat__pb2.ChatMessage.FromString,
+                '/chat.ChatServer/SendMessage',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
         self.ReadMessages = channel.unary_stream(
-                '/chat.ChatService/ReadMessages',
-                request_serializer=chat__pb2.ChatMessage.SerializeToString,
-                response_deserializer=chat__pb2.ChatMessage.FromString,
+                '/chat.ChatServer/ReadMessages',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
         self.CreateAccount = channel.unary_unary(
-                '/chat.ChatService/CreateAccount',
-                request_serializer=chat__pb2.ChatMessage.SerializeToString,
-                response_deserializer=chat__pb2.ChatMessage.FromString,
+                '/chat.ChatServer/CreateAccount',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
         self.Login = channel.unary_unary(
-                '/chat.ChatService/Login',
-                request_serializer=chat__pb2.ChatMessage.SerializeToString,
-                response_deserializer=chat__pb2.ChatMessage.FromString,
+                '/chat.ChatServer/Login',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
         self.ListAccounts = channel.unary_unary(
-                '/chat.ChatService/ListAccounts',
-                request_serializer=chat__pb2.ChatMessage.SerializeToString,
-                response_deserializer=chat__pb2.ChatMessage.FromString,
+                '/chat.ChatServer/ListAccounts',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
         self.DeleteMessages = channel.unary_unary(
-                '/chat.ChatService/DeleteMessages',
-                request_serializer=chat__pb2.ChatMessage.SerializeToString,
-                response_deserializer=chat__pb2.ChatMessage.FromString,
+                '/chat.ChatServer/DeleteMessages',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
         self.DeleteAccount = channel.unary_unary(
-                '/chat.ChatService/DeleteAccount',
-                request_serializer=chat__pb2.ChatMessage.SerializeToString,
-                response_deserializer=chat__pb2.ChatMessage.FromString,
+                '/chat.ChatServer/DeleteAccount',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
         self.ListChatPartners = channel.unary_unary(
-                '/chat.ChatService/ListChatPartners',
-                request_serializer=chat__pb2.ChatMessage.SerializeToString,
-                response_deserializer=chat__pb2.ChatMessage.FromString,
+                '/chat.ChatServer/ListChatPartners',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
         self.ReadConversation = channel.unary_unary(
-                '/chat.ChatService/ReadConversation',
-                request_serializer=chat__pb2.ChatMessage.SerializeToString,
-                response_deserializer=chat__pb2.ChatMessage.FromString,
+                '/chat.ChatServer/ReadConversation',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
 
 
-class ChatServiceServicer(object):
+class ChatServerServicer(object):
     """gRPC service definition for chat operations.
     """
 
@@ -144,62 +144,62 @@ class ChatServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_ChatServiceServicer_to_server(servicer, server):
+def add_ChatServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'SendMessage': grpc.unary_unary_rpc_method_handler(
                     servicer.SendMessage,
-                    request_deserializer=chat__pb2.ChatMessage.FromString,
-                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
             'ReadMessages': grpc.unary_stream_rpc_method_handler(
                     servicer.ReadMessages,
-                    request_deserializer=chat__pb2.ChatMessage.FromString,
-                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
             'CreateAccount': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateAccount,
-                    request_deserializer=chat__pb2.ChatMessage.FromString,
-                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
             'Login': grpc.unary_unary_rpc_method_handler(
                     servicer.Login,
-                    request_deserializer=chat__pb2.ChatMessage.FromString,
-                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
             'ListAccounts': grpc.unary_unary_rpc_method_handler(
                     servicer.ListAccounts,
-                    request_deserializer=chat__pb2.ChatMessage.FromString,
-                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
             'DeleteMessages': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteMessages,
-                    request_deserializer=chat__pb2.ChatMessage.FromString,
-                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
             'DeleteAccount': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteAccount,
-                    request_deserializer=chat__pb2.ChatMessage.FromString,
-                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
             'ListChatPartners': grpc.unary_unary_rpc_method_handler(
                     servicer.ListChatPartners,
-                    request_deserializer=chat__pb2.ChatMessage.FromString,
-                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
             'ReadConversation': grpc.unary_unary_rpc_method_handler(
                     servicer.ReadConversation,
-                    request_deserializer=chat__pb2.ChatMessage.FromString,
-                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'chat.ChatService', rpc_method_handlers)
+            'chat.ChatServer', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('chat.ChatService', rpc_method_handlers)
+    server.add_registered_method_handlers('chat.ChatServer', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class ChatService(object):
+class ChatServer(object):
     """gRPC service definition for chat operations.
     """
 
@@ -217,9 +217,9 @@ class ChatService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/chat.ChatService/SendMessage',
-            chat__pb2.ChatMessage.SerializeToString,
-            chat__pb2.ChatMessage.FromString,
+            '/chat.ChatServer/SendMessage',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,
@@ -244,9 +244,9 @@ class ChatService(object):
         return grpc.experimental.unary_stream(
             request,
             target,
-            '/chat.ChatService/ReadMessages',
-            chat__pb2.ChatMessage.SerializeToString,
-            chat__pb2.ChatMessage.FromString,
+            '/chat.ChatServer/ReadMessages',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,
@@ -271,9 +271,9 @@ class ChatService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/chat.ChatService/CreateAccount',
-            chat__pb2.ChatMessage.SerializeToString,
-            chat__pb2.ChatMessage.FromString,
+            '/chat.ChatServer/CreateAccount',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,
@@ -298,9 +298,9 @@ class ChatService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/chat.ChatService/Login',
-            chat__pb2.ChatMessage.SerializeToString,
-            chat__pb2.ChatMessage.FromString,
+            '/chat.ChatServer/Login',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,
@@ -325,9 +325,9 @@ class ChatService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/chat.ChatService/ListAccounts',
-            chat__pb2.ChatMessage.SerializeToString,
-            chat__pb2.ChatMessage.FromString,
+            '/chat.ChatServer/ListAccounts',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,
@@ -352,9 +352,9 @@ class ChatService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/chat.ChatService/DeleteMessages',
-            chat__pb2.ChatMessage.SerializeToString,
-            chat__pb2.ChatMessage.FromString,
+            '/chat.ChatServer/DeleteMessages',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,
@@ -379,9 +379,9 @@ class ChatService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/chat.ChatService/DeleteAccount',
-            chat__pb2.ChatMessage.SerializeToString,
-            chat__pb2.ChatMessage.FromString,
+            '/chat.ChatServer/DeleteAccount',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,
@@ -406,9 +406,9 @@ class ChatService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/chat.ChatService/ListChatPartners',
-            chat__pb2.ChatMessage.SerializeToString,
-            chat__pb2.ChatMessage.FromString,
+            '/chat.ChatServer/ListChatPartners',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,
@@ -433,9 +433,9 @@ class ChatService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/chat.ChatService/ReadConversation',
-            chat__pb2.ChatMessage.SerializeToString,
-            chat__pb2.ChatMessage.FromString,
+            '/chat.ChatServer/ReadConversation',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,
