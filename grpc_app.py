@@ -264,19 +264,24 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
             response = client.read_conversation_sync(partner, offset, limit)
             result = MessageToDict(response.payload)
             db_msgs = result.get("messages", [])
+            # Sort messages by timestamp in ascending order.
             db_msgs_sorted = sorted(db_msgs, key=lambda x: x["timestamp"])
             new_messages = []
+            unread_ids = []
             for m in db_msgs_sorted:
-                new_messages.append(
-                    {
-                        "sender": m["from"],
-                        "text": m["content"],
-                        "timestamp": m["timestamp"],
-                        "is_read": m.get("is_read", True),
-                        "is_delivered": m.get("is_delivered", True),
-                        "id": m["id"],
-                    }
-                )
+                msg_id = int(m["id"])
+                msg = {
+                    "sender": m["from"],
+                    "text": m["content"],
+                    "timestamp": m["timestamp"],
+                    "is_read": m.get("is_read", False),
+                    "is_delivered": m.get("is_delivered", True),
+                    "id": msg_id,
+                }
+                if msg["sender"].strip().lower() != st.session_state.username:
+                    msg["is_read"] = True
+                    unread_ids.append(msg_id)
+                new_messages.append(msg)
             with st.session_state.lock:
                 st.session_state.messages = new_messages
                 st.session_state.displayed_messages = new_messages
@@ -286,6 +291,14 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
                 st.session_state.scroll_to_top = True
                 st.session_state.unread_map[partner] = 0
             st.write(f"Loaded {len(new_messages)} messages.")
+
+            # Update the DB for all displayed messages not sent by the current user.
+            if unread_ids:
+                db_manager = DatabaseManager()
+                success = db_manager.mark_messages_as_read(st.session_state.username, unread_ids)
+                if not success:
+                    st.warning("Failed to update read status in database.")
+
         except Exception as e:
             st.warning(f"An error occurred while loading conversation: {e}")
     else:
