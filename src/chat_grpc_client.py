@@ -25,13 +25,42 @@ class ChatClient:
         self.logged_in = False
         self.read_thread: Optional[threading.Thread] = None
         self.running = True
-        self.incoming_messages_queue: queue.Queue = queue.Queue()  # NEW: for realtime messages
+        self.incoming_messages_queue: queue.Queue = queue.Queue()
 
-    def connect(self) -> bool:
+    def connect(self, timeout: int = 5) -> bool:
         """
-        For gRPC, connection is established on initialization.
+        Checks the connection by waiting for the gRPC channel to be ready,
+        and then performing a dummy RPC call (health-check) to verify the server
+        is actually responding.
+
+        Returns True if the health-check call succeeds, False otherwise.
         """
-        return True
+        try:
+            grpc.channel_ready_future(self.channel).result(timeout=timeout)
+        except grpc.FutureTimeoutError:
+            error_message = (
+                f"Failed to connect to server at {self.host}:{self.port} within {timeout} seconds."
+            )
+            print(error_message)
+            return False
+
+        dummy_payload = {"pattern": "", "page": 1}
+        dummy_request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.LIST_ACCOUNTS,
+            payload=ParseDict(dummy_payload, Struct()),
+            sender="",  # sender is irrelevant for a health-check
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        try:
+            # If the RPC call fails, an exception will be raised.
+            _ = self.stub.ListAccounts(dummy_request)
+            print(f"Connected to server at {self.host}:{self.port}")
+            return True
+        except grpc.RpcError as e:
+            error_message = f"Health-check RPC failed: {e.details()}"
+            print(error_message)
+            return False
 
     def create_account(self, password: str) -> None:
         payload = {"username": self.username, "password": password}
@@ -61,10 +90,7 @@ class ChatClient:
             timestamp=time.time(),
         )
         response = self.stub.CreateAccount(message)
-        if response.type == chat_pb2.MessageType.SUCCESS:
-            return True
-        else:
-            return False
+        return response.type == chat_pb2.MessageType.SUCCESS
 
     def login(self, password: str) -> bool:
         payload = {"username": self.username, "password": password}
@@ -334,6 +360,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     client = ChatClient(username=args.username, host=args.host, port=args.port)
-    # Example usage:
+    if client.connect():
+        print("Client connected successfully.")
+    else:
+        print("Client failed to connect. Please check the host and port.")
+        exit(1)
     client.start_read_thread()
     print("Client connected. Implement interactive commands as needed.")

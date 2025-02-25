@@ -1,3 +1,4 @@
+import argparse
 import logging
 import queue
 import threading
@@ -398,20 +399,25 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         )
 
 
-def serve() -> None:
-    """Start the gRPC server.
-
-    Creates a gRPC server with max 10 worker threads and starts it on port 50051.
-    The server runs indefinitely until terminated.
-    """
-    print("Starting gRPC server on port 50051...")
+def serve(host: str, port: int) -> None:
+    """Start the gRPC server on a specified host and port."""
+    print(f"Starting gRPC server on {host}:{port}...")
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     chat_pb2_grpc.add_ChatServerServicer_to_server(ChatServer(), server)
-    server.add_insecure_port("[::]:50051")
+    server.add_insecure_port(f"{host}:{port}")
     server.start()
     server.wait_for_termination()
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run the gRPC Chat Server")
+    parser.add_argument(
+        "--host", type=str, default="[::]", help="Host to bind the gRPC server on (default: [::])"
+    )
+    parser.add_argument(
+        "--port", type=int, default=50051, help="Port to bind the gRPC server on (default: 50051)"
+    )
+    args = parser.parse_args()
+
     logging.basicConfig()
-    serve()
+    serve(args.host, args.port)

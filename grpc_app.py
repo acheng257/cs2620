@@ -8,7 +8,7 @@ from google.protobuf.json_format import MessageToDict
 from streamlit_autorefresh import st_autorefresh
 
 import src.protocols.grpc.chat_pb2 as chat_pb2
-from src.chat_grpc_client import ChatClient  # Updated to use gRPC client
+from src.chat_grpc_client import ChatClient
 from src.database.db_manager import DatabaseManager
 
 
@@ -18,7 +18,6 @@ def init_session_state() -> None:
         st.session_state.username = None
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
-    # Protocol selection is no longer needed with gRPC.
     if "current_chat" not in st.session_state:
         st.session_state.current_chat = None
     if "messages" not in st.session_state:
@@ -86,7 +85,6 @@ def get_chat_client() -> Optional[ChatClient]:
 
 
 def render_login_page() -> None:
-    """Render the login and account creation interface."""
     st.title("Secure Chat - Login / Sign Up")
 
     if st.session_state.error_message:
@@ -113,8 +111,24 @@ def render_login_page() -> None:
             else:
                 st.session_state.server_host = server_host
                 st.session_state.server_port = int(server_port)
-                st.session_state.server_connected = True  # Assume connection works for gRPC
-                st.success("Connected to server successfully.")
+
+                # Create a temporary client to test the connection.
+                temp_client = ChatClient(
+                    username="",
+                    host=st.session_state.server_host,
+                    port=st.session_state.server_port,
+                )
+                if temp_client.connect():
+                    st.session_state.server_connected = True
+                    st.session_state.error_message = ""  # clear any previous errors
+                    st.success("Connected to server successfully.")
+                    # Force a rerun so that subsequent code picks up the new settings.
+                    st.rerun()
+                else:
+                    st.session_state.server_connected = False
+                    st.session_state.error_message = temp_client.error_message
+                    st.error(st.session_state.error_message)
+                temp_client.close()
 
     st.markdown("---")
 
@@ -147,8 +161,6 @@ def render_login_page() -> None:
             except Exception as e:
                 error_str = str(e).lower()
                 if "invalid password" in error_str:
-                    # This indicates the account exists but the password is wrong, which is
-                    # expected since we use a dummy password.
                     account_exists = True
                 elif "does not exist" in error_str:
                     account_exists = False
@@ -263,7 +275,6 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
             response = client.read_conversation_sync(partner, offset, limit)
             result = MessageToDict(response.payload)
             db_msgs = result.get("messages", [])
-            # Sort messages by timestamp in ascending order.
             db_msgs_sorted = sorted(db_msgs, key=lambda x: x["timestamp"])
             new_messages = []
             unread_ids = []
@@ -291,7 +302,6 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
                 st.session_state.unread_map[partner] = 0
             st.write(f"Loaded {len(new_messages)} messages.")
 
-            # Update the DB for all displayed messages not sent by the current user.
             if unread_ids:
                 db_manager = DatabaseManager()
                 success = db_manager.mark_messages_as_read(st.session_state.username, unread_ids)
@@ -333,7 +343,6 @@ def process_incoming_realtime_messages() -> None:
                         ):
                             conv = st.session_state.conversations[st.session_state.current_chat]
                             conv["displayed_messages"].append(new_message)
-
                             if len(conv["displayed_messages"]) > conv["limit"]:
                                 conv["displayed_messages"] = conv["displayed_messages"][
                                     -conv["limit"] :
@@ -557,14 +566,11 @@ def render_chat_page_with_deletion() -> None:
                                     != -1
                                 ):
                                     st.success("Selected messages have been deleted.")
-                                    # Re-fetch the conversation so that the
-                                    # UI refills to the set limit.
                                     load_conversation(partner, 0, conv["limit"])
                                     conv["offset"] = 0
                                     conv["displayed_messages"] = (
                                         st.session_state.displayed_messages.copy()
                                     )
-
                                 else:
                                     st.error("Failed to delete selected messages.")
                             except Exception as e:
@@ -662,39 +668,11 @@ def main() -> None:
     st_autorefresh(interval=3000, key="auto_refresh_chat")
     init_session_state()
 
-    if args.host:
-        st.session_state.server_host = args.host
-    if args.port:
-        st.session_state.server_port = args.port
+    if "server_host" not in st.session_state:
+        st.session_state.server_host = args.host if args.host else "127.0.0.1"
+    if "server_port" not in st.session_state:
+        st.session_state.server_port = args.port if args.port else 50051
 
-    if st.session_state.server_host and not st.session_state.server_connected:
-        try:
-            temp_client = ChatClient(
-                username="",
-                host=st.session_state.server_host,
-                port=st.session_state.server_port,
-            )
-            if temp_client.connect():
-                st.session_state.server_connected = True
-                st.success("Automatically connected to the server.")
-            else:
-                st.session_state.error_message = (
-                    "Failed to connect to the server automatically. Please check the host and port."
-                )
-            temp_client.close()
-        except Exception as e:
-            st.session_state.error_message = f"Error auto connecting to server: {e}"
-
-    if st.session_state.logged_in:
-        client = get_chat_client()
-        if not client:
-            st.session_state.error_message = (
-                "Failed to initialize the chat client. Please try logging in again."
-            )
-            st.session_state.logged_in = False
-            st.session_state.username = None
-            st.session_state.client_connected = False
-            st.session_state.client = None
     if not st.session_state.logged_in:
         render_login_page()
     else:
