@@ -5,17 +5,33 @@ import time
 from concurrent import futures
 from typing import Any, Dict
 
-import chat_pb2
-import chat_pb2_grpc
 import grpc
 from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.struct_pb2 import Struct
 
+import src.protocols.grpc.chat_pb2 as chat_pb2
+import src.protocols.grpc.chat_pb2_grpc as chat_pb2_grpc
 from src.database.db_manager import DatabaseManager
 
 
-class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
+class ChatServer(chat_pb2_grpc.ChatServerServicer):
+    """gRPC server implementation for the chat service.
+
+    This class implements all the RPC methods defined in the chat.proto service definition.
+    It handles user authentication, message delivery, and account management operations.
+
+    Attributes:
+        db (DatabaseManager): Database manager instance for persistent storage
+        active_subscribers (Dict[str, queue.Queue]): Maps usernames to their message queues
+        lock (threading.Lock): Thread synchronization lock for subscriber management
+    """
+
     def __init__(self, db_path: str = "chat.db") -> None:
+        """Initialize the chat service.
+
+        Args:
+            db_path (str, optional): Path to the SQLite database file. Defaults to "chat.db".
+        """
         self.db: DatabaseManager = DatabaseManager(db_path)
         # Maintain a mapping of logged-in users to a Queue for pushing messages.
         self.active_subscribers: Dict[str, queue.Queue] = {}  # {username: queue.Queue}
@@ -24,6 +40,19 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
     def CreateAccount(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """Create a new user account.
+
+        Args:
+            request (chat_pb2.ChatMessage): Contains username and password in payload
+            context (grpc.ServicerContext): gRPC service context
+
+        Returns:
+            chat_pb2.ChatMessage: Success message if account created, error otherwise
+
+        Sets error status codes:
+            INVALID_ARGUMENT: If username or password is missing
+            ALREADY_EXISTS: If username is already taken
+        """
         # Extract username and password from the Struct payload.
         payload = MessageToDict(request.payload)
         username = payload.get("username")
@@ -51,6 +80,20 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
     def Login(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """Authenticate a user and log them in.
+
+        Args:
+            request (chat_pb2.ChatMessage): Contains username and password in payload
+            context (grpc.ServicerContext): gRPC service context
+
+        Returns:
+            chat_pb2.ChatMessage: Success message with unread count if login successful
+
+        Sets error status codes:
+            INVALID_ARGUMENT: If username or password is missing
+            NOT_FOUND: If account doesn't exist (during dummy login)
+            UNAUTHENTICATED: If password is incorrect
+        """
         payload = MessageToDict(request.payload)
         username = payload.get("username")
         password = payload.get("password")
@@ -91,6 +134,21 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
     def SendMessage(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """Send a message to another user.
+
+        If the recipient is online (has an active subscriber), delivers the message
+        immediately. Otherwise, stores it for later delivery.
+
+        Args:
+            request (chat_pb2.ChatMessage): Contains sender, recipient, and message text
+            context (grpc.ServicerContext): gRPC service context
+
+        Returns:
+            chat_pb2.ChatMessage: Success confirmation message
+
+        Sets error status codes:
+            NOT_FOUND: If recipient doesn't exist
+        """
         payload = MessageToDict(request.payload)
         sender = request.sender
         recipient = request.recipient
@@ -131,6 +189,19 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
     def ReadMessages(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> Any:  # Using Any because it yields chat_pb2.ChatMessage
+        """Stream messages to a client.
+
+        Creates a message queue for the client and streams both undelivered messages
+        from the database and new incoming messages. Maintains the connection until
+        the client disconnects or a timeout occurs.
+
+        Args:
+            request (chat_pb2.ChatMessage): Contains recipient (username) for message delivery
+            context (grpc.ServicerContext): gRPC service context
+
+        Yields:
+            chat_pb2.ChatMessage: Stream of messages for the client
+        """
         # Client should provide its username in the 'recipient' field.
         username = request.recipient
         # Register subscriber by creating a new Queue for this user.
@@ -172,6 +243,15 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
     def ListAccounts(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """List user accounts matching a pattern.
+
+        Args:
+            request (chat_pb2.ChatMessage): Contains search pattern and page number
+            context (grpc.ServicerContext): gRPC service context
+
+        Returns:
+            chat_pb2.ChatMessage: List of matching accounts with pagination info
+        """
         payload = MessageToDict(request.payload)
         pattern = payload.get("pattern", "")
         page = int(payload.get("page", 1))
@@ -189,6 +269,18 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
     def DeleteMessages(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """Delete specified messages for a user.
+
+        Args:
+            request (chat_pb2.ChatMessage): Contains list of message IDs to delete
+            context (grpc.ServicerContext): gRPC service context
+
+        Returns:
+            chat_pb2.ChatMessage: Success or error message
+
+        Sets error status codes:
+            INVALID_ARGUMENT: If message_ids is not a list
+        """
         payload = MessageToDict(request.payload)
         message_ids = payload.get("message_ids", [])
         if not isinstance(message_ids, list):
@@ -216,6 +308,18 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
     def DeleteAccount(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """Delete a user's account.
+
+        Args:
+            request (chat_pb2.ChatMessage): Contains username in sender field
+            context (grpc.ServicerContext): gRPC service context
+
+        Returns:
+            chat_pb2.ChatMessage: Success or error message
+
+        Sets error status codes:
+            INTERNAL: If account deletion fails
+        """
         username = request.sender
         if self.db.delete_account(username):
             response_payload = {"text": "Account deleted successfully."}
@@ -235,6 +339,17 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
     def ListChatPartners(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """List all users that the requesting user has chatted with.
+
+        Also includes the count of unread messages from each chat partner.
+
+        Args:
+            request (chat_pb2.ChatMessage): Contains username in sender field
+            context (grpc.ServicerContext): gRPC service context
+
+        Returns:
+            chat_pb2.ChatMessage: List of chat partners and unread message counts
+        """
         username = request.sender
         partners = self.db.get_chat_partners(username)
         unread_map = {}
@@ -252,8 +367,13 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
 
 
 def serve() -> None:
+    """Start the gRPC server.
+
+    Creates a gRPC server with max 10 worker threads and starts it on port 50051.
+    The server runs indefinitely until terminated.
+    """
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    chat_pb2_grpc.add_ChatServiceServicer_to_server(ChatServiceServicer(), server)
+    chat_pb2_grpc.add_ChatServerServicer_to_server(ChatServer(), server)
     server.add_insecure_port("[::]:50051")
     server.start()
     server.wait_for_termination()
