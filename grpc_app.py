@@ -557,7 +557,7 @@ def render_chat_page_with_deletion() -> None:
                                     != -1
                                 ):
                                     st.success("Selected messages have been deleted.")
-                                    # Re-fetch the conversation so that the 
+                                    # Re-fetch the conversation so that the
                                     # UI refills to the set limit.
                                     load_conversation(partner, 0, conv["limit"])
                                     conv["offset"] = 0
