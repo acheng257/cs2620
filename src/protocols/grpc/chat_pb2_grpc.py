@@ -3,7 +3,6 @@
 import grpc
 import warnings
 
-# import chat_pb2 as chat__pb2
 from . import chat_pb2 as chat__pb2
 
 GRPC_GENERATED_VERSION = '1.70.0'
@@ -76,6 +75,11 @@ class ChatServiceStub(object):
                 request_serializer=chat__pb2.ChatMessage.SerializeToString,
                 response_deserializer=chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
+        self.ReadConversation = channel.unary_unary(
+                '/chat.ChatService/ReadConversation',
+                request_serializer=chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=chat__pb2.ChatMessage.FromString,
+                _registered_method=True)
 
 
 class ChatServiceServicer(object):
@@ -133,6 +137,12 @@ class ChatServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ReadConversation(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ChatServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -173,6 +183,11 @@ def add_ChatServiceServicer_to_server(servicer, server):
             ),
             'ListChatPartners': grpc.unary_unary_rpc_method_handler(
                     servicer.ListChatPartners,
+                    request_deserializer=chat__pb2.ChatMessage.FromString,
+                    response_serializer=chat__pb2.ChatMessage.SerializeToString,
+            ),
+            'ReadConversation': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReadConversation,
                     request_deserializer=chat__pb2.ChatMessage.FromString,
                     response_serializer=chat__pb2.ChatMessage.SerializeToString,
             ),
@@ -392,6 +407,33 @@ class ChatService(object):
             request,
             target,
             '/chat.ChatService/ListChatPartners',
+            chat__pb2.ChatMessage.SerializeToString,
+            chat__pb2.ChatMessage.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReadConversation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/chat.ChatService/ReadConversation',
             chat__pb2.ChatMessage.SerializeToString,
             chat__pb2.ChatMessage.FromString,
             options,

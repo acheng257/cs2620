@@ -42,4 +42,5 @@ service ChatService {
   rpc DeleteMessages(ChatMessage) returns (ChatMessage);
   rpc DeleteAccount(ChatMessage) returns (ChatMessage);
   rpc ListChatPartners(ChatMessage) returns (ChatMessage);
+  rpc ReadConversation(ChatMessage) returns (ChatMessage);
 }

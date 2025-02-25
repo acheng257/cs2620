@@ -3,6 +3,7 @@ import getpass
 import sys
 import threading
 import time
+from typing import Any, Dict, List
 from google.protobuf.json_format import ParseDict, MessageToDict
 from google.protobuf.struct_pb2 import Struct
 
@@ -60,7 +61,7 @@ class ChatClient:
             print(f"Login failed: {error_text}")
         return self.logged_in
 
-    def send_message(self, recipient: str, text: str) -> None:
+    def send_message(self, recipient: str, text: str) -> bool:
         try:
             payload = {"text": text}
             message = chat_pb2.ChatMessage(
@@ -73,13 +74,17 @@ class ChatClient:
             response = self.stub.SendMessage(message)
             if response.type == chat_pb2.MessageType.SUCCESS:
                 print("Message sent successfully.")
+                return True
             elif response.type == chat_pb2.MessageType.ERROR:
                 error_message = MessageToDict(response.payload).get("text", "Unknown error.")
                 print(f"Error sending message: {error_message}")
+                return False
             else:
                 print("Unexpected response from server.")
+                return False
         except grpc.RpcError as e:
             print(f"RPC error while sending message: {e.details()}")
+            return False
 
 
     def read_messages(self) -> None:
@@ -155,6 +160,54 @@ class ChatClient:
         if self.channel:
             self.channel.close()
 
+    def list_chat_partners(self):
+        """
+        Retrieve and return the list of chat partners using the gRPC ListChatPartners method.
+        """
+        message = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.LIST_CHAT_PARTNERS,
+            payload=Struct(),  # no additional data needed
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        try:
+            response = self.stub.ListChatPartners(message)
+            if response is None:
+                print("No response received from ListChatPartners RPC.")
+                return None
+            result = MessageToDict(response.payload)
+            print("Chat partners:", result)
+            return result  # Return the result dictionary
+        except grpc.RpcError as e:
+            print(f"RPC error in list_chat_partners: {e.details()}")
+            return None
+
+    def read_conversation(self, partner: str, offset: int = 0, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Retrieve the conversation history with a specific partner by calling the ReadConversation RPC.
+        """
+        payload = {"partner": partner, "offset": offset, "limit": limit}
+        message = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.READ_MESSAGES,  # Or use a new enum value if defined
+            payload=ParseDict(payload, Struct()),
+            sender=self.username,
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        try:
+            response = self.stub.ReadConversation(message)
+            if response and response.type == chat_pb2.MessageType.SUCCESS:
+                result = MessageToDict(response.payload)
+                return result.get("messages", [])
+            else:
+                print("Failed to read conversation.")
+                return []
+        except grpc.RpcError as e:
+            print(f"RPC error in read_conversation: {e.details()}")
+            return []
+
+ 
 
 def get_password(prompt: str) -> str:
     while True:
