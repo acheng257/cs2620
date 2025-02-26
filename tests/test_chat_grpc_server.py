@@ -1,18 +1,20 @@
-import unittest
 import queue
 import time
+import unittest
+
 import grpc
 from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.struct_pb2 import Struct
 
-from src.protocols.grpc import chat_pb2
 from src.chat_grpc_server import ChatServer
+from src.protocols.grpc import chat_pb2
 
 
 class FakeDatabaseManager:
     """
     A fake in-memory database manager to simulate account and message storage.
     """
+
     def __init__(self):
         self.accounts = {}  # username -> password
         self.messages = {}  # message_id -> message dict
@@ -114,6 +116,7 @@ class FakeContext:
     """
     A fake gRPC ServicerContext to capture status codes and details.
     """
+
     def __init__(self):
         self.code = None
         self.details_text = None

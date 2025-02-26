@@ -9,6 +9,7 @@ Modules
 
    chat.client
    chat.server
+   chat.grpc
 
 Subpackages
 ----------
