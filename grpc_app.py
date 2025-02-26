@@ -189,10 +189,7 @@ def render_login_page() -> None:
                         st.session_state.logged_in = True
                         st.session_state.client = client
                         st.session_state.client_connected = True
-                        db_manager = DatabaseManager()
-                        st.session_state.global_message_limit = db_manager.get_message_limit(
-                            username
-                        )
+                        st.session_state.global_message_limit = 50
                         st.success("Logged in successfully!")
                         client.start_read_thread()
                     else:
@@ -224,10 +221,7 @@ def render_login_page() -> None:
                             st.session_state.logged_in = True
                             st.session_state.client = client
                             st.session_state.client_connected = True
-                            db_manager = DatabaseManager()
-                            st.session_state.global_message_limit = db_manager.get_message_limit(
-                                username
-                            )
+                            st.session_state.global_message_limit = 50
                             st.success("Account created and logged in successfully!")
                             client.start_read_thread()
                         else:
