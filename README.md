@@ -316,16 +316,16 @@ pipenv run make html
 ## Protocol Comparison
 
 ### Message Size Comparison
-| Operation           | JSON Protocol | Binary Protocol | gRPC Protocol | Size vs JSON |
+| Operation           | JSON Protocol | Binary Protocol | gRPC Protocol | Binary Size vs JSON |
 |--------------------|---------------|-----------------|---------------|--------------|
-| CREATE_ACCOUNT     | 141 bytes     | 69 bytes        | 58 bytes     | -59%         |
-| LOGIN             | 150 bytes     | 75 bytes        | 62 bytes     | -59%         |
-| LIST_ACCOUNTS     | 125 bytes     | 51 bytes        | 45 bytes     | -64%         |
-| SEND_MESSAGE      | 150 bytes     | 53 bytes        | 48 bytes     | -68%         |
-| READ_MESSAGES     | 150 bytes     | 73 bytes        | 65 bytes     | -57%         |
-| DELETE_MESSAGES   | 127 bytes     | 54 bytes        | 42 bytes     | -67%         |
-| DELETE_ACCOUNT    | 100 bytes     | 28 bytes        | 25 bytes     | -75%         |
-| LIST_CHAT_PARTNERS| 100 bytes     | 28 bytes        | 24 bytes     | -76%         |
+| CREATE_ACCOUNT     | 141 bytes     | 69 bytes        | 69 bytes     | -59%         |
+| LOGIN             | 150 bytes     | 75 bytes        | 79 bytes     | -59%         |
+| LIST_ACCOUNTS     | 125 bytes     | 51 bytes        | 55 bytes     | -64%         |
+| SEND_MESSAGE      | 150 bytes     | 53 bytes        | 41 bytes     | -68%         |
+| READ_MESSAGES     | 150 bytes     | 73 bytes        | 27 bytes     | -57%         |
+| DELETE_MESSAGES   | 127 bytes     | 54 bytes        | 58 bytes     | -67%         |
+| DELETE_ACCOUNT    | 100 bytes     | 28 bytes        | 28 bytes     | -75%         |
+| LIST_CHAT_PARTNERS| 100 bytes     | 28 bytes        | 28 bytes     | -76%         |
 
 ### Performance Analysis
 Average processing times (in milliseconds):
