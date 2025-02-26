@@ -20,7 +20,8 @@ class ChatClient:
         self.username = username
         self.host = host
         self.port = port
-        self.channel = grpc.insecure_channel(f"{host}:{port}")
+        # Initially create a channel; however, if host/port change, we'll recreate it in connect()
+        self.channel = grpc.insecure_channel(f"{self.host}:{self.port}")
         self.stub = chat_pb2_grpc.ChatServerStub(self.channel)
         self.logged_in = False
         self.read_thread: Optional[threading.Thread] = None
@@ -29,12 +30,16 @@ class ChatClient:
 
     def connect(self, timeout: int = 5) -> bool:
         """
-        Checks the connection by waiting for the gRPC channel to be ready,
-        and then performing a dummy RPC call (health-check) to verify the server
+        Checks the connection by (re)creating the gRPC channel based on the current
+        host and port, and then performing a dummy RPC call (health-check) to verify the server
         is actually responding.
 
         Returns True if the health-check call succeeds, False otherwise.
         """
+        # Recreate the channel and stub using the current host and port values.
+        self.channel = grpc.insecure_channel(f"{self.host}:{self.port}")
+        self.stub = chat_pb2_grpc.ChatServerStub(self.channel)
+
         try:
             grpc.channel_ready_future(self.channel).result(timeout=timeout)
         except grpc.FutureTimeoutError:
@@ -45,15 +50,20 @@ class ChatClient:
             return False
 
         dummy_payload = {"pattern": "", "page": 1}
+        # Time serialization for dummy_payload.
+        start_ser = time.perf_counter()
+        parsed_dummy = ParseDict(dummy_payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[connect] Serialization took {end_ser - start_ser:.6f} seconds")
+
         dummy_request = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.LIST_ACCOUNTS,
-            payload=ParseDict(dummy_payload, Struct()),
+            payload=parsed_dummy,
             sender="",  # sender is irrelevant for a health-check
             recipient="SERVER",
             timestamp=time.time(),
         )
         try:
-            # If the RPC call fails, an exception will be raised.
             _ = self.stub.ListAccounts(dummy_request)
             print(f"Connected to server at {self.host}:{self.port}")
             return True
@@ -64,14 +74,25 @@ class ChatClient:
 
     def create_account(self, password: str) -> None:
         payload = {"username": self.username, "password": password}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[create_account] Serialization took {end_ser - start_ser:.6f} seconds")
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.CREATE_ACCOUNT,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.CreateAccount(message)
+        start_deser = time.perf_counter()
+        # In this method we don't explicitly call MessageToDict on the response,
+        # so only the stub's work is measured externally.
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[create_account] Deserialization took {end_deser - start_deser:.6f} seconds")
         if response.type == chat_pb2.MessageType.SUCCESS:
             print("Account created successfully.")
         else:
@@ -82,32 +103,51 @@ class ChatClient:
         Synchronous account creation wrapper.
         """
         payload = {"username": self.username, "password": password}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[create_account_sync] Serialization took {end_ser - start_ser:.6f} seconds")
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.CREATE_ACCOUNT,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.CreateAccount(message)
+        start_deser = time.perf_counter()
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[create_account_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
         return response.type == chat_pb2.MessageType.SUCCESS
 
     def login(self, password: str) -> bool:
         payload = {"username": self.username, "password": password}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[login] Serialization took {end_ser - start_ser:.6f} seconds")
+        
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.LOGIN,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.Login(message)
+        start_deser = time.perf_counter()
+        deser = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[login] Deserialization took {end_deser - start_deser:.6f} seconds")
+        
         if response.type == chat_pb2.MessageType.SUCCESS:
             self.logged_in = True
-            details = MessageToDict(response.payload).get("text", "")
+            details = deser.get("text", "")
             print(f"Login successful. {details}")
         else:
-            error_text = MessageToDict(response.payload).get("text", "Login failed.")
+            error_text = deser.get("text", "Login failed.")
             print(f"Login failed: {error_text}")
         return self.logged_in
 
@@ -116,32 +156,52 @@ class ChatClient:
         Synchronous login wrapper that returns (success, error_message).
         """
         payload = {"username": self.username, "password": password}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[login_sync] Serialization took {end_ser - start_ser:.6f} seconds")
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.LOGIN,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.Login(message)
+        start_deser = time.perf_counter()
+        deser = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[login_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
+        
         if response.type == chat_pb2.MessageType.SUCCESS:
             self.logged_in = True
             return True, None
         else:
-            error_text = MessageToDict(response.payload).get("text", "Login failed.")
+            error_text = deser.get("text", "Login failed.")
             return False, error_text
 
     def send_message(self, recipient: str, text: str) -> bool:
         try:
             payload = {"text": text}
+            start_ser = time.perf_counter()
+            parsed_payload = ParseDict(payload, Struct())
+            end_ser = time.perf_counter()
+            print(f"[send_message] Serialization took {end_ser - start_ser:.6f} seconds")
+
             message = chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.SEND_MESSAGE,
-                payload=ParseDict(payload, Struct()),
+                payload=parsed_payload,
                 sender=self.username,
                 recipient=recipient,
                 timestamp=time.time(),
             )
             response = self.stub.SendMessage(message)
+            start_deser = time.perf_counter()
+            _ = MessageToDict(response.payload)
+            end_deser = time.perf_counter()
+            print(f"[send_message] Deserialization took {end_deser - start_deser:.6f} seconds")
+            
             if response.type == chat_pb2.MessageType.SUCCESS:
                 print("Message sent successfully.")
                 return True
@@ -158,14 +218,23 @@ class ChatClient:
 
     def send_message_sync(self, recipient: str, text: str) -> chat_pb2.ChatMessage:
         payload = {"text": text}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[send_message_sync] Serialization took {end_ser - start_ser:.6f} seconds")
+        
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SEND_MESSAGE,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient=recipient,
             timestamp=time.time(),
         )
         response = self.stub.SendMessage(message)
+        start_deser = time.perf_counter()
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[send_message_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
         return response
 
     def read_messages(self) -> None:
@@ -182,6 +251,11 @@ class ChatClient:
         )
         try:
             for msg in self.stub.ReadMessages(message):
+                # Optionally, you could measure deserialization for each streamed message.
+                start_deser = time.perf_counter()
+                _ = MessageToDict(msg.payload)
+                end_deser = time.perf_counter()
+                print(f"[read_messages] Deserialization took {end_deser - start_deser:.6f} seconds")
                 self.incoming_messages_queue.put(msg)
         except grpc.RpcError as e:
             print("Message stream closed:", e)
@@ -193,39 +267,65 @@ class ChatClient:
 
     def list_accounts(self, pattern: str = "", page: int = 1) -> None:
         payload = {"pattern": pattern, "page": page}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[list_accounts] Serialization took {end_ser - start_ser:.6f} seconds")
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.LIST_ACCOUNTS,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.ListAccounts(message)
+        start_deser = time.perf_counter()
         result = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[list_accounts] Deserialization took {end_deser - start_deser:.6f} seconds")
         print("Accounts list:", result)
 
     def list_accounts_sync(self, pattern: str = "", page: int = 1) -> chat_pb2.ChatMessage:
         payload = {"pattern": pattern, "page": page}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[list_accounts_sync] Serialization took {end_ser - start_ser:.6f} seconds")
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.LIST_ACCOUNTS,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.ListAccounts(message)
+        start_deser = time.perf_counter()
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[list_accounts_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
         return response
 
     def delete_messages(self, message_ids: list) -> None:
         payload = {"message_ids": message_ids}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[delete_messages] Serialization took {end_ser - start_ser:.6f} seconds")
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.DELETE_MESSAGES,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.DeleteMessages(message)
+        start_deser = time.perf_counter()
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[delete_messages] Deserialization took {end_deser - start_deser:.6f} seconds")
         if response.type == chat_pb2.MessageType.SUCCESS:
             print("Messages deleted successfully.")
         else:
@@ -233,14 +333,23 @@ class ChatClient:
 
     def delete_messages_sync(self, message_ids: List[int]) -> chat_pb2.ChatMessage:
         payload = {"message_ids": message_ids}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[delete_messages_sync] Serialization took {end_ser - start_ser:.6f} seconds")
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.DELETE_MESSAGES,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.DeleteMessages(message)
+        start_deser = time.perf_counter()
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[delete_messages_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
         return response
 
     def delete_account(self) -> None:
@@ -252,6 +361,10 @@ class ChatClient:
             timestamp=time.time(),
         )
         response = self.stub.DeleteAccount(message)
+        start_deser = time.perf_counter()
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[delete_account] Deserialization took {end_deser - start_deser:.6f} seconds")
         if response.type == chat_pb2.MessageType.SUCCESS:
             print("Account deleted successfully.")
         else:
@@ -266,6 +379,10 @@ class ChatClient:
             timestamp=time.time(),
         )
         response = self.stub.DeleteAccount(message)
+        start_deser = time.perf_counter()
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[delete_account_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
         return response
 
     def list_chat_partners(self):
@@ -278,10 +395,13 @@ class ChatClient:
         )
         try:
             response = self.stub.ListChatPartners(message)
+            start_deser = time.perf_counter()
+            result = MessageToDict(response.payload)
+            end_deser = time.perf_counter()
+            print(f"[list_chat_partners] Deserialization took {end_deser - start_deser:.6f} seconds")
             if response is None:
                 print("No response received from ListChatPartners RPC.")
                 return None
-            result = MessageToDict(response.payload)
             print("Chat partners:", result)
             return result
         except grpc.RpcError as e:
@@ -297,24 +417,36 @@ class ChatClient:
             timestamp=time.time(),
         )
         response = self.stub.ListChatPartners(message)
+        start_deser = time.perf_counter()
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[list_chat_partners_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
         return response
 
     def read_conversation(
         self, partner: str, offset: int = 0, limit: int = 50
     ) -> List[Dict[str, Any]]:
         payload = {"partner": partner, "offset": offset, "limit": limit}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[read_conversation] Serialization took {end_ser - start_ser:.6f} seconds")
+        
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.READ_MESSAGES,  # or use READ_CONVERSATION if defined
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         try:
             response = self.stub.ReadConversation(message)
+            start_deser = time.perf_counter()
+            deser = MessageToDict(response.payload)
+            end_deser = time.perf_counter()
+            print(f"[read_conversation] Deserialization took {end_deser - start_deser:.6f} seconds")
             if response and response.type == chat_pb2.MessageType.SUCCESS:
-                result = MessageToDict(response.payload)
-                return result.get("messages", [])
+                return deser.get("messages", [])
             else:
                 print("Failed to read conversation.")
                 return []
@@ -326,14 +458,23 @@ class ChatClient:
         self, partner: str, offset: int = 0, limit: int = 50
     ) -> chat_pb2.ChatMessage:
         payload = {"partner": partner, "offset": offset, "limit": limit}
+        start_ser = time.perf_counter()
+        parsed_payload = ParseDict(payload, Struct())
+        end_ser = time.perf_counter()
+        print(f"[read_conversation_sync] Serialization took {end_ser - start_ser:.6f} seconds")
+        
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.READ_MESSAGES,
-            payload=ParseDict(payload, Struct()),
+            payload=parsed_payload,
             sender=self.username,
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.ReadConversation(message)
+        start_deser = time.perf_counter()
+        _ = MessageToDict(response.payload)
+        end_deser = time.perf_counter()
+        print(f"[read_conversation_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
         return response
 
     def close(self) -> None:

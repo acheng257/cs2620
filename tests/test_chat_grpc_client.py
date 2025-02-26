@@ -6,7 +6,7 @@ from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.struct_pb2 import Struct
 
 from src.chat_grpc_client import ChatClient
-from src.protocols.grpc import chat_pb2
+from src.protocols.grpc import chat_pb2, chat_pb2_grpc
 
 
 class FakeChatServerStub:
@@ -162,7 +162,25 @@ class TestChatClient(unittest.TestCase):
         grpc.channel_ready_future = self._old_channel_ready_future
 
     def test_connect(self):
+        # For this test, override grpc.insecure_channel to return a FakeChannelWithUnary,
+        # and override the ChatServerStub constructor to return our FakeChatServerStub.
+        class FakeChannelWithUnary(FakeChannel):
+            def unary_unary(self, method, request_serializer=None, response_deserializer=None, **kwargs):
+                def dummy(request, timeout=None, metadata=None, credentials=None):
+                    return None
+                return dummy
+
+        old_insecure_channel = grpc.insecure_channel
+        grpc.insecure_channel = lambda target: FakeChannelWithUnary()
+        old_stub_ctor = chat_pb2_grpc.ChatServerStub
+        chat_pb2_grpc.ChatServerStub = lambda channel: FakeChatServerStub()
+
         connected = self.client.connect()
+
+        # Restore the original functions.
+        grpc.insecure_channel = old_insecure_channel
+        chat_pb2_grpc.ChatServerStub = old_stub_ctor
+
         self.assertTrue(connected)
 
     def test_create_account(self):

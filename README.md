@@ -228,15 +228,15 @@ The report will be available in `htmlcov/index.html`
 | Module | Miss | Coverage |
 |--------|-----------|----------|
 | src/client.py | 27 | 82% |
-| src/chat_grpc_client.py | 27 | 81% |
+| src/chat_grpc_client.py | 27 | 88% |
 | src/database/db_manager.py | 50 | 79% |
 | src/protocols/base.py | 0 | 100% |
 | src/protocols/binary_protocol.py | 0 | 100% |
 | src/protocols/json_protocol.py | 0 | 100% |
 | src/protocols/grpc/chat_pb2.py | 0 | 100% |
 | src/server.py | 86 | 75% |
-| src/chat_grpc_server.py | 35 | 74% |
-| **Overall** | **241** | **78%** |
+| src/chat_grpc_server.py | 39 | 80% |
+| **Overall** | **245** | **80%** |
 
 ## Configuration
 
@@ -333,14 +333,14 @@ Average processing times (in milliseconds):
 **Serialization:**
 - JSON: 0.070ms (avg)
 - Binary: 0.026ms (avg)
-- gRPC: 0.018ms (avg)
-- Performance gain vs JSON: ~74% faster with gRPC
+- gRPC: 0.036ms (avg)
+- Performance gain vs JSON: ~49% faster with gRPC
 
 **Deserialization:**
 - JSON: 0.133ms (avg)
 - Binary: 0.033ms (avg)
-- gRPC: 0.025ms (avg)
-- Performance gain vs JSON: ~81% faster with gRPC
+- gRPC: 0.059ms (avg)
+- Performance gain vs JSON: ~56% faster with gRPC
 
 ### Key Findings
 - Binary protocol achieves 50-72% reduction in message size vs JSON
@@ -348,7 +348,7 @@ Average processing times (in milliseconds):
 - Binary serialization is ~2.7x faster than JSON
 - gRPC serialization is ~3.9x faster than JSON
 - Binary deserialization is ~4x faster than JSON
-- gRPC deserialization is ~5.3x faster than JSON
+- gRPC deserialization is ~2x faster than JSON
 - Most significant improvements in account and chat partner operations
 - gRPC provides additional benefits like type safety and code generation
 
