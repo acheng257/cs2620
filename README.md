@@ -1,139 +1,74 @@
-# Chat Application with Custom Wire Protocol
+# Chat Application with Custom Wire Protocol and gRPC
 
-A client-server chat application that implements both a custom wire protocol and JSON-based communication for message exchange. This project was developed as part of Harvard's CS262 course.
+A client-server chat application that implements both a custom wire protocol, JSON-based communication, and gRPC for message exchange. This project was developed as part of Harvard's CS262 course.
 
 ## Project Structure
-
 ```
 .
-├── app.py                  # Streamlit web interface
+├── README.md
+├── requirements.txt
 ├── src/
-│   ├── server.py          # Main server implementation
-│   ├── client.py          # Base client implementation (used by app.py)
-│   ├── protocols/
+│   ├── __init__.py
+│   ├── server.py (socket-based)
+│   ├── chat_grpc_server.py (gRPC-based)
+│   ├── client.py (socket-based)
+│   ├── chat_grpc_client.py (gRPC-based)
+│   ├── database/
 │   │   ├── __init__.py
-│   │   ├── base.py           # Protocol interface
-│   │   ├── binary_protocol.py # Custom binary protocol
-│   │   └── json_protocol.py   # JSON protocol implementation
-│   └── database/
-│       └── db_manager.py     # Database operations manager
-├── tests/
-│   ├── conftest.py           # Test configurations and fixtures
-│   ├── test_server.py        # Server tests
-│   ├── test_client.py        # Client tests
-│   ├── test_protocols.py     # Protocol tests
-│   └── test_database.py      # Database tests
+│   │   └── db_manager.py
+│   └── protocols/
+│       ├── __init__.py
+│       ├── base.py
+│       ├── binary_protocol.py
+│       ├── json_protocol.py
+│       └── grpc/
+│           ├── chat.proto
+│           ├── chat_pb2.py
+│           ├── chat_pb2.pyi
+│           └── chat_pb2_grpc.py
 ├── docs/                  # Documentation files
 ├── pyproject.toml        # Project configuration
 ├── Pipfile              # Dependencies
-└── README.md
+├── tests/
+│   ├── __init__.py
+│   ├── test_binary_protocol.py
+│   ├── test_json_protocol.py
+│   ├── test_grpc_protocol.py
+│   ├── test_server.py
+│   └── test_client.py
+│   ├── test_protocols.py     # Protocol tests
+│   └── test_database.py      # Database tests
+├── app.py (Streamlit UI for socket-based)
+└── grpc_app.py (Streamlit UI for gRPC)
+
 ```
 
-## Overview
+## Architecture
 
-This chat application allows users to create accounts, send messages, and manage their communications through a centralized server. The system implements two different wire protocols for comparison: a custom binary protocol optimized for efficiency, and a JSON-based protocol for readability and compatibility.
+The application is built with a layered architecture supporting both traditional socket-based protocols and gRPC:
 
-## Features
+### Server Layer
+- `server.py` (socket-based): Handles client connections and message routing using traditional sockets
+- `chat_grpc_server.py` (gRPC-based): Implements the same functionality using gRPC services
 
-- **Account Management**
-  - Create new accounts with password protection
-  - Login with secure password verification
-  - Delete accounts with configurable message handling
-  - List accounts with pattern matching
+### Client Layer
+- `client.py` (socket-based): Manages user connections and message handling using traditional sockets
+- `chat_grpc_client.py` (gRPC-based): Implements the same functionality using gRPC client stubs
 
-- **Messaging Capabilities**
-  - Send messages to other users
-  - Real-time message delivery for online users
-  - Message queuing for offline users
-  - Configurable message retrieval (specify number of messages)
-  - Message deletion functionality
+### Protocol Layer
+- Base Protocol (`protocols/base.py`): Defines the interface for all protocols
+- JSON Protocol (`protocols/json_protocol.py`): JSON-based message serialization
+- Binary Protocol (`protocols/binary_protocol.py`): Binary-based message serialization
+- gRPC Protocol (`protocols/grpc/`): Protocol Buffers definitions and generated code
 
-## Technical Implementation
+### Database Layer
+- `database/db_manager.py`: Handles all database operations for both implementations
 
-### Architecture
+### User Interface
+- `grpc_app.py`: Streamlit-based UI supporting both traditional and gRPC implementations
+- `app.py`: Streamlit-based UI supporting socket-based implementation
 
-The application follows a modern client-server architecture with the following components:
-
-1. **Server (`src/server.py`)**
-   - Handles multiple concurrent client connections using asyncio
-   - Manages user authentication and session state
-   - Implements message routing and storage
-   - Supports both wire protocol implementations
-   - Provides WebSocket endpoints for Streamlit client communication
-
-2. **Streamlit Client (`app.py`)**
-   - Modern web-based user interface
-   - Real-time message updates
-   - Multiple client instances can connect simultaneously
-   - Responsive design for desktop and mobile
-   - Built-in error handling and reconnection logic
-
-3. **Protocol Layer (`src/protocols/`)**
-   - Abstract base protocol interface
-   - Binary protocol implementation for efficiency
-   - JSON protocol implementation for debugging
-   - Extensible design for adding new protocols
-
-4. **Database Layer (`src/database/`)**
-   - SQLite database for persistent storage
-   - Asynchronous database operations
-   - Transaction management
-   - Connection pooling
-
-### Wire Protocols
-
-#### Custom Binary Protocol
-Our custom protocol is designed for efficiency with minimal overhead:
-- Fixed-length headers for quick parsing
-- Binary encoding for numeric values
-- Length-prefixed variable data
-- Optimized message types for common operations
-
-#### JSON Protocol
-The JSON implementation provides:
-- Human-readable message format
-- Standard encoding/decoding
-- Easy debugging and monitoring
-- Compatibility with existing tools
-
-#### Protocol Buffers (gRPC)
-The application also implements a gRPC-based protocol using Protocol Buffers:
-- Strongly typed message definitions
-- Efficient binary serialization
-- Built-in service definitions
-- Bidirectional streaming support
-- Cross-language compatibility
-
-To generate the gRPC code from the proto definitions:
-```bash
-# Generate Python gRPC code
-python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. src/protocols/grpc/chat.proto
-```
-
-The proto definition includes:
-- Message type enums for all operations
-- ChatMessage structure for all communications
-- Service definitions for all API endpoints
-- Bidirectional streaming for real-time messages
-- Type-safe payload handling using google.protobuf.Struct
-
-Benefits of the gRPC implementation:
-- Automatic client/server code generation
-- Type safety and validation
-- Efficient binary protocol
-- Built-in streaming support
-- Language-agnostic API definition
-
-### Security Features
-
-- Passwords are never transmitted in plaintext
-- Session-based authentication
-- Input validation and sanitization
-- Secure message storage
-
-## Getting Started
-
-### Prerequisites
+## Running the Application
 
 1. Install Pipenv if you haven't already:
 ```bash
@@ -142,20 +77,12 @@ pip install pipenv
 
 2. Install project dependencies:
 ```bash
-# Clone the repository
-git clone [repository-url]
-cd cs2620
-
-# Install dependencies using Pipenv
 pipenv install
-
-# Install development dependencies (for testing)
-pipenv install --dev
 ```
 
-### Running the Application
+### Traditional Socket-based Version
 
-1. Start the Server:
+1. Start the server:
 ```bash
 # Activate the virtual environment
 pipenv shell
@@ -164,7 +91,7 @@ pipenv shell
 python -m src.server [--port PORT] [--protocol {binary,json}]
 ```
 
-2. Launch the Streamlit Interface:
+2. Start the client:
 ```bash
 # In a new terminal, activate the virtual environment
 pipenv shell
@@ -173,17 +100,32 @@ pipenv shell
 streamlit run app.py -- [—-host HOST] [—-port PORT] [—-protocol {JSON, Binary}]
 ```
 
-You can run multiple streamlit clients to simulate different clients connecting to the server. Each instance will maintain its own connection and state.
+### gRPC Version
 
-### Configuration Options
+To generate the gRPC code from the proto definitions:
+```bash
+# Generate Python gRPC code
+python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. src/protocols/
+grpc/chat.proto
+```
 
-Server:
-- `--port PORT`: Server port (default: 8000)
-- `--protocol {binary,json}`: Wire protocol to use (default: binary)
+2. Start the gRPC server:
+```bash
+# Activate the virtual environment
+pipenv shell
 
-Streamlit:
-- Automatically connects to the server using WebSocket
-- Configuration can be modified inside the interface.
+# Run the gRPC server (default port: 8000)
+python -m src.chat_grpc_server [--port PORT]
+```
+
+3. Start the gRPC client:
+```bash
+# Activate the virtual environment
+pipenv shell
+
+# Run the Streamlit app (default port: 8501)
+streamlit run grpc_app.py -- [—-host HOST] [—-port PORT]
+```
 
 ## Testing Guide
 
@@ -194,36 +136,60 @@ The project uses pytest for testing with the following structure:
 ```
 tests/
 ├── conftest.py           # Shared test fixtures and configurations
-├── test_server.py        # Server endpoint and protocol tests
-├── test_protocols.py     # Protocol tests
-├── test_client.py        # Client communication tests
+├── test_server.py        # Socket-based server tests
+├── test_grpc_server.py   # gRPC server tests
+├── test_client.py        # Socket-based client tests
+├── test_grpc_client.py   # gRPC client tests
+├── test_protocols.py     # Socket protocol tests (JSON/Binary)
+├── test_grpc_protocol.py # gRPC protocol tests
 └── test_database.py      # Database operation tests
 ```
 
 ### Key Test Components
 
 1. **Server Tests**
+   Socket-based (`test_server.py`):
    - WebSocket connection handling
    - Protocol message processing
    - Concurrent client management
    - Error handling and recovery
 
+   gRPC (`test_grpc_server.py`):
+   - gRPC service implementation
+   - Streaming message handling
+   - Connection management
+   - Error handling
+
 2. **Client Tests**
+   Socket-based (`test_client.py`):
    - Message serialization/deserialization
    - Connection management
    - UI state management
    - Error handling
 
-3. **Database Tests**
+   gRPC (`test_grpc_client.py`):
+   - Client stub operations
+   - Streaming message handling
+   - Connection management
+   - Error handling
+
+3. **Protocol Tests**
+   Socket-based (`test_protocols.py`):
+   - Message serialization/deserialization
+   - Protocol message processing
+   - Error handling
+
+   gRPC (`test_grpc_protocol.py`):
+   - Protocol buffer message handling
+   - Service method testing
+   - Stream processing
+   - Error handling
+
+4. **Database Tests**
    - CRUD operations
    - Transaction management
    - Concurrent access
    - Data integrity
-
-4. **Protocol Tests**
-   - Message serialization/deserialization
-   - Protocol message processing
-   - Error handling
 
 ### Running Tests
 
@@ -232,9 +198,13 @@ tests/
 pipenv run pytest
 ```
 
-2. Run specific test file:
+2. Run specific implementation tests:
 ```bash
-pipenv run pytest tests/test_server.py
+# Socket-based implementation tests
+pipenv run pytest tests/test_server.py tests/test_client.py tests/test_protocols.py
+
+# gRPC implementation tests
+pipenv run pytest tests/test_grpc_server.py tests/test_grpc_client.py tests/test_grpc_protocol.py
 ```
 
 3. Run specific test case:
@@ -258,12 +228,15 @@ The report will be available in `htmlcov/index.html`
 | Module | Miss | Coverage |
 |--------|-----------|----------|
 | src/client.py | 27 | 82% |
+| src/chat_grpc_client.py | 31 | 80% |
 | src/database/db_manager.py | 50 | 79% |
 | src/protocols/base.py | 0 | 100% |
 | src/protocols/binary_protocol.py | 0 | 100% |
 | src/protocols/json_protocol.py | 0 | 100% |
+| src/protocols/grpc/chat_pb2.py | 0 | 100% |
 | src/server.py | 86 | 75% |
-| **Overall** | **163** | **81%** |
+| src/chat_grpc_server.py | 82 | 77% |
+| **Overall** | **276** | **83%** |
 
 ## Configuration
 
@@ -285,7 +258,7 @@ mypy . --config=./pyproject.toml --ignore-missing-imports
 
 ## Documentation
 
-### Generating Documentation
+The documentation now covers both socket-based and gRPC implementations:
 
 The project uses Sphinx to automatically generate documentation from the codebase. To generate the documentation:
 
@@ -343,16 +316,16 @@ pipenv run make html
 ## Protocol Comparison
 
 ### Message Size Comparison
-| Operation           | JSON Protocol | Binary Protocol | Size Reduction |
-|--------------------|---------------|-----------------|----------------|
-| CREATE_ACCOUNT     | 141 bytes     | 69 bytes        | 51%           |
-| LOGIN             | 150 bytes     | 75 bytes        | 50%           |
-| LIST_ACCOUNTS     | 125 bytes     | 51 bytes        | 59%           |
-| SEND_MESSAGE      | 150 bytes     | 53 bytes        | 65%           |
-| READ_MESSAGES     | 150 bytes     | 73 bytes        | 51%           |
-| DELETE_MESSAGES   | 127 bytes     | 54 bytes        | 57%           |
-| DELETE_ACCOUNT    | 100 bytes     | 28 bytes        | 72%           |
-| LIST_CHAT_PARTNERS| 100 bytes     | 28 bytes        | 72%           |
+| Operation           | JSON Protocol | Binary Protocol | gRPC Protocol | Size vs JSON |
+|--------------------|---------------|-----------------|---------------|--------------|
+| CREATE_ACCOUNT     | 141 bytes     | 69 bytes        | 58 bytes     | -59%         |
+| LOGIN             | 150 bytes     | 75 bytes        | 62 bytes     | -59%         |
+| LIST_ACCOUNTS     | 125 bytes     | 51 bytes        | 45 bytes     | -64%         |
+| SEND_MESSAGE      | 150 bytes     | 53 bytes        | 48 bytes     | -68%         |
+| READ_MESSAGES     | 150 bytes     | 73 bytes        | 65 bytes     | -57%         |
+| DELETE_MESSAGES   | 127 bytes     | 54 bytes        | 42 bytes     | -67%         |
+| DELETE_ACCOUNT    | 100 bytes     | 28 bytes        | 25 bytes     | -75%         |
+| LIST_CHAT_PARTNERS| 100 bytes     | 28 bytes        | 24 bytes     | -76%         |
 
 ### Performance Analysis
 Average processing times (in milliseconds):
@@ -360,27 +333,42 @@ Average processing times (in milliseconds):
 **Serialization:**
 - JSON: 0.070ms (avg)
 - Binary: 0.026ms (avg)
-- Performance gain: ~63% faster with Binary
+- gRPC: 0.018ms (avg)
+- Performance gain vs JSON: ~74% faster with gRPC
 
 **Deserialization:**
 - JSON: 0.133ms (avg)
 - Binary: 0.033ms (avg)
-- Performance gain: ~75% faster with Binary
+- gRPC: 0.025ms (avg)
+- Performance gain vs JSON: ~81% faster with gRPC
 
 ### Key Findings
-- Binary protocol consistently achieves 50-72% reduction in message size
+- Binary protocol achieves 50-72% reduction in message size vs JSON
+- gRPC protocol achieves 57-76% reduction in message size vs JSON
 - Binary serialization is ~2.7x faster than JSON
+- gRPC serialization is ~3.9x faster than JSON
 - Binary deserialization is ~4x faster than JSON
-- Most significant size improvements in account and chat partner operations
-- Most significant performance gains in message handling operations
+- gRPC deserialization is ~5.3x faster than JSON
+- Most significant improvements in account and chat partner operations
+- gRPC provides additional benefits like type safety and code generation
 
 ### Protocol Selection Guidelines
 - Use Binary Protocol when:
   - Network bandwidth is limited
   - High-frequency message exchange is needed
   - Performance is critical
+  - Protocol simplicity is desired
   
 - Use JSON Protocol when:
   - Debugging/monitoring is required
   - Human readability is important
   - Interoperating with external tools
+  - Quick prototyping is needed
+
+- Use gRPC Protocol when:
+  - Type safety is important
+  - Cross-language compatibility is needed
+  - Streaming is required
+  - Maximum performance is needed
+  - Auto-generated client/server code is desired
+  - Built-in security features are needed
