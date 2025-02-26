@@ -675,7 +675,8 @@ def main() -> None:
         if temp_client.connect():
             st.session_state.server_connected = True
             st.success(
-                f"Automatically connected to server at {args.host}:{args.port} (from command line)."
+                f"Automatically connected to server at {st.session_state.server_host}:\
+                    {st.session_state.server_port}."
             )
         else:
             st.error(
