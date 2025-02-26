@@ -525,7 +525,8 @@ def render_chat_page_with_deletion() -> None:
                     sender_name = "You" if sender == st.session_state.username else sender
                     cols = st.columns([4, 1])
                     with cols[0]:
-                        st.markdown(f"**{sender_name}** [{formatted_timestamp}]: {text}")
+                        st.markdown(f"**{sender_name}** [{formatted_timestamp}]:")
+                        st.markdown(f"```\n{text}\n```")
                     with cols[1]:
                         delete_checkbox = st.checkbox(
                             "🗑️",
@@ -585,7 +586,7 @@ def render_chat_page_with_deletion() -> None:
                     st.session_state.pending_deletions = []
 
         chat_html = """
-        <div style="height:400px; overflow-y:scroll; padding:0.5rem;" id="chat-container">
+        <div style="height:50px; padding:0.5rem;" id="chat-container">
         """
         if messages:
             chat_html += (
