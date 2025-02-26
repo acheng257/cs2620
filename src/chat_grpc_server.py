@@ -4,7 +4,7 @@ import queue
 import threading
 import time
 from concurrent import futures
-from typing import Any, Dict
+from typing import Dict
 
 import grpc
 from google.protobuf.json_format import MessageToDict, ParseDict
@@ -185,7 +185,8 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                 parsed_payload = ParseDict(response_payload, Struct())
                 end_ser = time.perf_counter()
                 print(
-                    f"[ReadMessages] Serialization (undelivered) took {end_ser - start_ser:.6f} seconds"
+                    f"[ReadMessages] Serialization (undelivered) \
+                        took {end_ser - start_ser:.6f} seconds"
                 )
 
                 chat_msg = chat_pb2.ChatMessage(
