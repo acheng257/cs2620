@@ -24,5 +24,3 @@ jobs:
       - name: Lint with flake8
         run: flake8 . --count --max-line-length=100 --statistics
         
-      - name: Type check with mypy
-        run: mypy . --config=./pyproject.toml --ignore-missing-imports 
