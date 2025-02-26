@@ -1,18 +1,20 @@
-import unittest
-import time
 import threading
+import time
+import unittest
+
 import grpc
 from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.struct_pb2 import Struct
 
-from src.protocols.grpc import chat_pb2
 from src.chat_grpc_client import ChatClient
+from src.protocols.grpc import chat_pb2
 
 
 class FakeChatServerStub:
     """
     A fake stub that simulates server responses for all RPCs.
     """
+
     def CreateAccount(self, request):
         payload = MessageToDict(request.payload)
         if payload.get("username") == "fail":
@@ -22,7 +24,7 @@ class FakeChatServerStub:
                 payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=request.sender,
-                timestamp=time.time()
+                timestamp=time.time(),
             )
         response_payload = {"text": "Account created successfully."}
         return chat_pb2.ChatMessage(
@@ -30,7 +32,7 @@ class FakeChatServerStub:
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
     def Login(self, request):
@@ -43,7 +45,7 @@ class FakeChatServerStub:
                 payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=request.sender,
-                timestamp=time.time()
+                timestamp=time.time(),
             )
         else:
             response_payload = {"text": "Login failed."}
@@ -52,7 +54,7 @@ class FakeChatServerStub:
                 payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=request.sender,
-                timestamp=time.time()
+                timestamp=time.time(),
             )
 
     def SendMessage(self, request):
@@ -63,7 +65,7 @@ class FakeChatServerStub:
                 payload=ParseDict(response_payload, Struct()),
                 sender="SERVER",
                 recipient=request.sender,
-                timestamp=time.time()
+                timestamp=time.time(),
             )
         response_payload = {"text": "Message sent successfully."}
         return chat_pb2.ChatMessage(
@@ -71,7 +73,7 @@ class FakeChatServerStub:
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
     def ReadMessages(self, request):
@@ -81,7 +83,7 @@ class FakeChatServerStub:
             payload=ParseDict({"text": "Hello from server."}, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
     def ListAccounts(self, request):
@@ -91,7 +93,7 @@ class FakeChatServerStub:
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
     def DeleteMessages(self, request):
@@ -101,7 +103,7 @@ class FakeChatServerStub:
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
     def DeleteAccount(self, request):
@@ -111,7 +113,7 @@ class FakeChatServerStub:
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
     def ListChatPartners(self, request):
@@ -121,7 +123,7 @@ class FakeChatServerStub:
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
     def ReadConversation(self, request):
@@ -131,7 +133,7 @@ class FakeChatServerStub:
             payload=ParseDict(response_payload, Struct()),
             sender="SERVER",
             recipient=request.sender,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
 
@@ -144,6 +146,7 @@ def fake_channel_ready_future(channel):
     class FakeFuture:
         def result(self, timeout):
             return True
+
     return FakeFuture()
 
 
