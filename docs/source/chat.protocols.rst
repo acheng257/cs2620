@@ -11,4 +11,5 @@ Protocols Package
 
    chat.protocols.base
    chat.protocols.binary_protocol
-   chat.protocols.json_protocol 
+   chat.protocols.json_protocol
+   chat.protocols.grpc 
