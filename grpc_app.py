@@ -43,9 +43,9 @@ def init_session_state() -> None:
     if "client_connected" not in st.session_state:
         st.session_state.client_connected = False
     if "server_host" not in st.session_state:
-        st.session_state.server_host = "127.0.0.1"  # default host
+        st.session_state.server_host = "127.0.0.1"  # default
     if "server_port" not in st.session_state:
-        st.session_state.server_port = 50051  # default gRPC port
+        st.session_state.server_port = 50051        # default
     if "server_connected" not in st.session_state:
         st.session_state.server_connected = False
     if "client" not in st.session_state:
@@ -73,14 +73,12 @@ def get_chat_client() -> Optional[ChatClient]:
     Return the connected ChatClient if logged in, else None.
     """
     if (
-        "logged_in" in st.session_state
-        and "client_connected" in st.session_state
-        and st.session_state.logged_in
+        st.session_state.logged_in
         and st.session_state.client_connected
         and st.session_state.client is not None
     ):
         return st.session_state.client
-    print("Chat client is not initialized or connected.")
+    print("Chat client is not initialized or not connected.")
     return None
 
 
@@ -122,11 +120,13 @@ def render_login_page() -> None:
                     st.session_state.server_connected = True
                     st.session_state.error_message = ""  # clear any previous errors
                     st.success("Connected to server successfully.")
-                    # Force a rerun so that subsequent code picks up the new settings.
-                    st.rerun()
+                    st.rerun()  # Force a re-run to propagate the new server settings
                 else:
                     st.session_state.server_connected = False
-                    st.session_state.error_message = temp_client.error_message
+                    st.session_state.error_message = (
+                        "Failed to connect to server at "
+                        f"{st.session_state.server_host}:{st.session_state.server_port}"
+                    )
                     st.error(st.session_state.error_message)
                 temp_client.close()
 
@@ -136,7 +136,7 @@ def render_login_page() -> None:
         st.warning("Please connect to the server before logging in or creating an account.")
         return
     else:
-        st.success("Connected to server successfully.")
+        st.success("Successfully connected to server.")
 
     if not st.session_state.pending_username:
         with st.form("enter_username_form"):
@@ -147,7 +147,7 @@ def render_login_page() -> None:
 
     username = st.session_state.pending_username
 
-    # Check account existence using dummy login
+    # Check account existence using a dummy password attempt
     account_exists = False
     try:
         temp_client = ChatClient(
@@ -157,7 +157,7 @@ def render_login_page() -> None:
         )
         if temp_client.connect():
             try:
-                # Try logging in with a dummy password.
+                # Try logging in with a dummy password
                 success, error = temp_client.login_sync("dummy_password")
                 account_exists = True
             except Exception as e:
@@ -199,9 +199,7 @@ def render_login_page() -> None:
                 else:
                     st.error("Failed to connect to the server.")
     else:
-        st.info(
-            "No account found for this username. Please create an account by choosing a password."
-        )
+        st.info("No account found. Please create an account by choosing a password.")
         with st.form("signup_form"):
             password1 = st.text_input("Enter Password", type="password", key="signup_password1")
             password2 = st.text_input("Confirm Password", type="password", key="signup_password2")
@@ -581,6 +579,7 @@ def render_chat_page_with_deletion() -> None:
                     st.warning("Deletion canceled.")
                     st.session_state.pending_deletions = []
 
+        # Show an extra container for the chat area so we can scroll it
         chat_html = """
         <div style="height:50px; padding:0.5rem;" id="chat-container">
         """
@@ -658,53 +657,47 @@ def render_chat_page_with_deletion() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="", help="Server host address")
-    parser.add_argument("--port", type=int, default=50051, help="Server port number")
+    parser.add_argument("--port", type=int, default=0, help="Server port number")
     args, unknown = parser.parse_known_args()
 
     st.set_page_config(page_title="Secure Chat", layout="wide")
     st_autorefresh(interval=3000, key="auto_refresh_chat")
+
     init_session_state()
 
-    if args.host:
+    # If user specified BOTH host (non-empty) and port (non-zero),
+    # attempt an automatic one-time connection before showing the UI.
+    # Only do this if we're not already connected.
+    if not st.session_state.server_connected and args.host and args.port:
         st.session_state.server_host = args.host
-    if args.port:
         st.session_state.server_port = args.port
-
-    # If the user provided a host via the command line, auto-connect.
-    if args.host and not st.session_state.server_connected:
-        temp_client = ChatClient(
-            username="",
-            host=st.session_state.server_host,
-            port=st.session_state.server_port,
-        )
+        temp_client = ChatClient(username="", host=args.host, port=args.port)
         if temp_client.connect():
             st.session_state.server_connected = True
             st.success(
-                f"Automatically connected to server at {st.session_state.server_host}:{st.session_state.server_port}."
+                f"Automatically connected to server at {args.host}:{args.port} (from command line)."
             )
         else:
-            st.session_state.error_message = "Client failed to connect. Please try again."
-            st.error(st.session_state.error_message)
+            st.error(
+                f"Failed to connect automatically to {args.host}:{args.port} "
+                "(from command line)."
+            )
         temp_client.close()
         st.rerun()
 
-    # If no auto-connection occurred (i.e. no command-line host provided)
-    # then simply render the login page so the user can enter host and port.
-    if not st.session_state.server_connected:
+    if not st.session_state.logged_in:
         render_login_page()
     else:
-        if not st.session_state.logged_in:
-            render_login_page()
+        # If we do have a connected client and user is logged in, go to chat UI
+        if st.session_state.client_connected:
+            try:
+                process_incoming_realtime_messages()
+            except Exception as e:
+                st.warning(f"An error occurred while processing messages: {e}")
+            render_sidebar()
+            render_chat_page_with_deletion()
         else:
-            if st.session_state.client_connected:
-                try:
-                    process_incoming_realtime_messages()
-                except Exception as e:
-                    st.warning(f"An error occurred while processing messages: {e}")
-                render_sidebar()
-                render_chat_page_with_deletion()
-            else:
-                st.error("Client is not connected. Please try logging in again.")
+            st.error("Client is not connected. Please try logging in again.")
 
 
 if __name__ == "__main__":
