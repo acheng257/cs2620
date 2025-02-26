@@ -41,7 +41,7 @@ class TestChatServer:
         assert server.port == 12345
         assert isinstance(server.active_connections, dict)
         assert isinstance(server.username_to_socket, dict)
-        assert isinstance(server.lock, threading.Lock)
+        assert isinstance(server.lock, type(threading.Lock()))
 
     def test_send_response(self, server: ChatServer, mock_socket: Mock) -> None:
         """Test sending response to client."""
