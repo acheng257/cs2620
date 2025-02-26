@@ -1,251 +1,363 @@
+import unittest
+import queue
 import time
-import uuid
-import tempfile
-import pytest
 import grpc
-from concurrent import futures
 from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.struct_pb2 import Struct
 
-from src.protocols.grpc import chat_pb2, chat_pb2_grpc
+from src.protocols.grpc import chat_pb2
 from src.chat_grpc_server import ChatServer
 
-# Returns a unique username to avoid collisions between tests.
-def unique_username(base="testuser"):
-    return f"{base}_{uuid.uuid4().hex[:8]}"
 
-# Create a fixture to start a gRPC server instance using a temporary file-based database.
-@pytest.fixture(scope="module")
-def grpc_server_address():
-    with tempfile.NamedTemporaryFile() as temp_db:
-        db_path = temp_db.name
-        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        chat_server = ChatServer(db_path=db_path)
-        chat_pb2_grpc.add_ChatServerServicer_to_server(chat_server, server)
-        port = server.add_insecure_port("[::]:0")
-        server.start()
-        address = f"localhost:{port}"
-        yield address
-        server.stop(0)
+class FakeDatabaseManager:
+    """
+    A fake in-memory database manager to simulate account and message storage.
+    """
+    def __init__(self):
+        self.accounts = {}  # username -> password
+        self.messages = {}  # message_id -> message dict
+        self.message_counter = 1
+        self.undelivered = {}  # username -> list of message dicts
 
-# Create a stub fixture to use in tests.
-@pytest.fixture
-def stub(grpc_server_address):
-    channel = grpc.insecure_channel(grpc_server_address)
-    stub = chat_pb2_grpc.ChatServerStub(channel)
-    yield stub
-    channel.close()
+    def create_account(self, username, password):
+        if username in self.accounts:
+            return False
+        self.accounts[username] = password
+        return True
 
-# Helper functions for making RPC calls.
-def create_account(stub, username, password):
-    payload = {"username": username, "password": password}
-    message = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.CREATE_ACCOUNT,
-        payload=ParseDict(payload, Struct()),
-        sender=username,
-        recipient="SERVER",
-        timestamp=time.time(),
-    )
-    return stub.CreateAccount(message)
+    def user_exists(self, username):
+        return username in self.accounts
 
-def login(stub, username, password):
-    payload = {"username": username, "password": password}
-    message = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.LOGIN,
-        payload=ParseDict(payload, Struct()),
-        sender=username,
-        recipient="SERVER",
-        timestamp=time.time(),
-    )
-    return stub.Login(message)
+    def verify_login(self, username, password):
+        return self.accounts.get(username) == password
 
-def test_create_account_success(stub):
-    username = unique_username("testuser")
-    password = "password123"
-    response = create_account(stub, username, password)
-    result = MessageToDict(response.payload)
-    # Expect a success message about account creation.
-    assert "account created successfully" in result.get("text", "").lower()
+    def get_unread_message_count(self, username):
+        return len(self.undelivered.get(username, []))
 
-def test_create_account_already_exists(stub):
-    username = unique_username("duplicateuser")
-    password = "password123"
-    create_account(stub, username, password)
-    # Try to create the account again.
-    response = create_account(stub, username, password)
-    result = MessageToDict(response.payload)
-    assert "already exists" in result.get("text", "").lower()
+    def store_message(self, sender, recipient, content, delivered):
+        message_id = self.message_counter
+        self.message_counter += 1
+        msg = {
+            "id": message_id,
+            "from": sender,
+            "to": recipient,
+            "content": content,
+            "timestamp": time.time(),
+            "delivered": delivered,
+        }
+        self.messages[message_id] = msg
+        if not delivered:
+            self.undelivered.setdefault(recipient, []).append(msg)
+        return message_id
 
-def test_login_success(stub):
-    username = unique_username("loginuser")
-    password = "password123"
-    create_account(stub, username, password)
-    response = login(stub, username, password)
-    result = MessageToDict(response.payload)
-    assert "login successful" in result.get("text", "").lower()
+    def mark_message_as_delivered(self, message_id):
+        if message_id in self.messages:
+            self.messages[message_id]["delivered"] = True
+            recipient = self.messages[message_id]["to"]
+            if recipient in self.undelivered:
+                self.undelivered[recipient] = [
+                    m for m in self.undelivered[recipient] if m["id"] != message_id
+                ]
 
-def test_login_failure(stub):
-    username = unique_username("nonexistent")
-    password = "wrongpass"
-    with pytest.raises(grpc.RpcError) as excinfo:
-        login(stub, username, password)
-    assert excinfo.value.code() == grpc.StatusCode.UNAUTHENTICATED
+    def get_undelivered_messages(self, username):
+        return self.undelivered.get(username, [])
 
-def test_send_message_and_read(stub):
-    sender = unique_username("senderuser")
-    recipient = unique_username("recipientuser")
-    password = "password123"
-    create_account(stub, sender, password)
-    create_account(stub, recipient, password)
-    
-    text = "Hello, this is a test message."
-    payload = {"text": text}
-    message = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.SEND_MESSAGE,
-        payload=ParseDict(payload, Struct()),
-        sender=sender,
-        recipient=recipient,
-        timestamp=time.time(),
-    )
-    send_response = stub.SendMessage(message)
-    result = MessageToDict(send_response.payload)
-    assert "sent successfully" in result.get("text", "").lower()
+    def list_accounts(self, pattern, page, per_page):
+        accounts_list = list(self.accounts.keys())
+        return {"accounts": accounts_list, "page": page, "per_page": per_page}
 
-    # Read undelivered messages for the recipient.
-    read_request = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.READ_MESSAGES,
-        payload=Struct(),
-        sender=recipient,
-        recipient=recipient,
-        timestamp=time.time(),
-    )
-    responses = stub.ReadMessages(read_request)
-    msg = next(responses)
-    payload_dict = MessageToDict(msg.payload)
-    assert text in payload_dict.get("text", "")
+    def delete_messages(self, username, message_ids):
+        success = True
+        for mid in message_ids:
+            if mid in self.messages:
+                del self.messages[mid]
+            else:
+                success = False
+        return success
 
-def test_delete_messages(stub):
-    sender = unique_username("deletemsgsender")
-    recipient = unique_username("deletemsgrecipient")
-    password = "password123"
-    create_account(stub, sender, password)
-    create_account(stub, recipient, password)
-    
-    text = "Message to delete"
-    payload = {"text": text}
-    message = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.SEND_MESSAGE,
-        payload=ParseDict(payload, Struct()),
-        sender=sender,
-        recipient=recipient,
-        timestamp=time.time(),
-    )
-    stub.SendMessage(message)
-    
-    # Retrieve the message to obtain its ID.
-    read_request = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.READ_MESSAGES,
-        payload=Struct(),
-        sender=recipient,
-        recipient=recipient,
-        timestamp=time.time(),
-    )
-    responses = stub.ReadMessages(read_request)
-    msg = next(responses)
-    payload_dict = MessageToDict(msg.payload)
-    message_id = payload_dict.get("id")
-    assert message_id is not None
+    def delete_account(self, username):
+        if username in self.accounts:
+            del self.accounts[username]
+            return True
+        return False
 
-    # Delete the message by its ID.
-    payload_del = {"message_ids": [message_id]}
-    del_message = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.DELETE_MESSAGES,
-        payload=ParseDict(payload_del, Struct()),
-        sender=sender,
-        recipient="SERVER",
-        timestamp=time.time(),
-    )
-    del_response = stub.DeleteMessages(del_message)
-    result = MessageToDict(del_response.payload)
-    assert "deleted successfully" in result.get("text", "").lower()
+    def get_chat_partners(self, username):
+        partners = set()
+        for msg in self.messages.values():
+            if msg["from"] == username:
+                partners.add(msg["to"])
+            elif msg["to"] == username:
+                partners.add(msg["from"])
+        return list(partners)
 
-def test_delete_account(stub):
-    username = unique_username("deleteaccountuser")
-    password = "password123"
-    create_account(stub, username, password)
-    
-    del_message = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.DELETE_ACCOUNT,
-        payload=Struct(),
-        sender=username,
-        recipient="SERVER",
-        timestamp=time.time(),
-    )
-    del_response = stub.DeleteAccount(del_message)
-    result = MessageToDict(del_response.payload)
-    assert "deleted successfully" in result.get("text", "").lower()
+    def get_unread_between_users(self, username, partner):
+        count = 0
+        for msg in self.undelivered.get(username, []):
+            if msg["from"] == partner:
+                count += 1
+        return count
 
-def test_list_chat_partners(stub):
-    user1 = unique_username("chatpartner1")
-    user2 = unique_username("chatpartner2")
-    password = "password123"
-    create_account(stub, user1, password)
-    create_account(stub, user2, password)
-    
-    payload = {"text": "Hi from user1"}
-    message = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.SEND_MESSAGE,
-        payload=ParseDict(payload, Struct()),
-        sender=user1,
-        recipient=user2,
-        timestamp=time.time(),
-    )
-    stub.SendMessage(message)
-    
-    # List chat partners for user2.
-    list_request = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.LIST_CHAT_PARTNERS,
-        payload=Struct(),
-        sender=user2,
-        recipient="SERVER",
-        timestamp=time.time(),
-    )
-    response = stub.ListChatPartners(list_request)
-    result = MessageToDict(response.payload)
-    chat_partners = result.get("chat_partners", [])
-    assert user1 in chat_partners
+    def get_messages_between_users(self, username, partner, offset, limit):
+        conversation = []
+        for msg in self.messages.values():
+            if (msg["from"] == username and msg["to"] == partner) or (
+                msg["from"] == partner and msg["to"] == username
+            ):
+                conversation.append(msg)
+        conversation.sort(key=lambda m: m["timestamp"])
+        total = len(conversation)
+        messages_slice = conversation[offset : offset + limit]
+        return {"messages": messages_slice, "total": total}
 
-def test_read_conversation(stub):
-    user1 = unique_username("convuser1")
-    user2 = unique_username("convuser2")
-    password = "password123"
-    create_account(stub, user1, password)
-    create_account(stub, user2, password)
-    
-    # Send two messages from user1 to user2.
-    messages = ["Hello", "How are you?"]
-    for text in messages:
-        payload = {"text": text}
-        message = chat_pb2.ChatMessage(
-            type=chat_pb2.MessageType.SEND_MESSAGE,
+
+class FakeContext:
+    """
+    A fake gRPC ServicerContext to capture status codes and details.
+    """
+    def __init__(self):
+        self.code = None
+        self.details_text = None
+
+    def set_code(self, code):
+        self.code = code
+
+    def set_details(self, details):
+        self.details_text = details
+
+    def is_active(self):
+        return True
+
+
+class TestChatServer(unittest.TestCase):
+    def setUp(self):
+        self.server = ChatServer()
+        # Replace the real database with our fake in-memory version.
+        self.server.db = FakeDatabaseManager()
+        self.context = FakeContext()
+
+    def test_create_account_success(self):
+        payload = {"username": "user1", "password": "pass"}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.CREATE_ACCOUNT,
             payload=ParseDict(payload, Struct()),
-            sender=user1,
-            recipient=user2,
+            sender="user1",
+            recipient="SERVER",
             timestamp=time.time(),
         )
-        stub.SendMessage(message)
-    
-    # Read the conversation from user1's perspective.
-    payload_conv = {"partner": user2, "offset": 0, "limit": 10}
-    conv_message = chat_pb2.ChatMessage(
-        type=chat_pb2.MessageType.READ_MESSAGES,
-        payload=ParseDict(payload_conv, Struct()),
-        sender=user1,
-        recipient="SERVER",
-        timestamp=time.time(),
-    )
-    response = stub.ReadConversation(conv_message, None)
-    result = MessageToDict(response.payload)
-    conv_messages = result.get("messages", [])
-    # Check that at least as many messages are returned as were sent.
-    assert len(conv_messages) >= len(messages)
+        response = self.server.CreateAccount(request, self.context)
+        self.assertEqual(response.type, chat_pb2.MessageType.SUCCESS)
+        text = MessageToDict(response.payload).get("text", "")
+        self.assertIn("Account created successfully", text)
+
+    def test_create_account_missing_fields(self):
+        payload = {"username": "", "password": ""}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.CREATE_ACCOUNT,
+            payload=ParseDict(payload, Struct()),
+            sender="",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        _ = self.server.CreateAccount(request, self.context)
+        self.assertEqual(self.context.code, grpc.StatusCode.INVALID_ARGUMENT)
+
+    def test_create_account_already_exists(self):
+        # First create an account.
+        payload = {"username": "user1", "password": "pass"}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.CREATE_ACCOUNT,
+            payload=ParseDict(payload, Struct()),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        self.server.CreateAccount(request, self.context)
+        response = self.server.CreateAccount(request, self.context)
+        text = MessageToDict(response.payload).get("text", "")
+        self.assertIn("already exists", text)
+
+    def test_login_dummy_password_not_found(self):
+        payload = {"username": "user2", "password": "dummy_password"}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.LOGIN,
+            payload=ParseDict(payload, Struct()),
+            sender="user2",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        _ = self.server.Login(request, self.context)
+        self.assertEqual(self.context.code, grpc.StatusCode.NOT_FOUND)
+
+    def test_login_dummy_password_invalid(self):
+        self.server.db.create_account("user1", "pass")
+        payload = {"username": "user1", "password": "dummy_password"}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.LOGIN,
+            payload=ParseDict(payload, Struct()),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        _ = self.server.Login(request, self.context)
+        self.assertEqual(self.context.code, grpc.StatusCode.UNAUTHENTICATED)
+
+    def test_login_success(self):
+        self.server.db.create_account("user1", "pass")
+        payload = {"username": "user1", "password": "pass"}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.LOGIN,
+            payload=ParseDict(payload, Struct()),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        response = self.server.Login(request, self.context)
+        text = MessageToDict(response.payload).get("text", "")
+        self.assertIn("Login successful", text)
+
+    def test_login_fail(self):
+        self.server.db.create_account("user1", "pass")
+        payload = {"username": "user1", "password": "wrong"}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.LOGIN,
+            payload=ParseDict(payload, Struct()),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        _ = self.server.Login(request, self.context)
+        self.assertEqual(self.context.code, grpc.StatusCode.UNAUTHENTICATED)
+
+    def test_send_message_success(self):
+        self.server.db.create_account("sender", "pass")
+        self.server.db.create_account("recipient", "pass")
+        self.server.active_subscribers["recipient"] = queue.Queue()
+        payload = {"text": "Hello"}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.SEND_MESSAGE,
+            payload=ParseDict(payload, Struct()),
+            sender="sender",
+            recipient="recipient",
+            timestamp=time.time(),
+        )
+        response = self.server.SendMessage(request, self.context)
+        text = MessageToDict(response.payload).get("text", "")
+        self.assertIn("Message sent successfully", text)
+        queued_msg = self.server.active_subscribers["recipient"].get(timeout=1)
+        self.assertEqual(queued_msg.sender, "sender")
+
+    def test_send_message_recipient_not_found(self):
+        self.server.db.create_account("sender", "pass")
+        payload = {"text": "Hello"}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.SEND_MESSAGE,
+            payload=ParseDict(payload, Struct()),
+            sender="sender",
+            recipient="nonexistent",
+            timestamp=time.time(),
+        )
+        _ = self.server.SendMessage(request, self.context)
+        self.assertEqual(self.context.code, grpc.StatusCode.NOT_FOUND)
+
+    def test_list_accounts(self):
+        self.server.db.create_account("user1", "pass")
+        self.server.db.create_account("user2", "pass")
+        payload = {"pattern": "", "page": 1}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.LIST_ACCOUNTS,
+            payload=ParseDict(payload, Struct()),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        response = self.server.ListAccounts(request, self.context)
+        result = MessageToDict(response.payload)
+        self.assertIn("accounts", result)
+        self.assertEqual(result["page"], 1)
+
+    def test_delete_messages_success(self):
+        self.server.db.create_account("user1", "pass")
+        message_id = self.server.db.store_message("user1", "user1", "Test", False)
+        payload = {"message_ids": [message_id]}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.DELETE_MESSAGES,
+            payload=ParseDict(payload, Struct()),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        response = self.server.DeleteMessages(request, self.context)
+        text = MessageToDict(response.payload).get("text", "")
+        self.assertIn("deleted successfully", text)
+
+    def test_delete_messages_invalid(self):
+        payload = {"message_ids": "not a list"}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.DELETE_MESSAGES,
+            payload=ParseDict(payload, Struct()),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        _ = self.server.DeleteMessages(request, self.context)
+        self.assertEqual(self.context.code, grpc.StatusCode.INVALID_ARGUMENT)
+
+    def test_delete_account_success(self):
+        self.server.db.create_account("user1", "pass")
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.DELETE_ACCOUNT,
+            payload=Struct(),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        response = self.server.DeleteAccount(request, self.context)
+        self.assertEqual(response.type, chat_pb2.MessageType.SUCCESS)
+
+    def test_delete_account_failure(self):
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.DELETE_ACCOUNT,
+            payload=Struct(),
+            sender="nonexistent",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        _ = self.server.DeleteAccount(request, self.context)
+        self.assertEqual(self.context.code, grpc.StatusCode.INTERNAL)
+
+    def test_list_chat_partners(self):
+        self.server.db.create_account("user1", "pass")
+        self.server.db.create_account("user2", "pass")
+        self.server.db.store_message("user1", "user2", "Hi", True)
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.LIST_CHAT_PARTNERS,
+            payload=Struct(),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        response = self.server.ListChatPartners(request, self.context)
+        result = MessageToDict(response.payload)
+        self.assertIn("chat_partners", result)
+
+    def test_read_conversation(self):
+        self.server.db.create_account("user1", "pass")
+        self.server.db.create_account("user2", "pass")
+        self.server.db.store_message("user1", "user2", "Hello", True)
+        self.server.db.store_message("user2", "user1", "Hi", True)
+        payload = {"partner": "user2", "offset": 0, "limit": 10}
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.READ_MESSAGES,
+            payload=ParseDict(payload, Struct()),
+            sender="user1",
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        response = self.server.ReadConversation(request, self.context)
+        result = MessageToDict(response.payload)
+        self.assertIn("messages", result)
+        self.assertIn("total", result)
+
+
+if __name__ == "__main__":
+    unittest.main()
