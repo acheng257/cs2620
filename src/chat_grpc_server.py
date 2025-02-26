@@ -29,7 +29,9 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         self.active_subscribers: Dict[str, queue.Queue] = {}  # {username: queue.Queue}
         self.lock: threading.Lock = threading.Lock()
 
-    def CreateAccount(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
+    def CreateAccount(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         # Deserialization timing for request payload.
         start_deser = time.perf_counter()
         payload = MessageToDict(request.payload)
@@ -53,7 +55,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         parsed_payload = ParseDict(response_payload, Struct())
         end_ser = time.perf_counter()
         print(f"[CreateAccount] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         response = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
             payload=parsed_payload,
@@ -63,7 +65,9 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         )
         return response
 
-    def Login(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
+    def Login(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         # Measure deserialization of request payload.
         start_deser = time.perf_counter()
         payload = MessageToDict(request.payload)
@@ -90,7 +94,9 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
 
         if self.db.verify_login(username, password):
             unread_count = self.db.get_unread_message_count(username)
-            response_payload = {"text": f"Login successful. You have {unread_count} unread messages."}
+            response_payload = {
+                "text": f"Login successful. You have {unread_count} unread messages."
+            }
         else:
             context.set_code(grpc.StatusCode.UNAUTHENTICATED)
             context.set_details("Invalid username or password.")
@@ -101,7 +107,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         parsed_payload = ParseDict(response_payload, Struct())
         end_ser = time.perf_counter()
         print(f"[Login] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         response = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
             payload=parsed_payload,
@@ -111,12 +117,14 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         )
         return response
 
-    def SendMessage(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
+    def SendMessage(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         start_deser = time.perf_counter()
         payload = MessageToDict(request.payload)
         end_deser = time.perf_counter()
         print(f"[SendMessage] Deserialization took {end_deser - start_deser:.6f} seconds")
-        
+
         sender = request.sender
         recipient = request.recipient
         message_text = payload.get("text", "")
@@ -147,7 +155,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         parsed_payload = ParseDict(response_payload, Struct())
         end_ser = time.perf_counter()
         print(f"[SendMessage] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         response = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
             payload=parsed_payload,
@@ -176,8 +184,10 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                 start_ser = time.perf_counter()
                 parsed_payload = ParseDict(response_payload, Struct())
                 end_ser = time.perf_counter()
-                print(f"[ReadMessages] Serialization (undelivered) took {end_ser - start_ser:.6f} seconds")
-                
+                print(
+                    f"[ReadMessages] Serialization (undelivered) took {end_ser - start_ser:.6f} seconds"
+                )
+
                 chat_msg = chat_pb2.ChatMessage(
                     type=chat_pb2.MessageType.SEND_MESSAGE,
                     payload=parsed_payload,
@@ -203,22 +213,24 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                 if username in self.active_subscribers:
                     del self.active_subscribers[username]
 
-    def ListAccounts(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
+    def ListAccounts(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         start_deser = time.perf_counter()
         payload = MessageToDict(request.payload)
         end_deser = time.perf_counter()
         print(f"[ListAccounts] Deserialization took {end_deser - start_deser:.6f} seconds")
-        
+
         pattern = payload.get("pattern", "")
         page = int(payload.get("page", 1))
         per_page = 10  # Number of accounts per page.
         result = self.db.list_accounts(pattern, page, per_page)
-        
+
         start_ser = time.perf_counter()
         parsed_payload = ParseDict(result, Struct())
         end_ser = time.perf_counter()
         print(f"[ListAccounts] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         response = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
             payload=parsed_payload,
@@ -228,12 +240,14 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         )
         return response
 
-    def DeleteMessages(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
+    def DeleteMessages(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         start_deser = time.perf_counter()
         payload = MessageToDict(request.payload)
         end_deser = time.perf_counter()
         print(f"[DeleteMessages] Deserialization took {end_deser - start_deser:.6f} seconds")
-        
+
         message_ids = payload.get("message_ids", [])
         if not isinstance(message_ids, list):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
@@ -252,7 +266,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         parsed_payload = ParseDict(response_payload, Struct())
         end_ser = time.perf_counter()
         print(f"[DeleteMessages] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         response = chat_pb2.ChatMessage(
             type=msg_type,
             payload=parsed_payload,
@@ -262,7 +276,9 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         )
         return response
 
-    def DeleteAccount(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
+    def DeleteAccount(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         username = request.sender
         if self.db.delete_account(username):
             response_payload = {"text": "Account deleted successfully."}
@@ -283,19 +299,21 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             context.set_details("Failed to delete account.")
             return chat_pb2.ChatMessage()
 
-    def ListChatPartners(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
+    def ListChatPartners(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
         username = request.sender
         partners = self.db.get_chat_partners(username)
         unread_map = {}
         for p in partners:
             unread_map[p] = self.db.get_unread_between_users(username, p)
         response_payload = {"chat_partners": partners, "unread_map": unread_map}
-        
+
         start_ser = time.perf_counter()
         parsed_payload = ParseDict(response_payload, Struct())
         end_ser = time.perf_counter()
         print(f"[ListChatPartners] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         response = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
             payload=parsed_payload,
@@ -311,7 +329,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         payload = MessageToDict(request.payload)
         end_deser = time.perf_counter()
         print(f"[ReadConversation] Deserialization took {end_deser - start_deser:.6f} seconds")
-        
+
         partner = payload.get("partner")
         offset = int(payload.get("offset", 0))
         limit = int(payload.get("limit", 50))
@@ -327,7 +345,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         parsed_payload = ParseDict(response_payload, Struct())
         end_ser = time.perf_counter()
         print(f"[ReadConversation] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
             payload=parsed_payload,
@@ -348,8 +366,12 @@ def serve(host: str, port: int) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the gRPC Chat Server")
-    parser.add_argument("--host", type=str, default="[::]", help="Host to bind the gRPC server on (default: [::])")
-    parser.add_argument("--port", type=int, default=50051, help="Port to bind the gRPC server on (default: 50051)")
+    parser.add_argument(
+        "--host", type=str, default="[::]", help="Host to bind the gRPC server on (default: [::])"
+    )
+    parser.add_argument(
+        "--port", type=int, default=50051, help="Port to bind the gRPC server on (default: 50051)"
+    )
     args = parser.parse_args()
 
     logging.basicConfig()

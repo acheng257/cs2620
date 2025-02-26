@@ -128,7 +128,7 @@ class ChatClient:
         parsed_payload = ParseDict(payload, Struct())
         end_ser = time.perf_counter()
         print(f"[login] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.LOGIN,
             payload=parsed_payload,
@@ -141,7 +141,7 @@ class ChatClient:
         deser = MessageToDict(response.payload)
         end_deser = time.perf_counter()
         print(f"[login] Deserialization took {end_deser - start_deser:.6f} seconds")
-        
+
         if response.type == chat_pb2.MessageType.SUCCESS:
             self.logged_in = True
             details = deser.get("text", "")
@@ -173,7 +173,7 @@ class ChatClient:
         deser = MessageToDict(response.payload)
         end_deser = time.perf_counter()
         print(f"[login_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
-        
+
         if response.type == chat_pb2.MessageType.SUCCESS:
             self.logged_in = True
             return True, None
@@ -201,7 +201,7 @@ class ChatClient:
             _ = MessageToDict(response.payload)
             end_deser = time.perf_counter()
             print(f"[send_message] Deserialization took {end_deser - start_deser:.6f} seconds")
-            
+
             if response.type == chat_pb2.MessageType.SUCCESS:
                 print("Message sent successfully.")
                 return True
@@ -222,7 +222,7 @@ class ChatClient:
         parsed_payload = ParseDict(payload, Struct())
         end_ser = time.perf_counter()
         print(f"[send_message_sync] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SEND_MESSAGE,
             payload=parsed_payload,
@@ -398,7 +398,9 @@ class ChatClient:
             start_deser = time.perf_counter()
             result = MessageToDict(response.payload)
             end_deser = time.perf_counter()
-            print(f"[list_chat_partners] Deserialization took {end_deser - start_deser:.6f} seconds")
+            print(
+                f"[list_chat_partners] Deserialization took {end_deser - start_deser:.6f} seconds"
+            )
             if response is None:
                 print("No response received from ListChatPartners RPC.")
                 return None
@@ -420,7 +422,9 @@ class ChatClient:
         start_deser = time.perf_counter()
         _ = MessageToDict(response.payload)
         end_deser = time.perf_counter()
-        print(f"[list_chat_partners_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
+        print(
+            f"[list_chat_partners_sync] Deserialization took {end_deser - start_deser:.6f} seconds"
+        )
         return response
 
     def read_conversation(
@@ -431,7 +435,7 @@ class ChatClient:
         parsed_payload = ParseDict(payload, Struct())
         end_ser = time.perf_counter()
         print(f"[read_conversation] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.READ_MESSAGES,  # or use READ_CONVERSATION if defined
             payload=parsed_payload,
@@ -462,7 +466,7 @@ class ChatClient:
         parsed_payload = ParseDict(payload, Struct())
         end_ser = time.perf_counter()
         print(f"[read_conversation_sync] Serialization took {end_ser - start_ser:.6f} seconds")
-        
+
         message = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.READ_MESSAGES,
             payload=parsed_payload,
@@ -474,7 +478,9 @@ class ChatClient:
         start_deser = time.perf_counter()
         _ = MessageToDict(response.payload)
         end_deser = time.perf_counter()
-        print(f"[read_conversation_sync] Deserialization took {end_deser - start_deser:.6f} seconds")
+        print(
+            f"[read_conversation_sync] Deserialization took {end_deser - start_deser:.6f} seconds"
+        )
         return response
 
     def close(self) -> None:

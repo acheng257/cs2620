@@ -45,7 +45,7 @@ def init_session_state() -> None:
     if "server_host" not in st.session_state:
         st.session_state.server_host = "127.0.0.1"  # default
     if "server_port" not in st.session_state:
-        st.session_state.server_port = 50051        # default
+        st.session_state.server_port = 50051  # default
     if "server_connected" not in st.session_state:
         st.session_state.server_connected = False
     if "client" not in st.session_state:

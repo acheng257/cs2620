@@ -165,9 +165,12 @@ class TestChatClient(unittest.TestCase):
         # For this test, override grpc.insecure_channel to return a FakeChannelWithUnary,
         # and override the ChatServerStub constructor to return our FakeChatServerStub.
         class FakeChannelWithUnary(FakeChannel):
-            def unary_unary(self, method, request_serializer=None, response_deserializer=None, **kwargs):
+            def unary_unary(
+                self, method, request_serializer=None, response_deserializer=None, **kwargs
+            ):
                 def dummy(request, timeout=None, metadata=None, credentials=None):
                     return None
+
                 return dummy
 
         old_insecure_channel = grpc.insecure_channel
