@@ -228,15 +228,15 @@ The report will be available in `htmlcov/index.html`
 | Module | Miss | Coverage |
 |--------|-----------|----------|
 | src/client.py | 27 | 82% |
-| src/chat_grpc_client.py | 31 | 80% |
+| src/chat_grpc_client.py | 27 | 81% |
 | src/database/db_manager.py | 50 | 79% |
 | src/protocols/base.py | 0 | 100% |
 | src/protocols/binary_protocol.py | 0 | 100% |
 | src/protocols/json_protocol.py | 0 | 100% |
 | src/protocols/grpc/chat_pb2.py | 0 | 100% |
 | src/server.py | 86 | 75% |
-| src/chat_grpc_server.py | 82 | 77% |
-| **Overall** | **276** | **83%** |
+| src/chat_grpc_server.py | 35 | 74% |
+| **Overall** | **241** | **78%** |
 
 ## Configuration
 
