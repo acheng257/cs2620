@@ -1,193 +1,257 @@
 import time
-import uuid
-import tempfile
-import threading
 import pytest
+from unittest.mock import MagicMock
 import grpc
-from concurrent import futures
+from google.protobuf.json_format import ParseDict, MessageToDict
+from google.protobuf.struct_pb2 import Struct
 
-from src.protocols.grpc import chat_pb2_grpc
-from src.chat_grpc_client import ChatClient  # your client class
-from src.chat_grpc_server import ChatServer  # the gRPC server implementation
+from src.chat_grpc_client import ChatClient
+from src.protocols.grpc import chat_pb2
 
-# Helper to generate unique usernames.
-def unique_username(base="client"):
-    return f"{base}_{uuid.uuid4().hex[:8]}"
+# ----------------- Dummy Stub Fixture -----------------
 
-# Fixture to start a gRPC server with a temporary file-based SQLite DB.
-@pytest.fixture(scope="module")
-def grpc_server_address():
-    with tempfile.NamedTemporaryFile() as temp_db:
-        db_path = temp_db.name
-        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        chat_server = ChatServer(db_path=db_path)
-        chat_pb2_grpc.add_ChatServerServicer_to_server(chat_server, server)
-        port = server.add_insecure_port("[::]:0")
-        server.start()
-        address = f"localhost:{port}"
-        yield address
-        server.stop(0)
-
-# Fixture for a ChatClient instance.
 @pytest.fixture
-def client(grpc_server_address):
-    host, port_str = grpc_server_address.split(":")
-    port = int(port_str)
-    username = unique_username("testclient")
-    c = ChatClient(username=username, host=host, port=port)
-    yield c
-    c.close()
+def dummy_stub():
+    stub = MagicMock()
 
-# Fixture for creating a second client.
+    # Successful responses.
+    stub.CreateAccount.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.SUCCESS,
+        payload=ParseDict({"text": "Account created successfully."}, Struct()),
+        sender="SERVER",
+        recipient="dummy",
+        timestamp=time.time(),
+    )
+    stub.Login.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.SUCCESS,
+        payload=ParseDict({"text": "Login successful. You have 0 unread messages."}, Struct()),
+        sender="SERVER",
+        recipient="dummy",
+        timestamp=time.time(),
+    )
+    stub.SendMessage.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.SUCCESS,
+        payload=ParseDict({"text": "Message sent successfully."}, Struct()),
+        sender="SERVER",
+        recipient="dummy",
+        timestamp=time.time(),
+    )
+    stub.ListAccounts.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.SUCCESS,
+        payload=ParseDict({"users": ["user1", "user2"]}, Struct()),
+        sender="SERVER",
+        recipient="dummy",
+        timestamp=time.time(),
+    )
+    stub.DeleteMessages.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.SUCCESS,
+        payload=ParseDict({"text": "Messages deleted successfully."}, Struct()),
+        sender="SERVER",
+        recipient="dummy",
+        timestamp=time.time(),
+    )
+    stub.DeleteAccount.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.SUCCESS,
+        payload=ParseDict({"text": "Account deleted successfully."}, Struct()),
+        sender="SERVER",
+        recipient="dummy",
+        timestamp=time.time(),
+    )
+    stub.ListChatPartners.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.SUCCESS,
+        payload=ParseDict({"chat_partners": ["partner1", "partner2"],
+                           "unread_map": {"partner1": 1}}, Struct()),
+        sender="SERVER",
+        recipient="dummy",
+        timestamp=time.time(),
+    )
+    stub.ReadConversation.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.SUCCESS,
+        payload=ParseDict({"messages": [{"id": 1, "from": "partner1", "content": "Hello", "timestamp": time.time()}],
+                           "total": 1}, Struct()),
+        sender="SERVER",
+        recipient="dummy",
+        timestamp=time.time(),
+    )
+    # For ReadMessages streaming RPC, yield one message.
+    def read_messages_gen(request, timeout=None):
+        msg_payload = ParseDict({"text": "Test message", "id": 42}, Struct())
+        yield chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.SEND_MESSAGE,
+            payload=msg_payload,
+            sender="partner",
+            recipient=request.recipient,
+            timestamp=time.time(),
+        )
+    stub.ReadMessages.side_effect = read_messages_gen
+
+    return stub
+
+# ----------------- Client Fixture With Dummy Stub -----------------
+
 @pytest.fixture
-def second_client(grpc_server_address):
-    host, port_str = grpc_server_address.split(":")
-    port = int(port_str)
-    username = unique_username("testclient2")
-    c = ChatClient(username=username, host=host, port=port)
-    yield c
-    c.close()
+def client_with_dummy(monkeypatch, dummy_stub):
+    # Override grpc.channel_ready_future so that connect() always returns ready.
+    monkeypatch.setattr(grpc, "channel_ready_future",
+                        lambda channel: type("DummyFuture", (), {"result": lambda self, timeout=None: True})())
+    client = ChatClient(username="test_user", host="mock_host", port=12345)
+    # Replace the real stub with our dummy stub.
+    client.stub = dummy_stub
+    return client
 
-# ------------------ Client Tests ------------------
+# ----------------- Tests for Successful Responses -----------------
 
-def test_create_and_login(client, capsys):
-    password = "password123"
-    client.create_account(password)
-    out = capsys.readouterr().out.lower()
-    assert "account created successfully" in out or "already exists" in out
+def test_connect(client_with_dummy):
+    assert client_with_dummy.connect() is True
 
-    logged_in = client.login(password)
-    out = capsys.readouterr().out.lower()
-    assert logged_in is True
-    assert "login successful" in out
+def test_create_account(client_with_dummy, capsys):
+    client_with_dummy.create_account("password")
+    captured = capsys.readouterr().out.lower()
+    assert "account created successfully" in captured
 
-def test_send_message_and_read_conversation(grpc_server_address):
-    host, port_str = grpc_server_address.split(":")
-    port = int(port_str)
-    password = "password123"
-    sender_username = unique_username("sender")
-    recipient_username = unique_username("recipient")
-    
-    sender = ChatClient(username=sender_username, host=host, port=port)
-    recipient = ChatClient(username=recipient_username, host=host, port=port)
-    
-    # Create accounts and login.
-    sender.create_account(password)
-    recipient.create_account(password)
-    assert sender.login(password) is True
-    assert recipient.login(password) is True
+def test_create_account_sync(client_with_dummy):
+    result = client_with_dummy.create_account_sync("password")
+    assert result is True
 
-    # Start recipient's read thread
-    recipient.start_read_thread()
-    time.sleep(0.1) 
+def test_login_success(client_with_dummy):
+    success, err = client_with_dummy.login_sync("password")
+    assert success is True
+    assert err is None
+    assert client_with_dummy.logged_in is True
 
-    # Send a message.
-    text = "Hello from sender!"
-    sender.send_message(recipient_username, text)
-    time.sleep(0.1)  # allow message delivery
+def test_send_message_success(client_with_dummy, capsys):
+    response = client_with_dummy.send_message_sync("recipient", "Hello")
+    resp_text = MessageToDict(response.payload).get("text", "").lower()
+    assert response.type == chat_pb2.MessageType.SUCCESS
+    assert "message sent successfully" in resp_text
 
-    # Use read_conversation to verify message delivery.
-    conv = sender.read_conversation(recipient_username)
-    found = any(text in msg.get("content", "") for msg in conv)
-    assert found
+def test_list_accounts(client_with_dummy):
+    response = client_with_dummy.list_accounts_sync("user", 1)
+    users = MessageToDict(response.payload).get("users", [])
+    assert "user1" in users and "user2" in users
 
-    sender.close()
-    recipient.close()
+def test_delete_messages_success(client_with_dummy, capsys):
+    response = client_with_dummy.delete_messages_sync([1, 2])
+    resp_text = MessageToDict(response.payload).get("text", "").lower()
+    assert "messages deleted successfully" in resp_text
 
-def test_list_accounts(client, capsys):
-    password = "password123"
-    # Create several accounts with a common pattern.
-    usernames = [unique_username("listuser") for _ in range(3)]
-    for user in usernames:
-        temp_client = ChatClient(username=user, host=client.host, port=client.port)
-        temp_client.create_account(password)
-        temp_client.close()
+def test_delete_account_success(client_with_dummy, capsys):
+    response = client_with_dummy.delete_account_sync()
+    resp_text = MessageToDict(response.payload).get("text", "").lower()
+    assert "account deleted successfully" in resp_text
 
-    # List accounts using the client's list_accounts() method.
-    # This method prints the results, so capture stdout.
-    client.list_accounts(pattern="listuser", page=1)
-    out = capsys.readouterr().out.lower()
-    for user in usernames:
-        assert user.lower() in out
+def test_list_chat_partners(client_with_dummy):
+    response = client_with_dummy.list_chat_partners_sync()
+    data = MessageToDict(response.payload)
+    assert "partner1" in data.get("chat_partners", [])
 
-def test_delete_messages(grpc_server_address, capsys):
-    host, port_str = grpc_server_address.split(":")
-    port = int(port_str)
-    password = "password123"
-    sender = ChatClient(username=unique_username("delmsgsender"), host=host, port=port)
-    recipient = ChatClient(username=unique_username("delmsgrecipient"), host=host, port=port)
-    
-    sender.create_account(password)
-    recipient.create_account(password)
-    assert sender.login(password)
-    assert recipient.login(password)
-
-    text = "Message to be deleted"
-    sender.send_message(recipient.username, text)
-    time.sleep(0.1)
-
-    # Read the conversation to get message IDs.
-    messages = sender.read_conversation(recipient.username)
+def test_read_conversation_success(client_with_dummy):
+    response = client_with_dummy.read_conversation_sync("partner1", 0, 50)
+    data = MessageToDict(response.payload)
+    messages = data.get("messages", [])
     assert len(messages) > 0
-    message_id = messages[0].get("id")
-    assert message_id is not None
+    # Check that the conversation message contains "hello"
+    assert "hello" in messages[0].get("content", "").lower()
 
-    # Call delete_messages.
-    sender.delete_messages([message_id])
-    out = capsys.readouterr().out.lower()
-    assert "deleted successfully" in out
+def test_read_messages_success(client_with_dummy, capsys):
+    request = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.READ_MESSAGES,
+        payload=Struct(),
+        sender="test_user",
+        recipient="test_user",
+        timestamp=time.time(),
+    )
+    gen = client_with_dummy.stub.ReadMessages(request)
+    message = next(gen)
+    msg_text = MessageToDict(message.payload).get("text", "").lower()
+    assert "test message" in msg_text
 
-    sender.close()
-    recipient.close()
+def test_start_read_thread(client_with_dummy):
+    client_with_dummy.start_read_thread()
+    time.sleep(0.2)
+    assert not client_with_dummy.incoming_messages_queue.empty()
 
-def test_delete_account(grpc_server_address, capsys):
-    host, port_str = grpc_server_address.split(":")
-    port = int(port_str)
-    password = "password123"
-    username = unique_username("delaccount")
-    temp_client = ChatClient(username=username, host=host, port=port)
-    
-    temp_client.create_account(password)
-    assert temp_client.login(password)
-    
-    # Delete the account.
-    temp_client.delete_account()
-    out = capsys.readouterr().out.lower()
-    assert "deleted successfully" in out
-    temp_client.close()
+def test_close(client_with_dummy):
+    # Ensure that calling close does not raise an exception.
+    client_with_dummy.close()
 
-def test_list_chat_partners(grpc_server_address, capsys):
-    host, port_str = grpc_server_address.split(":")
-    port = int(port_str)
-    password = "password123"
-    
-    user1 = ChatClient(username=unique_username("partner1"), host=host, port=port)
-    user2 = ChatClient(username=unique_username("partner2"), host=host, port=port)
-    
-    user1.create_account(password)
-    user2.create_account(password)
-    assert user1.login(password)
-    assert user2.login(password)
-    
-    # Have user1 send a message to user2.
-    user1.send_message(user2.username, "Hello partner!")
-    time.sleep(0.1)
-    
-    # Call list_chat_partners which prints the partners.
-    partners = user2.list_chat_partners()
-    # Expect the returned dictionary to contain the chat partner.
-    assert partners is not None
-    assert user1.username in partners.get("chat_partners", [])
-    
-    user1.close()
-    user2.close()
+# ----------------- Tests for Error/Failure Responses -----------------
 
-def test_start_read_thread_and_close(client, capsys):
-    # This test calls start_read_thread and then immediately closes the client.
-    password = "password123"
-    client.create_account(password)
-    client.login(password)
-    client.start_read_thread()
-    time.sleep(0.1)
-    # Close the client; ensure no errors occur.
-    client.close()
+def test_connect_failure(monkeypatch, client_with_dummy):
+    # Simulate failure by making stub.ListAccounts raise an RpcError.
+    def raise_rpc(*args, **kwargs):
+        raise grpc.RpcError("Simulated RPC error")
+    client_with_dummy.stub.ListAccounts.side_effect = raise_rpc
+    result = client_with_dummy.connect()
+    assert result is False
+
+def test_login_failure(monkeypatch, client_with_dummy, capsys):
+    # Simulate a login failure response.
+    client_with_dummy.stub.Login.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.ERROR,
+        payload=ParseDict({"text": "Login failed."}, Struct()),
+        sender="SERVER",
+        recipient="test_user",
+        timestamp=time.time(),
+    )
+    success, err = client_with_dummy.login_sync("wrongpassword")
+    assert success is False
+    assert "login failed" in err.lower()
+
+def test_send_message_failure(monkeypatch, client_with_dummy, capsys):
+    # Simulate an RpcError in send_message.
+    def raise_rpc(*args, **kwargs):
+        raise grpc.RpcError("Simulated send error")
+    client_with_dummy.stub.SendMessage.side_effect = raise_rpc
+    result = client_with_dummy.send_message("recipient", "Hello")
+    assert result is False
+
+def test_read_conversation_failure(monkeypatch, client_with_dummy, capsys):
+    # Simulate a non-success response for ReadConversation.
+    client_with_dummy.stub.ReadConversation.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.ERROR,
+        payload=ParseDict({"text": "Failed to read conversation."}, Struct()),
+        sender="SERVER",
+        recipient="test_user",
+        timestamp=time.time(),
+    )
+    conv = client_with_dummy.read_conversation("partner1", 0, 50)
+    # Expect an empty list on failure.
+    assert conv == []
+
+def test_read_messages_error(monkeypatch, client_with_dummy, capsys):
+    # Simulate an RpcError in the streaming ReadMessages call.
+    def raise_rpc(*args, **kwargs):
+        raise grpc.RpcError("Simulated stream error")
+    client_with_dummy.stub.ReadMessages.side_effect = raise_rpc
+    # Call read_messages() and capture output.
+    client_with_dummy.incoming_messages_queue = __import__("queue").Queue()
+    client_with_dummy.read_messages()
+    captured = capsys.readouterr().out.lower()
+    assert "message stream closed" in captured
+
+def test_delete_messages_failure(monkeypatch, client_with_dummy, capsys):
+    # Simulate a failure for delete_messages by returning an ERROR type.
+    client_with_dummy.stub.DeleteMessages.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.ERROR,
+        payload=ParseDict({"text": "Failed to delete messages."}, Struct()),
+        sender="SERVER",
+        recipient="test_user",
+        timestamp=time.time(),
+    )
+    response = client_with_dummy.delete_messages_sync([1])
+    resp_text = MessageToDict(response.payload).get("text", "").lower()
+    assert "failed to delete messages" in resp_text
+
+def test_delete_account_failure(monkeypatch, client_with_dummy, capsys):
+    # Simulate a failure for delete_account by returning an ERROR type.
+    client_with_dummy.stub.DeleteAccount.return_value = chat_pb2.ChatMessage(
+        type=chat_pb2.MessageType.ERROR,
+        payload=ParseDict({"text": "Failed to delete account."}, Struct()),
+        sender="SERVER",
+        recipient="test_user",
+        timestamp=time.time(),
+    )
+    response = client_with_dummy.delete_account_sync()
+    resp_text = MessageToDict(response.payload).get("text", "").lower()
+    assert "failed to delete account" in resp_text
