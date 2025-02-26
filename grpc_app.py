@@ -135,6 +135,8 @@ def render_login_page() -> None:
     if not st.session_state.server_connected:
         st.warning("Please connect to the server before logging in or creating an account.")
         return
+    else:
+        st.success("Connected to server successfully.")
 
     if not st.session_state.pending_username:
         with st.form("enter_username_form"):
@@ -663,24 +665,49 @@ def main() -> None:
     st_autorefresh(interval=3000, key="auto_refresh_chat")
     init_session_state()
 
-    if "server_host" not in st.session_state:
-        st.session_state.server_host = args.host if args.host else "127.0.0.1"
-    if "server_port" not in st.session_state:
-        st.session_state.server_port = args.port if args.port else 50051
+    if args.host:
+        st.session_state.server_host = args.host
+    if args.port:
+        st.session_state.server_port = args.port
 
-    if not st.session_state.logged_in:
+    # If the user provided a host via the command line, auto-connect.
+    if args.host and not st.session_state.server_connected:
+        temp_client = ChatClient(
+            username="",
+            host=st.session_state.server_host,
+            port=st.session_state.server_port,
+        )
+        if temp_client.connect():
+            st.session_state.server_connected = True
+            st.success(
+                f"Automatically connected to server at {st.session_state.server_host}:{st.session_state.server_port}."
+            )
+        else:
+            st.session_state.error_message = "Client failed to connect. Please try again."
+            st.error(st.session_state.error_message)
+        temp_client.close()
+        st.rerun()
+
+    # If no auto-connection occurred (i.e. no command-line host provided)
+    # then simply render the login page so the user can enter host and port.
+    if not st.session_state.server_connected:
         render_login_page()
     else:
-        if st.session_state.client_connected:
-            try:
-                process_incoming_realtime_messages()
-            except Exception as e:
-                st.warning(f"An error occurred while processing messages: {e}")
-            render_sidebar()
-            render_chat_page_with_deletion()
+        if not st.session_state.logged_in:
+            render_login_page()
         else:
-            st.error("Client is not connected. Please try logging in again.")
+            if st.session_state.client_connected:
+                try:
+                    process_incoming_realtime_messages()
+                except Exception as e:
+                    st.warning(f"An error occurred while processing messages: {e}")
+                render_sidebar()
+                render_chat_page_with_deletion()
+            else:
+                st.error("Client is not connected. Please try logging in again.")
 
 
 if __name__ == "__main__":
     main()
+
+
