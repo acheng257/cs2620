@@ -1,5 +1,3 @@
-# db_manager.py
-
 import sqlite3
 from typing import Any, Dict, List, Optional
 
@@ -20,7 +18,7 @@ class DatabaseManager:
     The database schema consists of:
     1. accounts: Stores user accounts and password hashes
     2. messages: Stores all messages with metadata and delivery status
-    3. user_preferences: Stores user-specific preferences (e.g. message_limit)
+    3. chat_preferences: Stores chat-specific preferences (e.g. message_limit)
 
     All methods include proper error handling and logging.
     """
@@ -43,7 +41,7 @@ class DatabaseManager:
         - accounts: username (PK), password_hash, created_at
         - messages: id (PK), sender, recipient, content, timestamp,
             is_read, is_delivered, sender_deleted, recipient_deleted
-        - user_preferences: username (PK), message_limit
+        - chat_preferences: username (PK), partner (PK), message_limit
 
         Raises:
             Exception: If database initialization fails
@@ -78,17 +76,6 @@ class DatabaseManager:
                         recipient_deleted BOOLEAN DEFAULT FALSE,
                         FOREIGN KEY (sender) REFERENCES accounts(username),
                         FOREIGN KEY (recipient) REFERENCES accounts(username)
-                    )
-                    """
-                )
-
-                # Create user_preferences table for storing user-specific settings
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS user_preferences (
-                        username TEXT PRIMARY KEY,
-                        message_limit INTEGER DEFAULT 50,
-                        FOREIGN KEY (username) REFERENCES accounts(username)
                     )
                     """
                 )
@@ -135,11 +122,6 @@ class DatabaseManager:
                 cursor.execute(
                     "INSERT INTO accounts (username, password_hash) VALUES (?, ?)",
                     (username, password_hash),
-                )
-                # Also insert default preferences for the new user.
-                cursor.execute(
-                    "INSERT INTO user_preferences (username, message_limit) VALUES (?, ?)",
-                    (username, 50),
                 )
                 conn.commit()
                 return True
@@ -232,8 +214,6 @@ class DatabaseManager:
                 )
                 # Delete the account
                 cursor.execute("DELETE FROM accounts WHERE username = ?", (username,))
-                # Delete user preferences
-                cursor.execute("DELETE FROM user_preferences WHERE username = ?", (username,))
                 conn.commit()
                 return True
         except Exception as e:
