@@ -26,11 +26,24 @@ class Machine:
         for target_id in target_ids:
             self.log_event(
                 event_type="SEND",
-                detail=f"Sending message to {target_id}: {msg}. System time = \
-                    {time.time():.3f}, Logical clock = {self.clock}"
+                detail=f"Sending message to {target_id}: {msg}."
             )
 
             # TODO: send the message
+
+    def log_event(self, event_type, detail):
+        """
+        Simple text logging to our dedicated file.
+        """
+        current_time = time.time()  # real (system) time
+        log_line = (
+            f"[SystemTime={current_time:.3f}] "
+            f"[Machine={self.id}] "
+            f"[LogicalClock={self.clock}] "
+            f"[Event={event_type}] {detail}\n"
+        )
+        self.log_file.write(log_line)
+        self.log_file.flush()
         
     def main_loop(self):
         while self.running:
@@ -56,6 +69,7 @@ class Machine:
                     self.logical_clock += 1
                     self.log_event(
                         event_type="INTERNAL",
-                        detail=f"Doing internal work. System time = \
-                            {time.time():.3f}, Logical clock = {self.clock}"
+                        detail=f"Doing internal work."
                     )
+
+    
