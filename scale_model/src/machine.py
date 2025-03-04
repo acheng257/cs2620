@@ -1,7 +1,8 @@
 import random
 import time
 import queue
-from network import start_server, send_message
+import os
+from .network import start_server, send_message
 
 
 class Machine:
@@ -14,7 +15,8 @@ class Machine:
         self.clock_rate = random.randint(1, 6)
         self.running = True
         self.message_queue = queue.Queue()
-        self.log_file = open(f"logs/machine_{self.id}.log", "w")
+        log_path = os.path.join("logs", f"machine_{self.id}.log")
+        self.log_file = open(log_path, "w")
 
     def handle_incoming_message(self, message):
         self.message_queue.put(message)
@@ -59,7 +61,7 @@ class Machine:
         start_time = time.time()
         time_per_tick = 1.0 / self.clock_rate
         while self.running:
-            if time.time() - start_time >= 60: # run for a minute
+            if time.time() - start_time >= 60:  # run for a minute
                 self.running = False
                 break
 

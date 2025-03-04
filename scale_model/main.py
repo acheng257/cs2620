@@ -1,5 +1,5 @@
 import argparse
-from machine import Machine
+from src.machine import Machine
 
 
 def parse_neighbors(neighbor_str):
