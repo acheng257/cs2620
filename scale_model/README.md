@@ -6,9 +6,6 @@
 - `network.py`: Provides networking functionality for message passing between machines
 - `main.py`: Entry point for starting individual machine instances
 
-## Requirements
-...
-
 ## Usage
 
 To run a machine instance, use the following command:
