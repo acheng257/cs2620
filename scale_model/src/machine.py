@@ -36,11 +36,14 @@ class Machine:
         return True
 
     def send_message(self, target_peer, message):
-        send_message(target_peer[0], target_peer[1], message)
-        self.clock += 1
+        for target in target_peer:
+            send_message(target[0], target[1], message)
+
         self.log_event(
             event_type="SEND", detail=f"Sending message to {target_peer}: {message}."
         )
+
+        self.clock += 1
 
     def log_event(self, event_type, detail):
         """
@@ -87,16 +90,15 @@ class Machine:
                     if self.neighbors:
                         target = self.neighbors[0]
                         msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
-                        self.send_message(target, msg)
+                        self.send_message([target], msg)
                 elif next_action == 2:
                     if len(self.neighbors) > 1:
                         target = self.neighbors[1]
                         msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
-                        self.send_message(target, msg)
+                        self.send_message([target], msg)
                 elif next_action == 3:
-                    for neighbor in self.neighbors:
-                        msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
-                        self.send_message(neighbor, msg)
+                    msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
+                    self.send_message([neighbor for neighbor in self.neighbors], msg)
                 else:
                     self.clock += 1
                     self.log_event(event_type="INTERNAL", detail="Doing internal work.")

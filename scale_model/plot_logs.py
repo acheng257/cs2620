@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 import pandas as pd
@@ -37,14 +38,15 @@ def parse_log_line(line):
     return None
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python plot_logs.py <log_file>")
+    if len(sys.argv) < 3:
+        print("Usage: python plot_logs.py <log_file> <trial_number>")
         sys.exit(1)
 
     log_file = sys.argv[1]
+    trial_num = sys.argv[2]
     records = []
     
-    with open(log_file, "r") as f:
+    with open("logs/" + log_file, "r") as f:
         for line in f:
             parsed = parse_log_line(line)
             if parsed:
@@ -82,9 +84,13 @@ def main():
     plt.tight_layout()
     
     machine_name = log_file.split('.')[0]
-    output_filename = f"plots/{machine_name}_plots.png"
+    # output_filename = f"plots/{machine_name}_plots_{trial_num}.png"
+    # plt.savefig(output_filename)
+    # print(f"Plots saved as {output_filename}")
+    output_dir = "plots"
+    os.makedirs(output_dir, exist_ok=True)
+    output_filename = f"{output_dir}/{machine_name}_plots_{trial_num}.png"
     plt.savefig(output_filename)
-    print(f"Plots saved as {output_filename}")
     
     plt.show()
 
