@@ -14,7 +14,7 @@ class Machine:
         self.clock_rate = random.randint(1, 6)
         self.running = True
         self.message_queue = queue.Queue()
-        self.log_file = open(f"logs/machine_{self.id}.log", "w")
+        self.log_file = open(f"logs/machine_{self.id}", "w")
 
     def handle_incoming_message(self, message):
         self.message_queue.put(message)
@@ -34,11 +34,14 @@ class Machine:
         return True
 
     def send_message(self, target_peer, message):
-        send_message(target_peer[0], target_peer[1], message)
-        self.clock += 1
+        for target in target_peer:
+            send_message(target[0], target[1], message)
+
         self.log_event(
             event_type="SEND", detail=f"Sending message to {target_peer}: {message}."
         )
+        
+        self.clock += 1
 
     def log_event(self, event_type, detail):
         """
@@ -59,7 +62,7 @@ class Machine:
         start_time = time.time()
         time_per_tick = 1.0 / self.clock_rate
         while self.running:
-            if time.time() - start_time >= 60: # run for a minute
+            if time.time() - start_time >= 70: # run for a minute
                 self.running = False
                 break
 
@@ -85,16 +88,15 @@ class Machine:
                     if self.neighbors:
                         target = self.neighbors[0]
                         msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
-                        self.send_message(target, msg)
+                        self.send_message([target], msg)
                 elif next_action == 2:
                     if len(self.neighbors) > 1:
                         target = self.neighbors[1]
                         msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
-                        self.send_message(target, msg)
+                        self.send_message([target], msg)
                 elif next_action == 3:
-                    for neighbor in self.neighbors:
-                        msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
-                        self.send_message(neighbor, msg)
+                    msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
+                    self.send_message([neighbor for neighbor in self.neighbors], msg)
                 else:
                     self.clock += 1
                     self.log_event(event_type="INTERNAL", detail="Doing internal work.")
