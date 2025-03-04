@@ -14,7 +14,7 @@ class Machine:
         self.clock_rate = random.randint(1, 6)
         self.running = True
         self.message_queue = queue.Queue()
-        self.log_file = open(f"machine_{self.id}.log", "w")
+        self.log_file = open(f"logs/machine_{self.id}.log", "w")
 
     def handle_incoming_message(self, message):
         self.message_queue.put(message)
@@ -56,8 +56,13 @@ class Machine:
         print(log_line)
 
     def main_loop(self):
+        start_time = time.time()
         time_per_tick = 1.0 / self.clock_rate
         while self.running:
+            if time.time() - start_time >= 60: # run for a minute
+                self.running = False
+                break
+
             time.sleep(time_per_tick)
             if not self.message_queue.empty():
                 message = self.message_queue.get()
