@@ -42,7 +42,7 @@ class Machine:
         self.clock_rate = random.randint(1, 6)
         self.running = True
         self.message_queue = queue.Queue()
-        log_path = os.path.join("logs", f"machine_{self.id}_smaller_prob_trial_5.log")
+        log_path = os.path.join("logs", f"machine_{self.id}.log")
         self.log_file = open(log_path, "w")
 
         self.log_event("INIT", f"Clock rate initialized as {self.clock_rate}")
