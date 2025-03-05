@@ -25,7 +25,15 @@ class Machine:
         internal_work_probability (float): Probability between 0-1 that machine performs internal work.
     """
 
-    def __init__(self, id, host, port, neighbors, clock_rate_range=(1,6), internal_work_probability=0.7):
+    def __init__(
+        self,
+        id,
+        host,
+        port,
+        neighbors,
+        clock_rate_range=(1, 6),
+        internal_work_probability=0.7,
+    ):
         self.id = id
         self.host = host
         self.port = port
