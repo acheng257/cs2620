@@ -39,10 +39,10 @@ class Machine:
         self.port = port
         self.neighbors = neighbors
         self.clock = 0
-        self.clock_rate = random.randint(3, 5)
+        self.clock_rate = random.randint(1, 6)
         self.running = True
         self.message_queue = queue.Queue()
-        log_path = os.path.join("logs", f"machine_{self.id}_smaller_variation_trial_5.log")
+        log_path = os.path.join("logs", f"machine_{self.id}_smaller_prob_trial_5.log")
         self.log_file = open(log_path, "w")
 
         self.log_event("INIT", f"Clock rate initialized as {self.clock_rate}")
@@ -156,17 +156,17 @@ class Machine:
                     continue
             else:
                 next_action = random.randint(1, 10)
-                if next_action == 1:
+                if next_action == 1 or next_action == 4:
                     if self.neighbors:
                         target = self.neighbors[0]
                         msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
                         self.send_message([target], msg)
-                elif next_action == 2:
+                elif next_action == 2 or next_action == 5:
                     if len(self.neighbors) > 1:
                         target = self.neighbors[1]
                         msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
                         self.send_message([target], msg)
-                elif next_action == 3:
+                elif next_action == 3 or next_action == 6:
                     msg = f"{self.id}|{self.clock}|Hello from M{self.id}"
                     self.send_message([neighbor for neighbor in self.neighbors], msg)
                 else:

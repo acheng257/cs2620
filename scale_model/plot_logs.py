@@ -41,14 +41,15 @@ def parse_log_line(line):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python plot_logs.py <trial_number>")
+        print("Usage: python plot_logs.py <trial_number> <plot_folder>")
         sys.exit(1)
 
     trial_num = sys.argv[1]
+    plot_folder = sys.argv[2]
     records = []
 
     for machine in [1, 2, 3]:
-        log_filename = f"machine_{machine}_smaller_variation_trial_{trial_num}.log"
+        log_filename = f"{plot_folder}/machine_{machine}_smaller_prob_trial_{trial_num}.log"
         file_path = os.path.join("logs", log_filename)
         if not os.path.exists(file_path):
             print(f"File {file_path} does not exist, skipping.")
@@ -122,7 +123,7 @@ def main():
 
     output_dir = "plots"
     os.makedirs(output_dir, exist_ok=True)
-    output_filename = f"{output_dir}/trial_{trial_num}_smaller_variation_combined_plots.png"
+    output_filename = f"{output_dir}/{plot_folder}/trial_{trial_num}_smaller_prob_combined_plots.png"
     plt.savefig(output_filename)
     print(f"Plots saved as {output_filename}")
 
