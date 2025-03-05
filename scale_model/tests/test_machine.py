@@ -65,7 +65,7 @@ def test_send_message(monkeypatch):
     monkeypatch.setattr(machine, "send_message", fake_send)
 
     target_peer = ("127.0.0.1", 5001)
-    m.send_message(target_peer, "Hi there")
+    m.send_message([target_peer], "Hi there")
     # Check that our fake_send was "called".
     assert calls == [("127.0.0.1", 5001, "Hi there")]
     # The machine's clock is incremented.
