@@ -1,0 +1,288 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Machine &mdash; Scale Model 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Network" href="network.html" />
+    <link rel="prev" title="Welcome to Scale Model’s documentation!" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Scale Model
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Machine</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#machine-class">Machine Class</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#src.machine.Machine"><code class="docutils literal notranslate"><span class="pre">Machine</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#src.machine.Machine.__init__"><code class="docutils literal notranslate"><span class="pre">Machine.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.machine.Machine.handle_incoming_message"><code class="docutils literal notranslate"><span class="pre">Machine.handle_incoming_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.machine.Machine.start_network"><code class="docutils literal notranslate"><span class="pre">Machine.start_network()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.machine.Machine.receive_message"><code class="docutils literal notranslate"><span class="pre">Machine.receive_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.machine.Machine.send_message"><code class="docutils literal notranslate"><span class="pre">Machine.send_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.machine.Machine.log_event"><code class="docutils literal notranslate"><span class="pre">Machine.log_event()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.machine.Machine.main_loop"><code class="docutils literal notranslate"><span class="pre">Machine.main_loop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.machine.Machine.run"><code class="docutils literal notranslate"><span class="pre">Machine.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#event-types">Event Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#message-format">Message Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#logging-format">Logging Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-usage">Example Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="network.html">Network</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Scale Model</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Machine</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/modules/machine.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-src.machine">
+<span id="machine"></span><h1>Machine<a class="headerlink" href="#module-src.machine" title="Link to this heading"></a></h1>
+<p>The Machine module implements a node in a distributed system using a logical clock.</p>
+<section id="machine-class">
+<h2>Machine Class<a class="headerlink" href="#machine-class" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.machine.Machine">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.machine.</span></span><span class="sig-name descname"><span class="pre">Machine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clock_rate_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">internal_work_probability</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class representing a machine in a distributed system implementing a logical clock.</p>
+<p>This class manages message passing between machines, maintains a logical clock,
+and logs events (internal, send, receive) with both system time and logical clock values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>id</strong> (<em>int</em>) – Unique identifier for the machine</p></li>
+<li><p><strong>host</strong> (<em>str</em>) – Host address the machine runs on</p></li>
+<li><p><strong>port</strong> (<em>int</em>) – Port number the machine listens on</p></li>
+<li><p><strong>neighbors</strong> (<em>list</em>) – List of (host, port) tuples representing neighbor machines</p></li>
+<li><p><strong>clock</strong> (<em>int</em>) – Current value of the logical clock</p></li>
+<li><p><strong>clock_rate</strong> (<em>int</em>) – Random rate (1-6) at which the machine’s clock ticks</p></li>
+<li><p><strong>running</strong> (<em>bool</em>) – Flag indicating if the machine is running</p></li>
+<li><p><strong>message_queue</strong> (<em>Queue</em>) – Queue for storing incoming messages</p></li>
+<li><p><strong>log_file</strong> (<em>file</em>) – File handle for logging events</p></li>
+<li><p><strong>internal_work_probability</strong> (<em>float</em>) – Probability between 0-1 that machine performs internal work.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.machine.Machine.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clock_rate_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">internal_work_probability</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.machine.Machine.handle_incoming_message">
+<span class="sig-name descname"><span class="pre">handle_incoming_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.handle_incoming_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.handle_incoming_message" title="Link to this definition"></a></dt>
+<dd><p>Handle an incoming message by adding it to the message queue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>message</strong> (<em>str</em>) – The received message to be queued</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.machine.Machine.start_network">
+<span class="sig-name descname"><span class="pre">start_network</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.start_network"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.start_network" title="Link to this definition"></a></dt>
+<dd><p>Start the network server for this machine.</p>
+<p>Initializes a TCP server socket that listens for incoming connections
+and handles incoming messages.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.machine.Machine.receive_message">
+<span class="sig-name descname"><span class="pre">receive_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sender_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sender_timestamp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.receive_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.receive_message" title="Link to this definition"></a></dt>
+<dd><p>Process a received message and update the logical clock.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sender_id</strong> (<em>int</em>) – ID of the sending machine</p></li>
+<li><p><strong>sender_timestamp</strong> (<em>int</em>) – Logical clock value of the sender</p></li>
+<li><p><strong>msg</strong> (<em>str</em>) – Content of the message</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if message was processed successfully</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.machine.Machine.send_message">
+<span class="sig-name descname"><span class="pre">send_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_peer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.send_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.send_message" title="Link to this definition"></a></dt>
+<dd><p>Send a message to one or more target peers and update the logical clock.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target_peer</strong> (<em>list</em>) – List of (host, port) tuples for target machines</p></li>
+<li><p><strong>message</strong> (<em>str</em>) – Message to be sent</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.machine.Machine.log_event">
+<span class="sig-name descname"><span class="pre">log_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detail</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.log_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.log_event" title="Link to this definition"></a></dt>
+<dd><p>Log an event with system time, machine ID, logical clock, and event details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event_type</strong> (<em>str</em>) – Type of event (INTERNAL, SEND, or RECEIVE)</p></li>
+<li><p><strong>detail</strong> (<em>str</em>) – Detailed description of the event</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.machine.Machine.main_loop">
+<span class="sig-name descname"><span class="pre">main_loop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.main_loop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.main_loop" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.machine.Machine.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.run" title="Link to this definition"></a></dt>
+<dd><p>Start the machine’s operation.</p>
+<p>Initializes the network server and enters the main processing loop.
+The machine will run for 60 seconds before shutting down.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="event-types">
+<h2>Event Types<a class="headerlink" href="#event-types" title="Link to this heading"></a></h2>
+<p>The machine handles three types of events:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">INTERNAL</span></code>: Internal events that only affect the local machine</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SEND</span></code>: Events where the machine sends a message to another machine</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RECEIVE</span></code>: Events where the machine receives a message from another machine</p></li>
+</ul>
+</section>
+<section id="message-format">
+<h2>Message Format<a class="headerlink" href="#message-format" title="Link to this heading"></a></h2>
+<p>Messages are formatted as strings with fields separated by ‘|’:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>sender_id|sender_timestamp|message_content
+</pre></div>
+</div>
+</section>
+<section id="logging-format">
+<h2>Logging Format<a class="headerlink" href="#logging-format" title="Link to this heading"></a></h2>
+<p>Each log entry follows this format:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[SystemTime=&lt;time&gt;] [Machine=&lt;id&gt;] [LogicalClock=&lt;clock&gt;] [Event=&lt;type&gt;] &lt;detail&gt;
+</pre></div>
+</div>
+</section>
+<section id="example-usage">
+<h2>Example Usage<a class="headerlink" href="#example-usage" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">src.machine</span><span class="w"> </span><span class="kn">import</span> <span class="n">Machine</span>
+
+<span class="c1"># Create a machine instance</span>
+<span class="n">machine</span> <span class="o">=</span> <span class="n">Machine</span><span class="p">(</span>
+    <span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">host</span><span class="o">=</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span>
+    <span class="n">port</span><span class="o">=</span><span class="mi">8765</span><span class="p">,</span>
+    <span class="n">neighbors</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">8766</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">8767</span><span class="p">)],</span>
+    <span class="n">clock_rate_min</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">clock_rate_max</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+    <span class="n">internal_work_prob</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Start the machine</span>
+<span class="n">machine</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Welcome to Scale Model’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="network.html" class="btn btn-neutral float-right" title="Network" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Itamar and Alice.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

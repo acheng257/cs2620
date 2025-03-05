@@ -1,0 +1,179 @@
+[SystemTime=1741133398.808] [Machine=3] [LogicalClock=0] [Event=INIT] Clock rate initialized as 3
+[SystemTime=1741133399.150] [Machine=3] [LogicalClock=0] [Event=SEND] Sending message to [('localhost', 8000)]: 3|0|Hello from M3.
+[SystemTime=1741133399.497] [Machine=3] [LogicalClock=2] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133399.832] [Machine=3] [LogicalClock=3] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133400.171] [Machine=3] [LogicalClock=10] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133400.505] [Machine=3] [LogicalClock=12] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133400.842] [Machine=3] [LogicalClock=13] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133401.176] [Machine=3] [LogicalClock=14] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133401.512] [Machine=3] [LogicalClock=15] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133401.849] [Machine=3] [LogicalClock=18] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133402.182] [Machine=3] [LogicalClock=20] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133402.524] [Machine=3] [LogicalClock=20] [Event=SEND] Sending message to [('localhost', 8000)]: 3|20|Hello from M3.
+[SystemTime=1741133402.862] [Machine=3] [LogicalClock=22] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133403.200] [Machine=3] [LogicalClock=25] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133403.536] [Machine=3] [LogicalClock=26] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133403.870] [Machine=3] [LogicalClock=28] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 1
+[SystemTime=1741133404.208] [Machine=3] [LogicalClock=29] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133404.545] [Machine=3] [LogicalClock=29] [Event=SEND] Sending message to [('localhost', 8000), ('localhost', 8001)]: 3|29|Hello from M3.
+[SystemTime=1741133404.884] [Machine=3] [LogicalClock=34] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133405.222] [Machine=3] [LogicalClock=36] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133405.557] [Machine=3] [LogicalClock=37] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133405.895] [Machine=3] [LogicalClock=38] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133406.234] [Machine=3] [LogicalClock=39] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133406.573] [Machine=3] [LogicalClock=39] [Event=SEND] Sending message to [('localhost', 8000)]: 3|39|Hello from M3.
+[SystemTime=1741133406.913] [Machine=3] [LogicalClock=40] [Event=SEND] Sending message to [('localhost', 8001)]: 3|40|Hello from M3.
+[SystemTime=1741133407.247] [Machine=3] [LogicalClock=45] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133407.586] [Machine=3] [LogicalClock=46] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133407.923] [Machine=3] [LogicalClock=47] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133408.262] [Machine=3] [LogicalClock=49] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133408.598] [Machine=3] [LogicalClock=50] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133408.937] [Machine=3] [LogicalClock=51] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133409.275] [Machine=3] [LogicalClock=52] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133409.615] [Machine=3] [LogicalClock=52] [Event=SEND] Sending message to [('localhost', 8000)]: 3|52|Hello from M3.
+[SystemTime=1741133409.955] [Machine=3] [LogicalClock=53] [Event=SEND] Sending message to [('localhost', 8000), ('localhost', 8001)]: 3|53|Hello from M3.
+[SystemTime=1741133410.294] [Machine=3] [LogicalClock=54] [Event=SEND] Sending message to [('localhost', 8000)]: 3|54|Hello from M3.
+[SystemTime=1741133410.633] [Machine=3] [LogicalClock=55] [Event=SEND] Sending message to [('localhost', 8001)]: 3|55|Hello from M3.
+[SystemTime=1741133410.971] [Machine=3] [LogicalClock=57] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133411.307] [Machine=3] [LogicalClock=58] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133411.645] [Machine=3] [LogicalClock=59] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133411.984] [Machine=3] [LogicalClock=68] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133412.323] [Machine=3] [LogicalClock=70] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 1
+[SystemTime=1741133412.661] [Machine=3] [LogicalClock=71] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 1
+[SystemTime=1741133412.998] [Machine=3] [LogicalClock=72] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133413.336] [Machine=3] [LogicalClock=73] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133413.672] [Machine=3] [LogicalClock=74] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133414.011] [Machine=3] [LogicalClock=75] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133414.345] [Machine=3] [LogicalClock=80] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 1
+[SystemTime=1741133414.683] [Machine=3] [LogicalClock=81] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133415.020] [Machine=3] [LogicalClock=84] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133415.358] [Machine=3] [LogicalClock=85] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133415.695] [Machine=3] [LogicalClock=86] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133416.032] [Machine=3] [LogicalClock=89] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133416.366] [Machine=3] [LogicalClock=90] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133416.705] [Machine=3] [LogicalClock=92] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133417.044] [Machine=3] [LogicalClock=93] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133417.381] [Machine=3] [LogicalClock=95] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133417.719] [Machine=3] [LogicalClock=96] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133418.057] [Machine=3] [LogicalClock=97] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133418.395] [Machine=3] [LogicalClock=98] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133418.733] [Machine=3] [LogicalClock=102] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133419.072] [Machine=3] [LogicalClock=103] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133419.410] [Machine=3] [LogicalClock=105] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133419.746] [Machine=3] [LogicalClock=106] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 1
+[SystemTime=1741133420.082] [Machine=3] [LogicalClock=107] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 1
+[SystemTime=1741133420.421] [Machine=3] [LogicalClock=108] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133420.761] [Machine=3] [LogicalClock=108] [Event=SEND] Sending message to [('localhost', 8001)]: 3|108|Hello from M3.
+[SystemTime=1741133421.097] [Machine=3] [LogicalClock=110] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133421.436] [Machine=3] [LogicalClock=115] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133421.774] [Machine=3] [LogicalClock=116] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133422.113] [Machine=3] [LogicalClock=118] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133422.452] [Machine=3] [LogicalClock=119] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133422.789] [Machine=3] [LogicalClock=121] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 1
+[SystemTime=1741133423.125] [Machine=3] [LogicalClock=122] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133423.464] [Machine=3] [LogicalClock=123] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133423.800] [Machine=3] [LogicalClock=124] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133424.138] [Machine=3] [LogicalClock=128] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133424.473] [Machine=3] [LogicalClock=129] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133424.811] [Machine=3] [LogicalClock=131] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133425.150] [Machine=3] [LogicalClock=132] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133425.488] [Machine=3] [LogicalClock=133] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133425.824] [Machine=3] [LogicalClock=134] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133426.160] [Machine=3] [LogicalClock=138] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133426.498] [Machine=3] [LogicalClock=139] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133426.837] [Machine=3] [LogicalClock=140] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133427.175] [Machine=3] [LogicalClock=141] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133427.514] [Machine=3] [LogicalClock=145] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133427.849] [Machine=3] [LogicalClock=147] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133428.188] [Machine=3] [LogicalClock=148] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133428.523] [Machine=3] [LogicalClock=150] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133428.861] [Machine=3] [LogicalClock=151] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133429.200] [Machine=3] [LogicalClock=152] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133429.540] [Machine=3] [LogicalClock=152] [Event=SEND] Sending message to [('localhost', 8001)]: 3|152|Hello from M3.
+[SystemTime=1741133429.877] [Machine=3] [LogicalClock=156] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133430.214] [Machine=3] [LogicalClock=156] [Event=SEND] Sending message to [('localhost', 8001)]: 3|156|Hello from M3.
+[SystemTime=1741133430.551] [Machine=3] [LogicalClock=159] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 1
+[SystemTime=1741133430.888] [Machine=3] [LogicalClock=160] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133431.226] [Machine=3] [LogicalClock=161] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133431.564] [Machine=3] [LogicalClock=165] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133431.900] [Machine=3] [LogicalClock=166] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133432.236] [Machine=3] [LogicalClock=166] [Event=SEND] Sending message to [('localhost', 8000)]: 3|166|Hello from M3.
+[SystemTime=1741133432.575] [Machine=3] [LogicalClock=167] [Event=SEND] Sending message to [('localhost', 8001)]: 3|167|Hello from M3.
+[SystemTime=1741133432.914] [Machine=3] [LogicalClock=168] [Event=SEND] Sending message to [('localhost', 8001)]: 3|168|Hello from M3.
+[SystemTime=1741133433.253] [Machine=3] [LogicalClock=170] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133433.590] [Machine=3] [LogicalClock=171] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 1
+[SystemTime=1741133433.927] [Machine=3] [LogicalClock=175] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133434.264] [Machine=3] [LogicalClock=178] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133434.603] [Machine=3] [LogicalClock=179] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133434.941] [Machine=3] [LogicalClock=180] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133435.280] [Machine=3] [LogicalClock=181] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133435.616] [Machine=3] [LogicalClock=184] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133435.951] [Machine=3] [LogicalClock=185] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133436.290] [Machine=3] [LogicalClock=188] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133436.626] [Machine=3] [LogicalClock=189] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133436.966] [Machine=3] [LogicalClock=189] [Event=SEND] Sending message to [('localhost', 8000), ('localhost', 8001)]: 3|189|Hello from M3.
+[SystemTime=1741133437.304] [Machine=3] [LogicalClock=191] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133437.643] [Machine=3] [LogicalClock=194] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133437.983] [Machine=3] [LogicalClock=194] [Event=SEND] Sending message to [('localhost', 8000)]: 3|194|Hello from M3.
+[SystemTime=1741133438.322] [Machine=3] [LogicalClock=196] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133438.659] [Machine=3] [LogicalClock=197] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133438.995] [Machine=3] [LogicalClock=198] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133439.334] [Machine=3] [LogicalClock=199] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133439.673] [Machine=3] [LogicalClock=204] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 1
+[SystemTime=1741133440.012] [Machine=3] [LogicalClock=205] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 1
+[SystemTime=1741133440.350] [Machine=3] [LogicalClock=206] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133440.690] [Machine=3] [LogicalClock=207] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133441.024] [Machine=3] [LogicalClock=208] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133441.362] [Machine=3] [LogicalClock=212] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133441.699] [Machine=3] [LogicalClock=212] [Event=SEND] Sending message to [('localhost', 8000)]: 3|212|Hello from M3.
+[SystemTime=1741133442.036] [Machine=3] [LogicalClock=214] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133442.384] [Machine=3] [LogicalClock=214] [Event=SEND] Sending message to [('localhost', 8000), ('localhost', 8001)]: 3|214|Hello from M3.
+[SystemTime=1741133442.722] [Machine=3] [LogicalClock=216] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133443.061] [Machine=3] [LogicalClock=220] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133443.400] [Machine=3] [LogicalClock=221] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133443.738] [Machine=3] [LogicalClock=224] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133444.073] [Machine=3] [LogicalClock=225] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133444.412] [Machine=3] [LogicalClock=226] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133444.750] [Machine=3] [LogicalClock=226] [Event=SEND] Sending message to [('localhost', 8000)]: 3|226|Hello from M3.
+[SystemTime=1741133445.089] [Machine=3] [LogicalClock=229] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133445.425] [Machine=3] [LogicalClock=230] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133445.761] [Machine=3] [LogicalClock=234] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133446.096] [Machine=3] [LogicalClock=235] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133446.434] [Machine=3] [LogicalClock=236] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133446.771] [Machine=3] [LogicalClock=237] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741133447.111] [Machine=3] [LogicalClock=237] [Event=SEND] Sending message to [('localhost', 8001)]: 3|237|Hello from M3.
+[SystemTime=1741133447.446] [Machine=3] [LogicalClock=242] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133447.781] [Machine=3] [LogicalClock=242] [Event=SEND] Sending message to [('localhost', 8000), ('localhost', 8001)]: 3|242|Hello from M3.
+[SystemTime=1741133448.119] [Machine=3] [LogicalClock=244] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133448.455] [Machine=3] [LogicalClock=244] [Event=SEND] Sending message to [('localhost', 8001)]: 3|244|Hello from M3.
+[SystemTime=1741133448.793] [Machine=3] [LogicalClock=249] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133449.131] [Machine=3] [LogicalClock=250] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133449.468] [Machine=3] [LogicalClock=250] [Event=SEND] Sending message to [('localhost', 8000)]: 3|250|Hello from M3.
+[SystemTime=1741133449.807] [Machine=3] [LogicalClock=251] [Event=SEND] Sending message to [('localhost', 8001)]: 3|251|Hello from M3.
+[SystemTime=1741133450.142] [Machine=3] [LogicalClock=255] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133450.476] [Machine=3] [LogicalClock=256] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133450.812] [Machine=3] [LogicalClock=257] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133451.150] [Machine=3] [LogicalClock=258] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133451.490] [Machine=3] [LogicalClock=258] [Event=SEND] Sending message to [('localhost', 8001)]: 3|258|Hello from M3.
+[SystemTime=1741133451.828] [Machine=3] [LogicalClock=260] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133452.168] [Machine=3] [LogicalClock=260] [Event=SEND] Sending message to [('localhost', 8000)]: 3|260|Hello from M3.
+[SystemTime=1741133452.507] [Machine=3] [LogicalClock=267] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133452.842] [Machine=3] [LogicalClock=268] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133453.181] [Machine=3] [LogicalClock=269] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133453.519] [Machine=3] [LogicalClock=270] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133453.858] [Machine=3] [LogicalClock=270] [Event=SEND] Sending message to [('localhost', 8000)]: 3|270|Hello from M3.
+[SystemTime=1741133454.196] [Machine=3] [LogicalClock=272] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133454.537] [Machine=3] [LogicalClock=272] [Event=SEND] Sending message to [('localhost', 8000), ('localhost', 8001)]: 3|272|Hello from M3.
+[SystemTime=1741133454.876] [Machine=3] [LogicalClock=274] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133455.214] [Machine=3] [LogicalClock=275] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133455.552] [Machine=3] [LogicalClock=275] [Event=SEND] Sending message to [('localhost', 8001)]: 3|275|Hello from M3.
+[SystemTime=1741133455.891] [Machine=3] [LogicalClock=277] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133456.229] [Machine=3] [LogicalClock=278] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133456.568] [Machine=3] [LogicalClock=279] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133456.906] [Machine=3] [LogicalClock=280] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133457.240] [Machine=3] [LogicalClock=290] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133457.579] [Machine=3] [LogicalClock=291] [Event=RECEIVE] Received from M1: Hello from M1, Queue length now: 0
+[SystemTime=1741133457.918] [Machine=3] [LogicalClock=292] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133458.254] [Machine=3] [LogicalClock=293] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133458.591] [Machine=3] [LogicalClock=294] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741133458.927] [Machine=3] [LogicalClock=295] [Event=INTERNAL] Doing internal work.
