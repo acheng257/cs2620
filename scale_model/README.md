@@ -63,12 +63,16 @@ pipenv run python main.py --id 2 --port 8002 --neighbors localhost:8001,localhos
 pipenv run python main.py --id 3 --port 8003 --neighbors localhost:8001,localhost:8002
 ```
 
-You can also run the `start_machines.py` script with the command
+You can also run the `start_machines.py` script using default parameters with the command
 
 ```bash
 python start_machines.py
 ```
-which will start three machines as listed in the commands above and run them for 60 seconds.
+which will start three machines as listed in the commands above and run them for 60 seconds. You can also use the following options to set additional options:
+
+`--clock_rate_min`: Minimum value for the machine’s random clock rate.\
+`--clock_rate_max`: Maximum value for the machine’s random clock rate.\
+`--internal_work_prob`: Probability (between 0 and 1) of performing internal work instead of sending messages.
 
 ## Development
 

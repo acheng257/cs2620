@@ -1,6 +1,7 @@
 # start_machines.py
 import subprocess
 import sys
+import argparse
 
 def start_machine(machine_id, port, neighbors, clock_rate_min, clock_rate_max, internal_work_prob):
     # Build the command to start a machine.
@@ -19,6 +20,12 @@ def start_machine(machine_id, port, neighbors, clock_rate_min, clock_rate_max, i
     return subprocess.Popen(command)
 
 def main():
+    parser = argparse.ArgumentParser(description="Start distributed machines with configurable parameters.")
+    parser.add_argument("--clock_rate_min", type=int, default=1, help="Minimum value for the machine’s random clock rate.")
+    parser.add_argument("--clock_rate_max", type=int, default=6, help="Maximum value for the machine’s random clock rate.")
+    parser.add_argument("--internal_work_prob", type=float, default=0.4, help="Probability of performing internal work (0-1).")
+    args = parser.parse_args()
+
     # Configuration for three machines.
     machines = [
         {"id": 1, "port": 8000, "neighbors": "localhost:8001,localhost:8002"},
@@ -26,20 +33,15 @@ def main():
         {"id": 3, "port": 8002, "neighbors": "localhost:8000,localhost:8001"},
     ]
 
-    # Set clock rate range and internal work probability
-    clock_rate_min = 1
-    clock_rate_max = 6
-    internal_work_prob = 0.4
-
     processes = []
     for machine in machines:
         p = start_machine(
             machine["id"],
             machine["port"],
             machine["neighbors"],
-            clock_rate_min,
-            clock_rate_max,
-            internal_work_prob
+            args.clock_rate_min,
+            args.clock_rate_max,
+            args.internal_work_prob
         )
         processes.append(p)
         
