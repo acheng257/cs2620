@@ -66,7 +66,7 @@ pipenv run python main.py --id 3 --port 8003 --neighbors localhost:8001,localhos
 You can also run the `start_machines.py` script using default parameters with the command
 
 ```bash
-python start_machines.py
+pipenv run python start_machines.py
 ```
 which will start three machines as listed in the commands above and run them for 60 seconds. You can also use the following options to set additional options:
 
