@@ -6,12 +6,39 @@
 - `src/network.py`: Provides networking functionality for message passing between machines
 - `main.py`: Entry point for starting individual machine instances
 
+## Setup
+
+### Requirements
+
+- Python 3.9+
+- pipenv (for dependency management)
+
+### Installation
+
+All commands should be run from the `scale_model` directory:
+
+1. Install Pipenv if you haven't already:
+```bash
+pip install pipenv
+```
+
+2. Install project dependencies:
+```bash
+# Install runtime dependencies
+pipenv install
+
+# Install development dependencies (for testing and documentation)
+pipenv install --dev
+```
+
 ## Usage
 
-To run a machine instance, use the following command:
+All commands below should be run from the `scale_model` directory.
+
+To run a machine instance:
 
 ```bash
-python main.py --id <machine_id> --port <port_number> [--host <hostname>] [--neighbors <neighbor_list>]
+pipenv run python main.py --id <machine_id> --port <port_number> [--host <hostname>] [--neighbors <neighbor_list>]
 ```
 
 ### Arguments
@@ -23,47 +50,66 @@ python main.py --id <machine_id> --port <port_number> [--host <hostname>] [--nei
 
 ### Example Setup
 
-To create a network of three machines:
+To create a network of three machines (run each in a separate terminal from the `scale_model` directory):
 
 ```bash
 # Terminal 1
-python main.py --id 1 --port 8001 --neighbors localhost:8002,localhost:8003
+pipenv run python main.py --id 1 --port 8001 --neighbors localhost:8002,localhost:8003
 
 # Terminal 2
-python main.py --id 2 --port 8002 --neighbors localhost:8001,localhost:8003
+pipenv run python main.py --id 2 --port 8002 --neighbors localhost:8001,localhost:8003
 
 # Terminal 3
-python main.py --id 3 --port 8003 --neighbors localhost:8001,localhost:8002
+pipenv run python main.py --id 3 --port 8003 --neighbors localhost:8001,localhost:8002
 ```
+
+## Development
+
+All development commands should be run from the `scale_model` directory.
 
 ### Running Tests
 
+Use the predefined Pipenv scripts for testing:
+
 1. Run all tests:
 ```bash
-run pytest
+pipenv run test
 ```
 
 2. Run specific implementation tests:
 ```bash
-run pytest tests/test_network.py
+pipenv run pytest tests/test_network.py
 ```
 
 3. Run specific unit tests:
 ```bash
-run pytest tests/test_machine.py::test_handle_incoming_message
+pipenv run pytest tests/test_machine.py::test_handle_incoming_message
 ```
 
 4. Run tests with coverage:
 ```bash
-run pytest --cov=src.machine
+pipenv run coverage
 ```
 
-5. Generate HTML coverage report:
+The coverage report will be available in `htmlcov/index.html`
+
+### Documentation
+
+Build and view the documentation:
+
 ```bash
-run pytest --cov=src --cov-report=html
+pipenv run docs
 ```
 
-The report will be available in `htmlcov/index.html`
+The documentation will be available in `docs/_build/html/index.html`
+
+### Code Formatting
+
+Format the code using Black:
+
+```bash
+pipenv run format
+```
 
 ### Coverage Metrics
 
