@@ -24,7 +24,15 @@ class Machine:
         log_file (file): File handle for logging events
     """
 
-    def __init__(self, id, host, port, neighbors, clock_rate_range=(1,6), internal_work_probability=0.7):
+    def __init__(
+        self,
+        id,
+        host,
+        port,
+        neighbors,
+        clock_rate_range=(1, 6),
+        internal_work_probability=0.7,
+    ):
         self.id = id
         self.host = host
         self.port = port
