@@ -22,6 +22,7 @@ class Machine:
         running (bool): Flag indicating if the machine is running
         message_queue (Queue): Queue for storing incoming messages
         log_file (file): File handle for logging events
+        internal_work_probability (float): Probability between 0-1 that machine performs internal work.
     """
 
     def __init__(self, id, host, port, neighbors, clock_rate_range=(1,6), internal_work_probability=0.7):

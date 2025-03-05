@@ -99,7 +99,7 @@
 <h2>Machine Class<a class="headerlink" href="#machine-class" title="Link to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="src.machine.Machine">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.machine.</span></span><span class="sig-name descname"><span class="pre">Machine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine" title="Link to this definition"></a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.machine.</span></span><span class="sig-name descname"><span class="pre">Machine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clock_rate_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">internal_work_probability</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>A class representing a machine in a distributed system implementing a logical clock.</p>
 <p>This class manages message passing between machines, maintains a logical clock,
@@ -116,24 +116,14 @@ and logs events (internal, send, receive) with both system time and logical cloc
 <li><p><strong>running</strong> (<em>bool</em>) – Flag indicating if the machine is running</p></li>
 <li><p><strong>message_queue</strong> (<em>Queue</em>) – Queue for storing incoming messages</p></li>
 <li><p><strong>log_file</strong> (<em>file</em>) – File handle for logging events</p></li>
+<li><p><strong>internal_work_probability</strong> (<em>float</em>) – Probability between 0-1 that machine performs internal work.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="src.machine.Machine.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.__init__" title="Link to this definition"></a></dt>
-<dd><p>Initialize a new Machine instance.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>id</strong> (<em>int</em>) – Unique identifier for the machine</p></li>
-<li><p><strong>host</strong> (<em>str</em>) – Host address to bind the server</p></li>
-<li><p><strong>port</strong> (<em>int</em>) – Port number to bind the server</p></li>
-<li><p><strong>neighbors</strong> (<em>list</em>) – List of (host, port) tuples for neighbor machines</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clock_rate_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">internal_work_probability</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="src.machine.Machine.handle_incoming_message">
@@ -206,11 +196,7 @@ and handles incoming messages.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="src.machine.Machine.main_loop">
 <span class="sig-name descname"><span class="pre">main_loop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/src/machine.html#Machine.main_loop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.machine.Machine.main_loop" title="Link to this definition"></a></dt>
-<dd><p>Main event loop for the machine.</p>
-<p>Runs for 60 seconds, processing messages from the queue and randomly
-generating internal events or sending messages to neighbors based on
-a probability distribution. The machine operates at its defined clock rate.</p>
-</dd></dl>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="src.machine.Machine.run">
@@ -255,7 +241,10 @@ The machine will run for 60 seconds before shutting down.</p>
     <span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">host</span><span class="o">=</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span>
     <span class="n">port</span><span class="o">=</span><span class="mi">8765</span><span class="p">,</span>
-    <span class="n">neighbors</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">8766</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">8767</span><span class="p">)]</span>
+    <span class="n">neighbors</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">8766</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">8767</span><span class="p">)],</span>
+    <span class="n">clock_rate_min</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">clock_rate_max</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+    <span class="n">internal_work_prob</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="c1"># Start the machine</span>

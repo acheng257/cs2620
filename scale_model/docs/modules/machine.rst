@@ -53,7 +53,10 @@ Example Usage
        id=1,
        host="localhost",
        port=8765,
-       neighbors=[("localhost", 8766), ("localhost", 8767)]
+       neighbors=[("localhost", 8766), ("localhost", 8767)],
+       clock_rate_min=1,
+       clock_rate_max=6,
+       internal_work_prob=0.7,
    )
 
    # Start the machine
