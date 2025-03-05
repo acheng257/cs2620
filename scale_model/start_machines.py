@@ -38,11 +38,7 @@ def main():
     for machine in machines:
         p = start_machine(machine["id"], machine["port"], machine["neighbors"])
         processes.append(p)
-        # Optionally add a short delay between starting machines
-        time.sleep(0.5)
-
-    # Optionally, wait for all processes to complete.
-    # In many distributed system simulations, these processes run indefinitely.
+        
     for p in processes:
         p.wait()
 
