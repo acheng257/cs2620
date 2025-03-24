@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package chat;
+
+import "google/protobuf/struct.proto";
+
+// Enum to represent the type of message.
+enum MessageType {
+  CREATE_ACCOUNT = 0;
+  LOGIN = 1;
+  LIST_ACCOUNTS = 2;
+  SEND_MESSAGE = 3;
+  READ_MESSAGES = 4;
+  DELETE_MESSAGES = 5;
+  DELETE_ACCOUNT = 6;
+  ERROR = 7;
+  SUCCESS = 8;
+  LIST_CHAT_PARTNERS = 9;
+}
+
+// Message definition corresponding to our Message class.
+message ChatMessage {
+  MessageType type = 1;
+  google.protobuf.Struct payload = 2;
+  string sender = 3;
+  string recipient = 4;
+  double timestamp = 5; // Unix timestamp
+}
+
+// gRPC service definition for chat operations.
+service ChatServer {
+  // RPC for sending a message.
+  rpc SendMessage(ChatMessage) returns (ChatMessage);
+
+  // RPC for reading messages (could be a streaming response).
+  rpc ReadMessages(ChatMessage) returns (stream ChatMessage);
+
+  // Additional RPC methods for other operations can be defined as needed.
+  rpc CreateAccount(ChatMessage) returns (ChatMessage);
+  rpc Login(ChatMessage) returns (ChatMessage);
+  rpc ListAccounts(ChatMessage) returns (ChatMessage);
+  rpc DeleteMessages(ChatMessage) returns (ChatMessage);
+  rpc DeleteAccount(ChatMessage) returns (ChatMessage);
+  rpc ListChatPartners(ChatMessage) returns (ChatMessage);
+  rpc ReadConversation(ChatMessage) returns (ChatMessage);
+}

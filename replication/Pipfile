@@ -1,0 +1,27 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+bcrypt = ">=4.1.2"
+streamlit = "*"
+streamlit-autorefresh = "*"
+grpcio = "*"
+grpcio-tools = "*"
+
+[dev-packages]
+black = "*"
+isort = "*"
+flake8 = "*"
+flake8-pyproject = "*"
+mypy = "*"
+pre-commit = "*"
+pytest = "*"
+pytest-cov = "*"
+pytest-asyncio = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
+
+[requires]
+python_version = "3.13"
