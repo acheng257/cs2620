@@ -1,4 +1,5 @@
 import sqlite3
+import time
 from typing import Any, Dict, List, Optional
 
 import bcrypt
@@ -31,9 +32,9 @@ class DatabaseManager:
             db_path (str, optional): Path to SQLite database file. Defaults to "chat.db"
         """
         self.db_path: str = db_path
-        self.init_database()
+        self._init_db()
 
-    def init_database(self) -> None:
+    def _init_db(self) -> None:
         """
         Initialize the database schema.
 
@@ -240,7 +241,7 @@ class DatabaseManager:
             return False
 
     def store_message(
-        self, sender: str, recipient: str, content: str, is_delivered: bool = True
+        self, sender: str, recipient: str, content: str, is_delivered: bool = False
     ) -> Optional[int]:
         """
         Store a new message in the database.
@@ -249,7 +250,7 @@ class DatabaseManager:
             sender (str): Username of message sender
             recipient (str): Username of message recipient
             content (str): Message content
-            is_delivered (bool, optional): Whether message was delivered. Defaults to True
+            is_delivered (bool, optional): Whether message was delivered. Defaults to False
 
         Returns:
             Optional[int]: The message ID if stored successfully, None otherwise
@@ -262,9 +263,11 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO messages (sender, recipient, content, \
-                        is_delivered, is_read) VALUES (?, ?, ?, ?, ?)",
-                    (sender, recipient, content, is_delivered, False),
+                    """
+                    INSERT INTO messages (sender, recipient, content, timestamp, is_delivered)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (sender, recipient, content, time.time(), is_delivered),
                 )
                 conn.commit()
                 return cursor.lastrowid
@@ -748,3 +751,66 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error updating chat message limit for {username} and {partner}: {e}")
             return False
+
+    def create_user(self, username: str) -> bool:
+        """Create a new user"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO users (username) VALUES (?)", (username,))
+                conn.commit()
+                return True
+        except sqlite3.IntegrityError:
+            return False
+
+    def get_messages(self, username: str) -> List[Dict]:
+        """Get all messages for a user"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, sender, recipient, content, timestamp, is_delivered
+                    FROM messages
+                    WHERE recipient = ?
+                    ORDER BY timestamp DESC
+                    """,
+                    (username,),
+                )
+                return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            print(f"Error retrieving messages: {e}")
+            return []
+
+    def delete_message(self, message_id: int) -> bool:
+        """Delete a message from the database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM messages WHERE id = ?", (message_id,))
+                conn.commit()
+                return True
+        except sqlite3.Error as e:
+            print(f"Error deleting message: {e}")
+            return False
+
+    def get_undelivered_messages(self, recipient: str) -> List[Dict]:
+        """Get all undelivered messages for a user"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, sender, recipient, content, timestamp, is_delivered
+                    FROM messages
+                    WHERE recipient = ? AND is_delivered = 0
+                    ORDER BY timestamp ASC
+                    """,
+                    (recipient,),
+                )
+                return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            print(f"Error retrieving undelivered messages: {e}")
+            return []

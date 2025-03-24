@@ -4,7 +4,7 @@ import queue
 import threading
 import time
 from concurrent import futures
-from typing import Dict
+from typing import Dict, List, Optional, Set
 
 import grpc
 from google.protobuf.json_format import MessageToDict, ParseDict
@@ -13,163 +13,298 @@ from google.protobuf.struct_pb2 import Struct
 import src.protocols.grpc.chat_pb2 as chat_pb2
 import src.protocols.grpc.chat_pb2_grpc as chat_pb2_grpc
 from src.database.db_manager import DatabaseManager
+from src.replication.replication_manager import ReplicationManager
 
 
 class ChatServer(chat_pb2_grpc.ChatServerServicer):
     """
     gRPC server implementation for the chat service.
+    Integrates with ReplicationManager for leader-follower replication.
 
     This class implements all the RPC methods defined in the chat.proto service definition.
     It handles user authentication, message delivery, and account management operations.
     """
 
-    def __init__(self, db_path: str = "chat.db") -> None:
+    def __init__(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 50051,
+        db_path: str = "chat.db",
+        replica_addresses: List[str] = None,
+    ) -> None:
+        self.host = host
+        self.port = port
         self.db: DatabaseManager = DatabaseManager(db_path)
-        # Maintain a mapping of logged-in users to a Queue for pushing messages.
-        self.active_subscribers: Dict[str, queue.Queue] = {}  # {username: queue.Queue}
+        self.active_users: Dict[str, Set[chat_pb2_grpc.ChatServer_SubscribeStub]] = {}
         self.lock: threading.Lock = threading.Lock()
+
+        # Initialize replication manager
+        self.replication_manager = ReplicationManager(
+            host=host, port=port, replica_addresses=replica_addresses or []
+        )
 
     def CreateAccount(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
-        # Deserialization timing for request payload.
-        start_deser = time.perf_counter()
-        payload = MessageToDict(request.payload)
-        end_deser = time.perf_counter()
-        print(f"[CreateAccount] Deserialization took {end_deser - start_deser:.6f} seconds")
+        """Create a new user account"""
+        username = request.sender
+        if self.db.user_exists(username):
+            return chat_pb2.ChatMessage(
+                type=chat_pb2.MessageType.ERROR,
+                content="Username already exists",
+                timestamp=time.time(),
+            )
 
-        username = payload.get("username")
-        password = payload.get("password")
-        if not username or not password:
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details("Username and password required.")
-            return chat_pb2.ChatMessage()
-
-        if self.db.create_account(username, password):
-            response_payload = {"text": "Account created successfully."}
-        else:
-            response_payload = {"text": "Username already exists. Please login instead."}
-
-        # Serialization timing for response payload.
-        start_ser = time.perf_counter()
-        parsed_payload = ParseDict(response_payload, Struct())
-        end_ser = time.perf_counter()
-        print(f"[CreateAccount] Serialization took {end_ser - start_ser:.6f} seconds")
-
-        response = chat_pb2.ChatMessage(
+        self.db.create_user(username)
+        return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
-            payload=parsed_payload,
-            sender="SERVER",
-            recipient=username,
+            content="Account created successfully",
             timestamp=time.time(),
         )
-        return response
 
     def Login(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
-        # Measure deserialization of request payload.
-        start_deser = time.perf_counter()
-        payload = MessageToDict(request.payload)
-        end_deser = time.perf_counter()
-        print(f"[Login] Deserialization took {end_deser - start_deser:.6f} seconds")
+        """Login a user"""
+        username = request.sender
+        if not self.db.user_exists(username):
+            return chat_pb2.ChatMessage(
+                type=chat_pb2.MessageType.ERROR,
+                content="User does not exist",
+                timestamp=time.time(),
+            )
 
-        username = payload.get("username")
-        password = payload.get("password")
-        if not username or not password:
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details("Username and password required.")
-            return chat_pb2.ChatMessage()
-
-        # Handle dummy login for account existence check.
-        if password == "dummy_password":
-            if not self.db.user_exists(username):
-                context.set_code(grpc.StatusCode.NOT_FOUND)
-                context.set_details("Account does not exist.")
-                return chat_pb2.ChatMessage()
-            else:
-                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
-                context.set_details("Invalid password.")
-                return chat_pb2.ChatMessage()
-
-        if self.db.verify_login(username, password):
-            unread_count = self.db.get_unread_message_count(username)
-            response_payload = {
-                "text": f"Login successful. You have {unread_count} unread messages."
-            }
-        else:
-            context.set_code(grpc.StatusCode.UNAUTHENTICATED)
-            context.set_details("Invalid username or password.")
-            return chat_pb2.ChatMessage()
-
-        # Measure serialization of response payload.
-        start_ser = time.perf_counter()
-        parsed_payload = ParseDict(response_payload, Struct())
-        end_ser = time.perf_counter()
-        print(f"[Login] Serialization took {end_ser - start_ser:.6f} seconds")
-
-        response = chat_pb2.ChatMessage(
-            type=chat_pb2.MessageType.SUCCESS,
-            payload=parsed_payload,
-            sender="SERVER",
-            recipient=username,
-            timestamp=time.time(),
+        return chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.SUCCESS, content="Login successful", timestamp=time.time()
         )
-        return response
 
     def SendMessage(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
-        start_deser = time.perf_counter()
-        payload = MessageToDict(request.payload)
-        end_deser = time.perf_counter()
-        print(f"[SendMessage] Deserialization took {end_deser - start_deser:.6f} seconds")
-
+        """Send a message to another user"""
         sender = request.sender
         recipient = request.recipient
-        message_text = payload.get("text", "")
-        if not self.db.user_exists(recipient):
-            context.set_code(grpc.StatusCode.NOT_FOUND)
-            context.set_details("Recipient does not exist.")
-            return chat_pb2.ChatMessage()
+        content = request.content
 
-        delivered = False
-        with self.lock:
-            if recipient in self.active_subscribers:
-                delivered = True
-                new_msg = chat_pb2.ChatMessage(
-                    type=chat_pb2.MessageType.SEND_MESSAGE,
-                    payload=request.payload,
-                    sender=sender,
-                    recipient=recipient,
+        # Check if recipient exists
+        if not self.db.user_exists(recipient):
+            return chat_pb2.ChatMessage(
+                type=chat_pb2.MessageType.ERROR,
+                content="Recipient does not exist",
+                timestamp=time.time(),
+            )
+
+        # If this server is not the leader, forward to leader
+        if self.replication_manager.role != "leader":
+            try:
+                channel = grpc.insecure_channel(
+                    f"{self.replication_manager.leader_host}:{self.replication_manager.leader_port}"
+                )
+                stub = chat_pb2_grpc.ChatServerStub(channel)
+                return stub.SendMessage(request)
+            except Exception as e:
+                return chat_pb2.ChatMessage(
+                    type=chat_pb2.MessageType.ERROR,
+                    content=f"Failed to forward message to leader: {str(e)}",
                     timestamp=time.time(),
                 )
-                self.active_subscribers[recipient].put(new_msg)
 
-        message_id = self.db.store_message(sender, recipient, message_text, delivered)
-        if delivered and message_id:
-            self.db.mark_message_as_delivered(message_id)
+        # Store message locally first
+        message_id = self.db.store_message(
+            sender=sender, recipient=recipient, content=content, is_delivered=False
+        )
 
-        response_payload = {"text": "Message sent successfully."}
-        start_ser = time.perf_counter()
-        parsed_payload = ParseDict(response_payload, Struct())
-        end_ser = time.perf_counter()
-        print(f"[SendMessage] Serialization took {end_ser - start_ser:.6f} seconds")
+        if message_id is None:
+            return chat_pb2.ChatMessage(
+                type=chat_pb2.MessageType.ERROR,
+                content="Failed to store message",
+                timestamp=time.time(),
+            )
 
-        response = chat_pb2.ChatMessage(
+        # Replicate message to followers
+        if not self.replication_manager.replicate_message(
+            message_id=message_id, sender=sender, recipient=recipient, content=content
+        ):
+            # If replication fails, delete the message and return error
+            self.db.delete_message(message_id)
+            return chat_pb2.ChatMessage(
+                type=chat_pb2.MessageType.ERROR,
+                content="Failed to replicate message",
+                timestamp=time.time(),
+            )
+
+        # Deliver message to active subscribers
+        with self.lock:
+            if recipient in self.active_users:
+                message = chat_pb2.ChatMessage(
+                    type=chat_pb2.MessageType.SEND_MESSAGE,
+                    sender=sender,
+                    recipient=recipient,
+                    content=content,
+                    timestamp=time.time(),
+                )
+
+                for subscriber in self.active_users[recipient]:
+                    try:
+                        subscriber.on_message(message)
+                        self.db.mark_message_delivered(message_id)
+                    except Exception as e:
+                        logging.error(f"Failed to deliver message to subscriber: {e}")
+                        continue
+
+        return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
-            payload=parsed_payload,
-            sender="SERVER",
-            recipient=sender,
+            content="Message sent successfully",
             timestamp=time.time(),
         )
-        return response
+
+    def Subscribe(self, request: chat_pb2.ChatMessage, context) -> None:
+        """Subscribe to receive messages"""
+        username = request.sender
+        if not self.db.user_exists(username):
+            return
+
+        with self.lock:
+            if username not in self.active_users:
+                self.active_users[username] = set()
+            self.active_users[username].add(context.peer())
+
+        try:
+            while context.is_active():
+                time.sleep(1)
+        except Exception as e:
+            logging.error(f"Subscription error: {e}")
+        finally:
+            with self.lock:
+                if username in self.active_users:
+                    self.active_users[username].remove(context.peer())
+                    if not self.active_users[username]:
+                        del self.active_users[username]
+
+    def HandleReplication(
+        self, request: chat_pb2.ReplicationMessage, context
+    ) -> chat_pb2.ReplicationMessage:
+        """Handle replication-related messages from other servers"""
+        return self.replication_manager.handle_replication_message(request)
+
+    def GetMessages(self, request: chat_pb2.ChatMessage, context) -> chat_pb2.ChatMessage:
+        """Get all messages for a user"""
+        username = request.sender
+        messages = self.db.get_messages(username)
+
+        if not messages:
+            return chat_pb2.ChatMessage(
+                type=chat_pb2.MessageType.SUCCESS,
+                content="No messages found",
+                timestamp=time.time(),
+            )
+
+        # Format messages as a string
+        formatted_messages = []
+        for msg in messages:
+            formatted_messages.append(
+                f"From: {msg['sender']}\n"
+                f"Content: {msg['content']}\n"
+                f"Time: {time.ctime(msg['timestamp'])}\n"
+                f"{'(Delivered)' if msg['is_delivered'] else '(Pending)'}\n"
+            )
+
+        return chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.SUCCESS,
+            content="\n".join(formatted_messages),
+            timestamp=time.time(),
+        )
+
+    def RequestVote(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
+        """Handle vote requests from candidates"""
+        payload = MessageToDict(request.payload)
+        term = payload.get("term", 0)
+        candidate_id = request.sender
+
+        vote_granted = self.replication_manager.handle_vote_request(term, candidate_id)
+
+        response_payload = {"vote_granted": vote_granted}
+        return chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.SUCCESS,
+            payload=ParseDict(response_payload, Struct()),
+            sender="SERVER",
+            recipient=candidate_id,
+            timestamp=time.time(),
+        )
+
+    def Heartbeat(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
+        """Handle heartbeat messages from the leader"""
+        payload = MessageToDict(request.payload)
+        term = payload.get("term", 0)
+        leader_id = request.sender
+
+        self.replication_manager.handle_heartbeat(term, leader_id)
+
+        return chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.SUCCESS,
+            payload=Struct(),
+            sender="SERVER",
+            recipient=leader_id,
+            timestamp=time.time(),
+        )
+
+    def ReplicateMessage(
+        self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
+    ) -> chat_pb2.ChatMessage:
+        """Handle message replication requests from the leader"""
+        payload = MessageToDict(request.payload)
+
+        if self.replication_manager.handle_replicate_message(payload):
+            # Store the message locally
+            message_id = payload.get("message_id")
+            sender = payload.get("sender")
+            recipient = payload.get("recipient")
+            content = payload.get("content")
+
+            # Check if recipient is active on this replica
+            delivered = recipient in self.active_users
+
+            stored_id = self.db.store_message(sender, recipient, content, delivered)
+            if stored_id == message_id:
+                if delivered:
+                    try:
+                        new_msg = chat_pb2.ChatMessage(
+                            type=chat_pb2.MessageType.SEND_MESSAGE,
+                            payload=ParseDict({"text": content}, Struct()),
+                            sender=sender,
+                            recipient=recipient,
+                            timestamp=time.time(),
+                        )
+                        self.active_users[recipient].add(context.peer())
+                        self.db.mark_message_as_delivered(message_id)
+                    except Exception as e:
+                        print(f"Failed to deliver replicated message: {e}")
+
+                return chat_pb2.ChatMessage(
+                    type=chat_pb2.MessageType.SUCCESS,
+                    payload=Struct(),
+                    sender="SERVER",
+                    recipient=request.sender,
+                    timestamp=time.time(),
+                )
+
+        return chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.ERROR,
+            payload=Struct(),
+            sender="SERVER",
+            recipient=request.sender,
+            timestamp=time.time(),
+        )
 
     def ReadMessages(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext):
         username = request.recipient
         q: queue.Queue[chat_pb2.ChatMessage] = queue.Queue()
         with self.lock:
-            self.active_subscribers[username] = q
+            self.active_users[username] = set()
 
         try:
             # Deliver undelivered messages.
@@ -211,8 +346,8 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                         break
         finally:
             with self.lock:
-                if username in self.active_subscribers:
-                    del self.active_subscribers[username]
+                if username in self.active_users:
+                    self.active_users[username].clear()
 
     def ListAccounts(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
