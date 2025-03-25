@@ -51,14 +51,14 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         if self.db.user_exists(username):
             return chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.ERROR,
-                content="Username already exists",
+                payload=ParseDict({"text": "Username already exists"}, Struct()),
                 timestamp=time.time(),
             )
 
         self.db.create_user(username)
         return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
-            content="Account created successfully",
+            payload=ParseDict({"text": "Account created successfully"}, Struct()),
             timestamp=time.time(),
         )
 
@@ -70,12 +70,14 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         if not self.db.user_exists(username):
             return chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.ERROR,
-                content="User does not exist",
+                payload=ParseDict({"text": "User does not exist"}, Struct()),
                 timestamp=time.time(),
             )
 
         return chat_pb2.ChatMessage(
-            type=chat_pb2.MessageType.SUCCESS, content="Login successful", timestamp=time.time()
+            type=chat_pb2.MessageType.SUCCESS,
+            payload=ParseDict({"text": "Login successful"}, Struct()),
+            timestamp=time.time(),
         )
 
     def SendMessage(
@@ -84,13 +86,14 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         """Send a message to another user"""
         sender = request.sender
         recipient = request.recipient
-        content = request.content
+        # Extract the text from the payload
+        content = MessageToDict(request.payload).get("text", "")
 
         # Check if recipient exists
         if not self.db.user_exists(recipient):
             return chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.ERROR,
-                content="Recipient does not exist",
+                payload=ParseDict({"text": "Recipient does not exist"}, Struct()),
                 timestamp=time.time(),
             )
 
@@ -105,7 +108,9 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             except Exception as e:
                 return chat_pb2.ChatMessage(
                     type=chat_pb2.MessageType.ERROR,
-                    content=f"Failed to forward message to leader: {str(e)}",
+                    payload=ParseDict(
+                        {"text": f"Failed to forward message to leader: {str(e)}"}, Struct()
+                    ),
                     timestamp=time.time(),
                 )
 
@@ -117,7 +122,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         if message_id is None:
             return chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.ERROR,
-                content="Failed to store message",
+                payload=ParseDict({"text": "Failed to store message"}, Struct()),
                 timestamp=time.time(),
             )
 
@@ -129,7 +134,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             self.db.delete_message(message_id)
             return chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.ERROR,
-                content="Failed to replicate message",
+                payload=ParseDict({"text": "Failed to replicate message"}, Struct()),
                 timestamp=time.time(),
             )
 
@@ -140,7 +145,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                     type=chat_pb2.MessageType.SEND_MESSAGE,
                     sender=sender,
                     recipient=recipient,
-                    content=content,
+                    payload=ParseDict({"text": content}, Struct()),
                     timestamp=time.time(),
                 )
 
@@ -154,7 +159,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
 
         return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
-            content="Message sent successfully",
+            payload=ParseDict({"text": "Message sent successfully"}, Struct()),
             timestamp=time.time(),
         )
 
@@ -195,7 +200,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         if not messages:
             return chat_pb2.ChatMessage(
                 type=chat_pb2.MessageType.SUCCESS,
-                content="No messages found",
+                payload=ParseDict({"text": "No messages found"}, Struct()),
                 timestamp=time.time(),
             )
 
@@ -211,7 +216,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
 
         return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
-            content="\n".join(formatted_messages),
+            payload=ParseDict({"text": "\n".join(formatted_messages)}, Struct()),
             timestamp=time.time(),
         )
 
@@ -263,7 +268,8 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             message_id = payload.get("message_id")
             sender = payload.get("sender")
             recipient = payload.get("recipient")
-            content = payload.get("content")
+            # Use "text" rather than "content"
+            content = payload.get("text")
 
             # Check if recipient is active on this replica
             delivered = recipient in self.active_users
@@ -286,7 +292,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
 
                 return chat_pb2.ChatMessage(
                     type=chat_pb2.MessageType.SUCCESS,
-                    payload=Struct(),
+                    payload=Struct(),  # empty payload
                     sender="SERVER",
                     recipient=request.sender,
                     timestamp=time.time(),
@@ -320,8 +326,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                 parsed_payload = ParseDict(response_payload, Struct())
                 end_ser = time.perf_counter()
                 print(
-                    f"[ReadMessages] Serialization (undelivered) \
-                        took {end_ser - start_ser:.6f} seconds"
+                    f"[ReadMessages] Serialization (undelivered) took {end_ser - start_ser:.6f} seconds"
                 )
 
                 chat_msg = chat_pb2.ChatMessage(
@@ -533,4 +538,3 @@ if __name__ == "__main__":
     server.add_insecure_port(f"{args.host}:{args.port}")
     server.start()
     server.wait_for_termination()
-
