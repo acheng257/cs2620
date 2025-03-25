@@ -9,7 +9,8 @@ from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.struct_pb2 import Struct
 
 from src.protocols.grpc import chat_pb2, chat_pb2_grpc
-
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 class ServerRole(Enum):
     LEADER = "leader"
@@ -85,12 +86,12 @@ class ReplicationManager:
                 self._start_election()
 
     def _start_election(self) -> None:
-        """Start a new leader election"""
         with self.lock:
             self.term += 1
             self.role = ServerRole.CANDIDATE
             self.voted_for = f"{self.host}:{self.port}"
             votes = 1  # Vote for self
+            logging.debug(f"Starting election for term {self.term} from {self.host}:{self.port}")
 
             # Request votes from all replicas
             for addr, replica in self.replicas.items():
@@ -111,24 +112,26 @@ class ReplicationManager:
                     )
 
                     response = stub.HandleReplication(request)
-                    if (
-                        response.type == chat_pb2.ReplicationType.VOTE_RESPONSE
-                        and response.vote_response.vote_granted
-                    ):
+                    if (response.type == chat_pb2.ReplicationType.VOTE_RESPONSE and 
+                        response.vote_response.vote_granted):
                         votes += 1
+                        logging.debug(f"Vote granted from {addr}")
 
                 except Exception as e:
-                    print(f"Failed to request vote from {addr}: {e}")
-                    continue
+                    logging.error(f"Failed to request vote from {addr}: {e}")
 
+            logging.debug(f"Election votes received: {votes}")
             # If received majority votes, become leader
             if votes > (len(self.replicas) + 1) / 2:
                 self.role = ServerRole.LEADER
                 self.leader_host = self.host
                 self.leader_port = self.port
+                logging.info(f"Elected as leader: {self.host}:{self.port} for term {self.term}")
                 self._start_heartbeat()
             else:
                 self.role = ServerRole.FOLLOWER
+                logging.info(f"Election failed. Remains follower. Current term: {self.term}")
+
 
     def _start_heartbeat(self) -> None:
         """Start sending heartbeats to followers"""
@@ -137,7 +140,6 @@ class ReplicationManager:
             self.heartbeat_thread.start()
 
     def _send_heartbeats(self) -> None:
-        """Send periodic heartbeats to all followers"""
         while self.role == ServerRole.LEADER:
             for addr, replica in self.replicas.items():
                 try:
@@ -156,13 +158,12 @@ class ReplicationManager:
                     response = stub.HandleReplication(request)
                     replica.is_alive = True
                     replica.last_heartbeat = time.time()
-
+                    logging.debug(f"Heartbeat sent to {addr} successfully.")
                 except Exception as e:
-                    print(f"Failed to send heartbeat to {addr}: {e}")
+                    logging.error(f"Failed to send heartbeat to {addr}: {e}")
                     replica.is_alive = False
-                    continue
+            time.sleep(0.05)
 
-            time.sleep(0.05)  # 50ms heartbeat interval
 
     def replicate_message(self, message_id: int, sender: str, recipient: str, content: str) -> bool:
         """

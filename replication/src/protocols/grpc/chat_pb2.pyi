@@ -18,6 +18,7 @@ class MessageType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ERROR: _ClassVar[MessageType]
     SUCCESS: _ClassVar[MessageType]
     LIST_CHAT_PARTNERS: _ClassVar[MessageType]
+    GET_LEADER: _ClassVar[MessageType]
 
 class ReplicationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -38,6 +39,7 @@ DELETE_ACCOUNT: MessageType
 ERROR: MessageType
 SUCCESS: MessageType
 LIST_CHAT_PARTNERS: MessageType
+GET_LEADER: MessageType
 HEARTBEAT: ReplicationType
 REQUEST_VOTE: ReplicationType
 REPLICATE_MESSAGE: ReplicationType

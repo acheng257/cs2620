@@ -16,6 +16,7 @@ enum MessageType {
   ERROR = 7;
   SUCCESS = 8;
   LIST_CHAT_PARTNERS = 9;
+  GET_LEADER = 10;   // <-- New message type for leader query
 }
 
 // Main message structure used for client-server communication
@@ -29,68 +30,69 @@ message ChatMessage {
 
 // Message types for server-server replication protocol
 enum ReplicationType {
-    HEARTBEAT = 0;
-    REQUEST_VOTE = 1;
-    REPLICATE_MESSAGE = 2;
-    VOTE_RESPONSE = 3;
-    REPLICATION_RESPONSE = 4;
-    REPLICATION_SUCCESS = 5;
-    REPLICATION_ERROR = 6;
+  HEARTBEAT = 0;
+  REQUEST_VOTE = 1;
+  REPLICATE_MESSAGE = 2;
+  VOTE_RESPONSE = 3;
+  REPLICATION_RESPONSE = 4;
+  REPLICATION_SUCCESS = 5;
+  REPLICATION_ERROR = 6;
 }
 
 // Message structure for server-server replication
 message ReplicationMessage {
-    ReplicationType type = 1;
-    int32 term = 2;  // Current term number
-    string server_id = 3;  // Server identifier (host:port)
-    oneof content {
-        VoteRequest vote_request = 4;
-        VoteResponse vote_response = 5;
-        MessageReplication message_replication = 6;
-        ReplicationResponse replication_response = 7;
-        Heartbeat heartbeat = 8;
-    }
-    double timestamp = 9;
+  ReplicationType type = 1;
+  int32 term = 2;  // Current term number
+  string server_id = 3;  // Server identifier (host:port)
+  oneof content {
+    VoteRequest vote_request = 4;
+    VoteResponse vote_response = 5;
+    MessageReplication message_replication = 6;
+    ReplicationResponse replication_response = 7;
+    Heartbeat heartbeat = 8;
+  }
+  double timestamp = 9;
 }
 
 message VoteRequest {
-    int32 last_log_term = 1;
-    int32 last_log_index = 2;
+  int32 last_log_term = 1;
+  int32 last_log_index = 2;
 }
 
 message VoteResponse {
-    bool vote_granted = 1;
+  bool vote_granted = 1;
 }
 
 message MessageReplication {
-    int32 message_id = 1;
-    string sender = 2;
-    string recipient = 3;
-    string content = 4;
+  int32 message_id = 1;
+  string sender = 2;
+  string recipient = 3;
+  string content = 4;
 }
 
 message ReplicationResponse {
-    bool success = 1;
-    int32 message_id = 2;
+  bool success = 1;
+  int32 message_id = 2;
 }
 
 message Heartbeat {
-    int32 commit_index = 1;
+  int32 commit_index = 1;
 }
 
 // The chat service definition
 service ChatServer {
-    // Client-facing RPCs
-    rpc CreateAccount(ChatMessage) returns (ChatMessage) {}
-    rpc Login(ChatMessage) returns (ChatMessage) {}
-    rpc SendMessage(ChatMessage) returns (ChatMessage) {}
-    rpc ReadMessages(ChatMessage) returns (stream ChatMessage) {}
-    rpc DeleteMessages(ChatMessage) returns (ChatMessage) {}
-    rpc DeleteAccount(ChatMessage) returns (ChatMessage) {}
-    rpc ListAccounts(ChatMessage) returns (ChatMessage) {}
-    rpc ListChatPartners(ChatMessage) returns (ChatMessage) {}
-    rpc ReadConversation(ChatMessage) returns (ChatMessage) {}
+  // Client-facing RPCs
+  rpc CreateAccount(ChatMessage) returns (ChatMessage) {}
+  rpc Login(ChatMessage) returns (ChatMessage) {}
+  rpc SendMessage(ChatMessage) returns (ChatMessage) {}
+  rpc ReadMessages(ChatMessage) returns (stream ChatMessage) {}
+  rpc DeleteMessages(ChatMessage) returns (ChatMessage) {}
+  rpc DeleteAccount(ChatMessage) returns (ChatMessage) {}
+  rpc ListAccounts(ChatMessage) returns (ChatMessage) {}
+  rpc ListChatPartners(ChatMessage) returns (ChatMessage) {}
+  rpc ReadConversation(ChatMessage) returns (ChatMessage) {}
+  rpc GetLeader(ChatMessage) returns (ChatMessage) {}   // <-- New RPC
 
-    // Server-server replication RPCs
-    rpc HandleReplication(ReplicationMessage) returns (ReplicationMessage) {}
+  // Server-server replication RPCs
+  rpc HandleReplication(ReplicationMessage) returns (ReplicationMessage) {}
 }

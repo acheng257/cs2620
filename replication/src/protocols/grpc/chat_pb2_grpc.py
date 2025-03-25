@@ -80,6 +80,11 @@ class ChatServerStub(object):
                 request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
                 response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
+        self.GetLeader = channel.unary_unary(
+                '/chat.ChatServer/GetLeader',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                _registered_method=True)
         self.HandleReplication = channel.unary_unary(
                 '/chat.ChatServer/HandleReplication',
                 request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ReplicationMessage.SerializeToString,
@@ -146,6 +151,12 @@ class ChatServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetLeader(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def HandleReplication(self, request, context):
         """Server-server replication RPCs
         """
@@ -198,6 +209,11 @@ def add_ChatServerServicer_to_server(servicer, server):
             ),
             'ReadConversation': grpc.unary_unary_rpc_method_handler(
                     servicer.ReadConversation,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            ),
+            'GetLeader': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetLeader,
                     request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                     response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
@@ -449,6 +465,33 @@ class ChatServer(object):
             request,
             target,
             '/chat.ChatServer/ReadConversation',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetLeader(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/chat.ChatServer/GetLeader',
             src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
