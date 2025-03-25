@@ -113,55 +113,60 @@ def render_login_page() -> None:
         st.error(st.session_state.error_message)
 
     with st.expander("Server Settings", expanded=True):
-        server_host = st.text_input(
-            "Server Host",
-            value=st.session_state.server_host,
-            key="server_host_input",
-            help="Enter the server's IP address (default: 127.0.0.1)",
-        )
-        server_port = st.number_input(
-            "Server Port",
-            min_value=1,
-            max_value=65535,
-            value=st.session_state.server_port,
-            key="server_port_input",
-            help="Enter the server's port number (default: 50051)",
-        )
-        if st.button("Connect to Server"):
-            if not server_host:
-                st.warning("Please enter the server's IP address.")
-            else:
-                st.session_state.server_host = server_host
-                st.session_state.server_port = int(server_port)
-                # Create a temporary client to test the connection.
-                temp_client = ChatClient(
-                    username="",
-                    host=st.session_state.server_host,
-                    port=st.session_state.server_port,
-                )
-                if temp_client.connect():
-                    # query the leader from this server.
-                    leader = temp_client.get_leader()
-                    if leader:
-                        st.session_state.server_host, st.session_state.server_port = leader
-                        st.session_state.server_connected = True
-                        st.session_state.error_message = ""
-                        st.success(
-                            f"Connected to leader server at {leader[0]}:{leader[1]}"
-                        )
-                    else:
-                        st.session_state.error_message = "Could not determine leader server."
-                        st.error(st.session_state.error_message)
-                    temp_client.close()
-                    st.rerun()  # Re-run the app to use leader's address.
+        if st.session_state.server_connected:
+            st.markdown("✅ Connected to leader server:")
+            st.code(f"{st.session_state.server_host}:{st.session_state.server_port}")
+        else:
+            server_host = st.text_input(
+                "Server Host",
+                value=st.session_state.server_host,
+                key="server_host_input",
+                help="Enter the server's IP address (default: 127.0.0.1)",
+            )
+            server_port = st.number_input(
+                "Server Port",
+                min_value=1,
+                max_value=65535,
+                value=st.session_state.server_port,
+                key="server_port_input",
+                help="Enter the server's port number (default: 50051)",
+            )
+            if st.button("Connect to Server"):
+                if not server_host:
+                    st.warning("Please enter the server's IP address.")
                 else:
-                    st.session_state.server_connected = False
-                    st.session_state.error_message = (
-                        "Failed to connect to server at "
-                        f"{st.session_state.server_host}:{st.session_state.server_port}"
+                    st.session_state.server_host = server_host
+                    st.session_state.server_port = int(server_port)
+                    # Create a temporary client to test the connection.
+                    temp_client = ChatClient(
+                        username="",
+                        host=st.session_state.server_host,
+                        port=st.session_state.server_port,
                     )
-                    st.error(st.session_state.error_message)
-                    temp_client.close()
+                    if temp_client.connect():
+                        # query the leader from this server.
+                        leader = temp_client.get_leader()
+                        if leader:
+                            st.session_state.server_host, st.session_state.server_port = leader
+                            st.session_state.server_connected = True
+                            st.session_state.error_message = ""
+                            st.success(
+                                f"Connected to leader server at {leader[0]}:{leader[1]}"
+                            )
+                        else:
+                            st.session_state.error_message = "Could not determine leader server."
+                            st.error(st.session_state.error_message)
+                        temp_client.close()
+                        st.rerun()  # Re-run the app to use leader's address.
+                    else:
+                        st.session_state.server_connected = False
+                        st.session_state.error_message = (
+                            "Failed to connect to server at "
+                            f"{st.session_state.server_host}:{st.session_state.server_port}"
+                        )
+                        st.error(st.session_state.error_message)
+                        temp_client.close()
+
 
     st.markdown("---")
 

@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Set
 import grpc
 from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.struct_pb2 import Struct
+import random
 
 from src.protocols.grpc import chat_pb2, chat_pb2_grpc
 import logging
@@ -77,7 +78,8 @@ class ReplicationManager:
         """Run the election timeout loop"""
         while True:
             # Random timeout between 150-300ms
-            timeout = 0.15 + (hash(str(time.time())) % 150) / 1000
+            # timeout = 0.15 + (hash(str(time.time())) % 150) / 1000
+            timeout = random.uniform(0.3, 0.5)  # 300–500ms
             if self.election_timeout.wait(timeout):
                 self.election_timeout.clear()
                 continue
