@@ -34,6 +34,8 @@ enum ReplicationType {
     REPLICATE_MESSAGE = 2;
     VOTE_RESPONSE = 3;
     REPLICATION_RESPONSE = 4;
+    REPLICATION_SUCCESS = 5;
+    REPLICATION_ERROR = 6;
 }
 
 // Message structure for server-server replication

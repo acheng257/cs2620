@@ -219,7 +219,7 @@ class ReplicationManager:
         """Handle incoming replication messages from other servers"""
         if message.term < self.term:
             return chat_pb2.ReplicationMessage(
-                type=chat_pb2.ReplicationType.ERROR,
+                type=chat_pb2.ReplicationType.REPLICATION_ERROR,
                 term=self.term,
                 server_id=f"{self.host}:{self.port}",
                 timestamp=time.time(),
@@ -254,7 +254,7 @@ class ReplicationManager:
             self.leader_port = int(self.leader_port)
 
             return chat_pb2.ReplicationMessage(
-                type=chat_pb2.ReplicationType.SUCCESS,
+                type=chat_pb2.ReplicationType.REPLICATION_SUCCESS,
                 term=self.term,
                 server_id=f"{self.host}:{self.port}",
                 timestamp=time.time(),
@@ -275,7 +275,7 @@ class ReplicationManager:
             )
 
         return chat_pb2.ReplicationMessage(
-            type=chat_pb2.ReplicationType.ERROR,
+            type=chat_pb2.ReplicationType.REPLICATION_ERROR,
             term=self.term,
             server_id=f"{self.host}:{self.port}",
             timestamp=time.time(),

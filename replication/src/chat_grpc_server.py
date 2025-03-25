@@ -503,12 +503,34 @@ def serve(host: str, port: int) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the gRPC Chat Server")
     parser.add_argument(
-        "--host", type=str, default="[::]", help="Host to bind the gRPC server on (default: [::])"
+        "--host",
+        type=str,
+        default="[::]",
+        help="Host to bind the gRPC server on (default: [::])"
     )
     parser.add_argument(
-        "--port", type=int, default=50051, help="Port to bind the gRPC server on (default: 50051)"
+        "--port",
+        type=int,
+        default=50051,
+        help="Port to bind the gRPC server on (default: 50051)"
+    )
+    parser.add_argument(
+        "--replicas",
+        nargs="+",    # one or more replica addresses
+        default=[],  # default to an empty list if not provided
+        help="List of replica addresses (e.g., 127.0.0.1:50052 127.0.0.1:50053)"
     )
     args = parser.parse_args()
 
     logging.basicConfig()
-    serve(args.host, args.port)
+    # Create and start the server, passing the replicas list.
+    print(f"Starting gRPC server on {args.host}:{args.port} with replicas: {args.replicas}")
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    chat_pb2_grpc.add_ChatServerServicer_to_server(
+        ChatServer(host=args.host, port=args.port, db_path="chat.db", replica_addresses=args.replicas),
+        server,
+    )
+    server.add_insecure_port(f"{args.host}:{args.port}")
+    server.start()
+    server.wait_for_termination()
+
