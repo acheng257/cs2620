@@ -465,9 +465,6 @@ def fetch_accounts(pattern: str = "", page: int = 1) -> None:
 
 
 def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
-    if "chat_partners" in st.session_state and st.session_state.chat_partners:
-        return st.session_state.chat_partners, st.session_state.unread_map
-
     client = get_chat_client()
     if client:
         response = client.list_chat_partners_sync()

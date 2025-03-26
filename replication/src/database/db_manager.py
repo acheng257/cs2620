@@ -317,7 +317,7 @@ class DatabaseManager:
                 else:
                     cursor.execute(
                         "UPDATE messages SET is_read = 1 WHERE \
-                            recipient = ? AND recipient_deleted = FALSE",
+                            recipient = ? AND recipient_deleted = 0",
                         (username,),
                     )
                 conn.commit()

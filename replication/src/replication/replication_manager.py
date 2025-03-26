@@ -539,8 +539,9 @@ class ReplicationManager:
             
         elif message.type == chat_pb2.ReplicationType.REPLICATE_DELETE_MESSAGES:
             deletion_dict = MessageToDict(message.deletion)
-            message_ids = deletion_dict.get("message_ids", [])
-            success = self.db.delete_messages(message.sender, message_ids)
+            message_ids = deletion_dict.get("messageIds", [])
+            username = deletion_dict.get("username", "")
+            success = self.db.delete_messages(username, message_ids)
             return chat_pb2.ReplicationMessage(
                 type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
                 term=self.term,

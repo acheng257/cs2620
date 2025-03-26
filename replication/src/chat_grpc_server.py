@@ -625,7 +625,8 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         )
         if success:
             # Replicate deletion to followers:
-            deletion_payload = {"message_ids": message_ids}
+            message_ids = [int(mid) for mid in message_ids]
+            deletion_payload = {"message_ids": message_ids, "username": request.sender}
             replication_request = chat_pb2.ReplicationMessage(
                 type=chat_pb2.ReplicationType.REPLICATE_DELETE_MESSAGES,
                 term=self.replication_manager.term,
@@ -636,6 +637,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             if not self.replication_manager.replicate_operation(replication_request):
                 logging.warning("Failed to replicate message deletion.")
                 return response
+        return response
 
     def DeleteAccount(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
@@ -739,6 +741,25 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
     def MarkRead(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        if self.replication_manager.role != ServerRole.LEADER:
+            # 1. Forward to leader
+            try:
+                leader_address = (
+                    f"{self.replication_manager.leader_host}:{self.replication_manager.leader_port}"
+                )
+                channel = grpc.insecure_channel(leader_address)
+                stub = chat_pb2_grpc.ChatServerStub(channel)
+                response = stub.MarkRead(request, timeout=5.0)
+                channel.close()
+                return response
+            except Exception as e:
+                # fallback/error message
+                return chat_pb2.ChatMessage(
+                    type=chat_pb2.MessageType.ERROR,
+                    payload=ParseDict({"text": f"Failed to contact leader: {e}"}, Struct()),
+                    timestamp=time.time(),
+                )
+            
         # Extract the list of message IDs from the payload.
         payload = MessageToDict(request.payload)
         message_ids = payload.get("message_ids", [])
