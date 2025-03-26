@@ -397,6 +397,26 @@ class ReplicationManager:
         else:
             logging.error(f"Account '{username}' replication failed. Acks: {acks}")
         return success
+    
+    def replicate_operation(self, replication_request: chat_pb2.ReplicationMessage) -> bool:
+        acks = 1  # Leader counts as one ack
+        with self.replica_lock:
+            for addr, replica in self.replicas.items():
+                if not replica.is_alive:
+                    continue
+                try:
+                    channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
+                    stub = chat_pb2_grpc.ChatServerStub(channel)
+                    response = stub.HandleReplication(replication_request, timeout=1.0)
+                    if (response.type == chat_pb2.ReplicationType.REPLICATION_RESPONSE and 
+                        response.replication_response.success):
+                        acks += 1
+                    channel.close()
+                except Exception as e:
+                    logging.error(f"Failed to replicate operation to {addr}: {e}")
+                    continue
+        total_nodes = len(self.replicas) + 1
+        return acks > (total_nodes // 2)
 
     def handle_replication_message(
         self, message: chat_pb2.ReplicationMessage
@@ -488,7 +508,14 @@ class ReplicationManager:
                     )
 
             # Message doesn't exist, store it
-            stored_id = self.db.store_message(sender, recipient, content, delivered)
+            stored_id = self.db.store_message(
+                sender=sender,
+                recipient=recipient,
+                content=content,
+                is_delivered=delivered,
+                forced_id=msg_id,  # <-- use the leader’s exact ID
+            )
+
             if stored_id is not None:
                 return chat_pb2.ReplicationMessage(
                     type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
@@ -509,6 +536,47 @@ class ReplicationManager:
                     ),
                     timestamp=time.time(),
                 )
+            
+        elif message.type == chat_pb2.ReplicationType.REPLICATE_DELETE_MESSAGES:
+            deletion_dict = MessageToDict(message.deletion)
+            message_ids = deletion_dict.get("message_ids", [])
+            success = self.db.delete_messages(message.sender, message_ids)
+            return chat_pb2.ReplicationMessage(
+                type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
+                term=self.term,
+                server_id=f"{self.host}:{self.port}",
+                replication_response=chat_pb2.ReplicationResponse(success=success, message_id=0),
+                timestamp=time.time(),
+            )
+
+        elif message.type == chat_pb2.ReplicationType.REPLICATE_DELETE_ACCOUNT:
+            deletion_dict = MessageToDict(message.deletion)
+            username = deletion_dict.get("username", "")
+            success = self.db.delete_account(username)
+            return chat_pb2.ReplicationMessage(
+                type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
+                term=self.term,
+                server_id=f"{self.host}:{self.port}",
+                replication_response=chat_pb2.ReplicationResponse(success=success, message_id=0),
+                timestamp=time.time(),
+            )
+
+        elif message.type == chat_pb2.ReplicationType.REPLICATE_MARK_READ:
+            deletion_dict = MessageToDict(message.deletion)
+            username = deletion_dict.get("username", "")
+            message_ids = deletion_dict.get("messageIds", [])
+            logging.debug(f"Received deletion_dict: {deletion_dict}")
+            logging.debug(f"Received mark read replication for user: {username} with message_ids: {message_ids}")
+            success = self.db.mark_messages_as_read(username, message_ids)
+            logging.debug(f"Mark read replication for user {username} success: {success}")
+            return chat_pb2.ReplicationMessage(
+                type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
+                term=self.term,
+                server_id=f"{self.host}:{self.port}",
+                replication_response=chat_pb2.ReplicationResponse(success=success, message_id=0),
+                timestamp=time.time(),
+            )
+
 
         # Default case
         return chat_pb2.ReplicationMessage(

@@ -1,8 +1,9 @@
 from google.protobuf import struct_pb2 as _struct_pb2
+from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -31,6 +32,9 @@ class ReplicationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     REPLICATION_SUCCESS: _ClassVar[ReplicationType]
     REPLICATION_ERROR: _ClassVar[ReplicationType]
     REPLICATE_ACCOUNT: _ClassVar[ReplicationType]
+    REPLICATE_DELETE_MESSAGES: _ClassVar[ReplicationType]
+    REPLICATE_DELETE_ACCOUNT: _ClassVar[ReplicationType]
+    REPLICATE_MARK_READ: _ClassVar[ReplicationType]
 CREATE_ACCOUNT: MessageType
 LOGIN: MessageType
 LIST_ACCOUNTS: MessageType
@@ -51,6 +55,9 @@ REPLICATION_RESPONSE: ReplicationType
 REPLICATION_SUCCESS: ReplicationType
 REPLICATION_ERROR: ReplicationType
 REPLICATE_ACCOUNT: ReplicationType
+REPLICATE_DELETE_MESSAGES: ReplicationType
+REPLICATE_DELETE_ACCOUNT: ReplicationType
+REPLICATE_MARK_READ: ReplicationType
 
 class ChatMessage(_message.Message):
     __slots__ = ("type", "payload", "sender", "recipient", "timestamp")
@@ -67,7 +74,7 @@ class ChatMessage(_message.Message):
     def __init__(self, type: _Optional[_Union[MessageType, str]] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., sender: _Optional[str] = ..., recipient: _Optional[str] = ..., timestamp: _Optional[float] = ...) -> None: ...
 
 class ReplicationMessage(_message.Message):
-    __slots__ = ("type", "term", "server_id", "vote_request", "vote_response", "message_replication", "replication_response", "heartbeat", "account_replication", "timestamp")
+    __slots__ = ("type", "term", "server_id", "vote_request", "vote_response", "message_replication", "replication_response", "heartbeat", "account_replication", "timestamp", "deletion")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     TERM_FIELD_NUMBER: _ClassVar[int]
     SERVER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -78,6 +85,7 @@ class ReplicationMessage(_message.Message):
     HEARTBEAT_FIELD_NUMBER: _ClassVar[int]
     ACCOUNT_REPLICATION_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    DELETION_FIELD_NUMBER: _ClassVar[int]
     type: ReplicationType
     term: int
     server_id: str
@@ -88,7 +96,8 @@ class ReplicationMessage(_message.Message):
     heartbeat: Heartbeat
     account_replication: AccountReplication
     timestamp: float
-    def __init__(self, type: _Optional[_Union[ReplicationType, str]] = ..., term: _Optional[int] = ..., server_id: _Optional[str] = ..., vote_request: _Optional[_Union[VoteRequest, _Mapping]] = ..., vote_response: _Optional[_Union[VoteResponse, _Mapping]] = ..., message_replication: _Optional[_Union[MessageReplication, _Mapping]] = ..., replication_response: _Optional[_Union[ReplicationResponse, _Mapping]] = ..., heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., account_replication: _Optional[_Union[AccountReplication, _Mapping]] = ..., timestamp: _Optional[float] = ...) -> None: ...
+    deletion: DeletionPayload
+    def __init__(self, type: _Optional[_Union[ReplicationType, str]] = ..., term: _Optional[int] = ..., server_id: _Optional[str] = ..., vote_request: _Optional[_Union[VoteRequest, _Mapping]] = ..., vote_response: _Optional[_Union[VoteResponse, _Mapping]] = ..., message_replication: _Optional[_Union[MessageReplication, _Mapping]] = ..., replication_response: _Optional[_Union[ReplicationResponse, _Mapping]] = ..., heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., account_replication: _Optional[_Union[AccountReplication, _Mapping]] = ..., timestamp: _Optional[float] = ..., deletion: _Optional[_Union[DeletionPayload, _Mapping]] = ...) -> None: ...
 
 class VoteRequest(_message.Message):
     __slots__ = ("last_log_term", "last_log_index")
@@ -135,3 +144,11 @@ class AccountReplication(_message.Message):
     USERNAME_FIELD_NUMBER: _ClassVar[int]
     username: str
     def __init__(self, username: _Optional[str] = ...) -> None: ...
+
+class DeletionPayload(_message.Message):
+    __slots__ = ("message_ids", "username")
+    MESSAGE_IDS_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    message_ids: _containers.RepeatedScalarFieldContainer[int]
+    username: str
+    def __init__(self, message_ids: _Optional[_Iterable[int]] = ..., username: _Optional[str] = ...) -> None: ...

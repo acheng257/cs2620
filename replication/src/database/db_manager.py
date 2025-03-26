@@ -64,9 +64,8 @@ class DatabaseManager:
 
                 # Create messages table with read, delivered, and deleted status
                 cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS messages (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    """CREATE TABLE IF NOT EXISTS messages (
+                        id INTEGER PRIMARY KEY,
                         sender TEXT NOT NULL,
                         recipient TEXT NOT NULL,
                         content TEXT NOT NULL,
@@ -77,8 +76,7 @@ class DatabaseManager:
                         recipient_deleted BOOLEAN DEFAULT FALSE,
                         FOREIGN KEY (sender) REFERENCES accounts(username),
                         FOREIGN KEY (recipient) REFERENCES accounts(username)
-                    )
-                    """
+                    );"""
                 )
 
                 cursor.execute(
@@ -241,39 +239,46 @@ class DatabaseManager:
             return False
 
     def store_message(
-        self, sender: str, recipient: str, content: str, is_delivered: bool = False
+        self,
+        sender: str,
+        recipient: str,
+        content: str,
+        is_delivered: bool = False,
+        forced_id: Optional[int] = None
     ) -> Optional[int]:
         """
-        Store a new message in the database.
-
-        Args:
-            sender (str): Username of message sender
-            recipient (str): Username of message recipient
-            content (str): Message content
-            is_delivered (bool, optional): Whether message was delivered. Defaults to False
-
-        Returns:
-            Optional[int]: The message ID if stored successfully, None otherwise
-
-        Note:
-            Messages are always stored as unread initially.
-            Delivery status can be set for offline message queueing.
+        Store a new message in the database. If forced_id is given, use that exact ID.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    INSERT INTO messages (sender, recipient, content, timestamp, is_delivered)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (sender, recipient, content, time.time(), is_delivered),
-                )
+                if forced_id is None:
+                    # No forced ID; let SQLite choose the next unused ID
+                    cursor.execute(
+                        """
+                        INSERT INTO messages (sender, recipient, content, timestamp, is_delivered)
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (sender, recipient, content, time.time(), is_delivered),
+                    )
+                    message_id = cursor.lastrowid
+                else:
+                    # Use the forced_id (the leader's ID)
+                    cursor.execute(
+                        """
+                        INSERT INTO messages (id, sender, recipient, content, timestamp, is_delivered)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (forced_id, sender, recipient, content, time.time(), is_delivered),
+                    )
+                    message_id = forced_id
+
                 conn.commit()
-                return cursor.lastrowid
+                return message_id
         except Exception as e:
             print(f"Error storing message: {e}")
             return None
+
 
     def mark_messages_as_read(self, username: str, message_ids: Optional[List[int]] = None) -> bool:
         """
@@ -305,13 +310,13 @@ class DatabaseManager:
                     if cursor.fetchone()[0] == 0:
                         return False
 
-                    query = f"UPDATE messages SET is_read = TRUE \
+                    query = f"UPDATE messages SET is_read = 1 \
                         WHERE recipient = ? AND id IN ({placeholder})"
                     params = [username] + message_ids
                     cursor.execute(query, params)
                 else:
                     cursor.execute(
-                        "UPDATE messages SET is_read = TRUE WHERE \
+                        "UPDATE messages SET is_read = 1 WHERE \
                             recipient = ? AND recipient_deleted = FALSE",
                         (username,),
                     )

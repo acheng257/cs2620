@@ -413,7 +413,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                 chat_msg = chat_pb2.ChatMessage(
                     type=chat_pb2.MessageType.SEND_MESSAGE,
                     payload=parsed_payload,
-                    sender=msg["from"],
+                    sender=msg["sender"],
                     recipient=username,
                     timestamp=timestamp_val,
                 )
@@ -494,13 +494,35 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             recipient=request.sender,
             timestamp=time.time(),
         )
-        return response
+        if success:
+            # Replicate deletion to followers:
+            deletion_payload = {"message_ids": message_ids}
+            replication_request = chat_pb2.ReplicationMessage(
+                type=chat_pb2.ReplicationType.REPLICATE_DELETE_MESSAGES,
+                term=self.replication_manager.term,
+                server_id=f"{self.host}:{self.port}",
+                deletion=ParseDict(deletion_payload, chat_pb2.DeletionPayload()),
+                timestamp=time.time(),
+            )
+            if not self.replication_manager.replicate_operation(replication_request):
+                logging.warning("Failed to replicate message deletion.")
+                return response
 
     def DeleteAccount(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
         username = request.sender
         if self.db.delete_account(username):
+            # Replicate account deletion to followers:
+            replication_request = chat_pb2.ReplicationMessage(
+                type=chat_pb2.ReplicationType.REPLICATE_DELETE_ACCOUNT,
+                term=self.replication_manager.term,
+                server_id=f"{self.host}:{self.port}",
+                deletion=ParseDict({"username": username}, chat_pb2.DeletionPayload()),
+                timestamp=time.time(),
+            )
+            if not self.replication_manager.replicate_operation(replication_request):
+                logging.warning("Failed to replicate account deletion.")
             response_payload = {"text": "Account deleted successfully."}
             start_ser = time.perf_counter()
             parsed_payload = ParseDict(response_payload, Struct())
@@ -576,7 +598,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             )
         else:
             leader_address = "Unknown"
-        logging.debug("GetLeader called. Returning leader: %s", leader_address)
+        # logging.debug("GetLeader called. Returning leader: %s", leader_address)
         return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
             payload=ParseDict({"leader": leader_address}, Struct()),
@@ -604,6 +626,20 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             else {"text": "Failed to update read status."}
         )
         response_type = chat_pb2.MessageType.SUCCESS if success else chat_pb2.MessageType.ERROR
+        if success:
+            # Ensure all message IDs are integers
+            message_ids_int = [int(mid) for mid in message_ids]
+            replication_request = chat_pb2.ReplicationMessage(
+                type=chat_pb2.ReplicationType.REPLICATE_MARK_READ,
+                term=self.replication_manager.term,
+                server_id=f"{self.host}:{self.port}",
+                deletion=ParseDict({"username": request.sender, "message_ids": message_ids_int}, chat_pb2.DeletionPayload()),
+                timestamp=time.time(),
+            )
+            if not self.replication_manager.replicate_operation(replication_request):
+                logging.warning("Failed to replicate mark read operation.")
+
+
         return chat_pb2.ChatMessage(
             type=response_type,
             payload=ParseDict(response_payload, Struct()),

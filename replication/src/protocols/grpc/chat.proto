@@ -38,7 +38,10 @@ enum ReplicationType {
   REPLICATION_RESPONSE = 4;
   REPLICATION_SUCCESS = 5;
   REPLICATION_ERROR = 6;
-  REPLICATE_ACCOUNT = 7; // New replication type for account creation
+  REPLICATE_ACCOUNT = 7;
+  REPLICATE_DELETE_MESSAGES = 8;
+  REPLICATE_DELETE_ACCOUNT = 9;
+  REPLICATE_MARK_READ = 10;
 }
 
 // Message structure for server-server replication
@@ -55,6 +58,7 @@ message ReplicationMessage {
     AccountReplication account_replication = 10;  // New field for account replication
   }
   double timestamp = 9;
+  DeletionPayload deletion = 11;
 }
 
 message VoteRequest {
@@ -85,6 +89,12 @@ message Heartbeat {
 // New message for replicating account creation
 message AccountReplication {
   string username = 1;
+}
+
+// Deletion struct for messages and accounts
+message DeletionPayload {
+  repeated int32 message_ids = 1;
+  string username = 2;
 }
 
 // The chat service definition
