@@ -254,7 +254,7 @@ def render_login_page() -> None:
 
     with st.expander("Server Settings", expanded=True):
         if st.session_state.server_connected:
-            st.markdown("✅ Connected to leader server:")
+            st.markdown("✅ Connected to server:")
             st.code(f"{st.session_state.server_host}:{st.session_state.server_port}")
         else:
             server_host = st.text_input(
