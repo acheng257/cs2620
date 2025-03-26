@@ -25,6 +25,7 @@ class ChatClient:
         self.stub = chat_pb2_grpc.ChatServerStub(self.channel)
         self.logged_in = False
         self.read_thread: Optional[threading.Thread] = None
+        self.leader_check_thread: Optional[threading.Thread] = None
         self.running = True
         self.incoming_messages_queue: queue.Queue = queue.Queue()
 
@@ -180,7 +181,6 @@ class ChatClient:
             error_text = deser.get("text", "Login failed.")
             return False, error_text
 
-
     def send_message(self, recipient: str, text: str) -> bool:
         try:
             payload = {"text": text}
@@ -264,6 +264,7 @@ class ChatClient:
         if self.read_thread is None:
             self.read_thread = threading.Thread(target=self.read_messages, daemon=True)
             self.read_thread.start()
+            self.start_leader_check_thread()  # Start leader check when starting read thread
 
     def list_accounts(self, pattern: str = "", page: int = 1) -> None:
         payload = {"pattern": pattern, "page": page}
@@ -487,6 +488,28 @@ class ChatClient:
         self.running = False
         if self.channel:
             self.channel.close()
+
+    def _check_leader(self) -> None:
+        """Periodically check if we're still connected to the leader"""
+        while self.running:
+            try:
+                leader = self.get_leader()
+                if leader:
+                    leader_host, leader_port = leader
+                    if leader_host != self.host or leader_port != self.port:
+                        print(f"Leader changed to {leader_host}:{leader_port}, reconnecting...")
+                        self.host = leader_host
+                        self.port = leader_port
+                        self.connect()
+            except Exception as e:
+                print(f"Error checking leader: {e}")
+            time.sleep(5)  # Check every 5 seconds
+
+    def start_leader_check_thread(self) -> None:
+        """Start the leader check thread"""
+        if self.leader_check_thread is None:
+            self.leader_check_thread = threading.Thread(target=self._check_leader, daemon=True)
+            self.leader_check_thread.start()
 
 
 if __name__ == "__main__":
