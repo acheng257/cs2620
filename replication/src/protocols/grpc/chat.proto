@@ -17,6 +17,7 @@ enum MessageType {
   SUCCESS = 8;
   LIST_CHAT_PARTNERS = 9;
   GET_LEADER = 10;   // New message type for leader query
+  MARK_READ = 11;    // New message type for marking messages as read
 }
 
 // Main message structure used for client-server communication
@@ -98,7 +99,8 @@ service ChatServer {
   rpc ListAccounts(ChatMessage) returns (ChatMessage) {}
   rpc ListChatPartners(ChatMessage) returns (ChatMessage) {}
   rpc ReadConversation(ChatMessage) returns (ChatMessage) {}
-  rpc GetLeader(ChatMessage) returns (ChatMessage) {}   // New RPC
+  rpc GetLeader(ChatMessage) returns (ChatMessage) {}   // New RPC for leader query
+  rpc MarkRead(ChatMessage) returns (ChatMessage) {}    // New RPC for marking messages as read
 
   // Server-server replication RPCs
   rpc HandleReplication(ReplicationMessage) returns (ReplicationMessage) {}

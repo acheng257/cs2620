@@ -490,6 +490,28 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             timestamp=time.time(),
         )
 
+    def MarkRead(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
+        # Extract the list of message IDs from the payload.
+        payload = MessageToDict(request.payload)
+        message_ids = payload.get("message_ids", [])
+        username = request.sender
+        if not isinstance(message_ids, list):
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details("'message_ids' must be a list.")
+            return chat_pb2.ChatMessage()
+        # Call the DatabaseManager method to mark messages as read.
+        success = self.db.mark_messages_as_read(username, message_ids)
+        response_payload = {"text": "Read status updated successfully."} if success else {"text": "Failed to update read status."}
+        response_type = chat_pb2.MessageType.SUCCESS if success else chat_pb2.MessageType.ERROR
+        return chat_pb2.ChatMessage(
+            type=response_type,
+            payload=ParseDict(response_payload, Struct()),
+            sender="SERVER",
+            recipient=username,
+            timestamp=time.time(),
+        )
+
+
 def serve(host: str, port: int) -> None:
     logging.info("Starting gRPC server on %s:%s...", host, port)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

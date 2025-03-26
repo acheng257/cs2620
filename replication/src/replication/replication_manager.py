@@ -145,6 +145,50 @@ class ReplicationManager:
                     replica.is_alive = False
             time.sleep(0.05)
 
+    def replicate_message(self, message_id: int, sender: str, recipient: str, content: str) -> bool:
+        """
+        Replicate a message to all followers and wait for a majority of acknowledgments.
+        Returns True if replicated successfully.
+        """
+        if self.role != ServerRole.LEADER:
+            logging.error("Attempt to replicate message on a non-leader server.")
+            return False
+
+        acks = 1  # Leader counts as one ack
+        message_replication = chat_pb2.MessageReplication(
+            message_id=message_id, sender=sender, recipient=recipient, content=content
+        )
+        request = chat_pb2.ReplicationMessage(
+            type=chat_pb2.ReplicationType.REPLICATE_MESSAGE,
+            term=self.term,
+            server_id=f"{self.host}:{self.port}",
+            message_replication=message_replication,
+            timestamp=time.time(),
+        )
+        for addr, replica in self.replicas.items():
+            if not replica.is_alive:
+                continue
+            try:
+                channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
+                stub = chat_pb2_grpc.ChatServerStub(channel)
+                response = stub.HandleReplication(request, timeout=1.0)
+                if (response.type == chat_pb2.ReplicationType.REPLICATION_RESPONSE and
+                    response.replication_response.success):
+                    acks += 1
+                    logging.debug(f"Message replication acknowledged from {addr}.")
+                channel.close()
+            except Exception as e:
+                logging.error(f"Failed to replicate message to {addr}: {e}")
+                continue
+
+        logging.info(f"Total acknowledgments received: {acks} (including self).")
+        success = acks > (len(self.replicas) + 1) / 2
+        if success:
+            self.last_log_index += 1
+            self.last_log_term = self.term
+            self.commit_index = self.last_log_index
+        return success
+
     def replicate_account(self, username: str) -> bool:
         """
         Replicate account creation to all followers and wait for majority acknowledgment.

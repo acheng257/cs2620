@@ -307,6 +307,50 @@ def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
         return partners, unread_map
     return [], {}
 
+# def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
+#     client = get_chat_client()
+#     if client:
+#         try:
+#             response = client.read_conversation_sync(partner, offset, limit)
+#             result = MessageToDict(response.payload)
+#             db_msgs = result.get("messages", [])
+#             db_msgs_sorted = sorted(db_msgs, key=lambda x: x["timestamp"])
+#             new_messages = []
+#             unread_ids = []
+#             for m in db_msgs_sorted:
+#                 msg_id = int(m["id"])
+#                 msg = {
+#                     "sender": m["from"],
+#                     "text": m["content"],
+#                     "timestamp": m["timestamp"],
+#                     "is_read": m.get("is_read", False),
+#                     "is_delivered": m.get("is_delivered", True),
+#                     "id": msg_id,
+#                 }
+#                 if msg["sender"].strip().lower() != st.session_state.username:
+#                     msg["is_read"] = True
+#                     unread_ids.append(msg_id)
+#                 new_messages.append(msg)
+#             with st.session_state.lock:
+#                 st.session_state.messages = new_messages
+#                 st.session_state.displayed_messages = new_messages
+#                 st.session_state.messages_offset = offset
+#                 st.session_state.messages_limit = limit
+#                 st.session_state.scroll_to_bottom = False
+#                 st.session_state.scroll_to_top = True
+#                 st.session_state.unread_map[partner] = 0
+#             st.write(f"Loaded {len(new_messages)} messages.")
+
+#             if unread_ids:
+#                 db_manager = DatabaseManager()
+#                 success = db_manager.mark_messages_as_read(st.session_state.username, unread_ids)
+#                 if not success:
+#                     st.warning("Failed to update read status in database.")
+
+#         except Exception as e:
+#             st.warning(f"An error occurred while loading conversation: {e}")
+#     else:
+#         st.warning("Client is not connected.")
 def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
     client = get_chat_client()
     if client:
@@ -341,16 +385,24 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
                 st.session_state.unread_map[partner] = 0
             st.write(f"Loaded {len(new_messages)} messages.")
 
+            # Instead of updating read status locally, call the MarkRead RPC.
             if unread_ids:
-                db_manager = DatabaseManager()
-                success = db_manager.mark_messages_as_read(st.session_state.username, unread_ids)
-                if not success:
-                    st.warning("Failed to update read status in database.")
-
+                mark_request = chat_pb2.ChatMessage(
+                    type=chat_pb2.MessageType.MARK_READ,  # Ensure MARK_READ is defined in your proto.
+                    payload=ParseDict({"message_ids": unread_ids}, Struct()),
+                    sender=st.session_state.username,
+                    recipient="SERVER",
+                    timestamp=time.time(),
+                )
+                mark_response = client.stub.MarkRead(mark_request)
+                mark_result = MessageToDict(mark_response.payload)
+                if "success" not in mark_result.get("text", "").lower():
+                    st.warning("Failed to update read status on server.")
         except Exception as e:
             st.warning(f"An error occurred while loading conversation: {e}")
     else:
         st.warning("Client is not connected.")
+
 
 def process_incoming_realtime_messages() -> None:
     client = get_chat_client()
