@@ -144,7 +144,7 @@ def render_login_page() -> None:
                         port=st.session_state.server_port,
                     )
                     if temp_client.connect():
-                        # query the leader from this server.
+                        # Query the leader from this server.
                         leader = temp_client.get_leader()
                         if leader:
                             st.session_state.server_host, st.session_state.server_port = leader
@@ -167,7 +167,6 @@ def render_login_page() -> None:
                         st.error(st.session_state.error_message)
                         temp_client.close()
 
-
     st.markdown("---")
 
     if not st.session_state.server_connected:
@@ -185,7 +184,7 @@ def render_login_page() -> None:
 
     username = st.session_state.pending_username
 
-    # Check account existence using a dummy password attempt
+    # Check account existence using a dummy password attempt.
     account_exists = False
     try:
         temp_client = ChatClient(
@@ -194,20 +193,12 @@ def render_login_page() -> None:
             port=st.session_state.server_port,
         )
         if temp_client.connect():
-            try:
-                # Try logging in with a dummy password
-                success, error = temp_client.login_sync("dummy_password")
+            success, error = temp_client.login_sync("dummy_password")
+            # If login fails with an error containing "does not exist", then account doesn't exist.
+            if not success and error and "does not exist" in error.lower():
+                account_exists = False
+            else:
                 account_exists = True
-            except Exception as e:
-                error_str = str(e).lower()
-                if "invalid password" in error_str:
-                    account_exists = True
-                elif "does not exist" in error_str:
-                    account_exists = False
-                else:
-                    st.error(f"Unexpected error during account check: {e}")
-                    temp_client.close()
-                    return
         temp_client.close()
     except Exception as e:
         st.error(f"Error checking account existence: {e}")
@@ -233,7 +224,22 @@ def render_login_page() -> None:
                         st.success("Logged in successfully!")
                         client.start_read_thread()
                     else:
-                        st.error(f"Login failed: {error}")
+                        if error and "does not exist" in error.lower():
+                            st.info("Account does not exist. Creating account automatically...")
+                            created = client.create_account_sync(password)
+                            if created:
+                                st.session_state.username = username
+                                st.session_state.logged_in = True
+                                st.session_state.client = client
+                                st.session_state.client_connected = True
+                                st.session_state.global_message_limit = 50
+                                st.success("Account created and logged in successfully!")
+                                client.start_read_thread()
+                                st.rerun()  # Automatically re-run to update UI state.
+                            else:
+                                st.error("Failed to create account.")
+                        else:
+                            st.error(f"Login failed: {error}")
                 else:
                     st.error("Failed to connect to the server.")
     else:
@@ -262,6 +268,7 @@ def render_login_page() -> None:
                             st.session_state.global_message_limit = 50
                             st.success("Account created and logged in successfully!")
                             client.start_read_thread()
+                            st.rerun()  # Re-run so the new logged-in state takes effect.
                         else:
                             st.error("Account creation failed. Username may already exist.")
                     else:
@@ -269,6 +276,7 @@ def render_login_page() -> None:
 
     if st.button("Change Username"):
         st.session_state.pending_username = ""
+
 
 def fetch_accounts(pattern: str = "", page: int = 1) -> None:
     client = get_chat_client()

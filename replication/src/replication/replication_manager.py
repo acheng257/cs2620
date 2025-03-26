@@ -2,7 +2,7 @@ import threading
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
 import grpc
 from google.protobuf.json_format import MessageToDict, ParseDict
@@ -18,16 +18,13 @@ class ServerRole(Enum):
     FOLLOWER = "follower"
     CANDIDATE = "candidate"
 
-
 @dataclass
 class ReplicaInfo:
     """Information about a replica in the system"""
-
     host: str
     port: int
     is_alive: bool = True
     last_heartbeat: float = time.time()
-
 
 class ReplicationManager:
     """
@@ -36,14 +33,6 @@ class ReplicationManager:
     """
 
     def __init__(self, host: str, port: int, replica_addresses: List[str]) -> None:
-        """
-        Initialize the replication manager.
-
-        Args:
-            host: The host address of this server
-            port: The port of this server
-            replica_addresses: List of "host:port" strings for all replicas
-        """
         self.host = host
         self.port = port
         self.role = ServerRole.FOLLOWER
@@ -77,13 +66,10 @@ class ReplicationManager:
     def _run_election_timer(self) -> None:
         """Run the election timeout loop"""
         while True:
-            # Random timeout between 150-300ms
-            # timeout = 0.15 + (hash(str(time.time())) % 150) / 1000
             timeout = random.uniform(0.3, 0.5)  # 300–500ms
             if self.election_timeout.wait(timeout):
                 self.election_timeout.clear()
                 continue
-
             if self.role != ServerRole.LEADER:
                 self._start_election()
 
@@ -94,17 +80,15 @@ class ReplicationManager:
             self.voted_for = f"{self.host}:{self.port}"
             votes = 1  # Vote for self
             logging.debug(f"Starting election for term {self.term} from {self.host}:{self.port}")
+            logging.debug(f"Current replicas: {self.replicas}")
 
-            # Request votes from all replicas
             for addr, replica in self.replicas.items():
                 try:
                     channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
                     stub = chat_pb2_grpc.ChatServerStub(channel)
-
                     vote_request = chat_pb2.VoteRequest(
                         last_log_term=self.last_log_term, last_log_index=self.last_log_index
                     )
-
                     request = chat_pb2.ReplicationMessage(
                         type=chat_pb2.ReplicationType.REQUEST_VOTE,
                         term=self.term,
@@ -112,18 +96,16 @@ class ReplicationManager:
                         vote_request=vote_request,
                         timestamp=time.time(),
                     )
-
                     response = stub.HandleReplication(request)
                     if (response.type == chat_pb2.ReplicationType.VOTE_RESPONSE and 
                         response.vote_response.vote_granted):
                         votes += 1
                         logging.debug(f"Vote granted from {addr}")
-
+                    channel.close()
                 except Exception as e:
                     logging.error(f"Failed to request vote from {addr}: {e}")
 
             logging.debug(f"Election votes received: {votes}")
-            # If received majority votes, become leader
             if votes > (len(self.replicas) + 1) / 2:
                 self.role = ServerRole.LEADER
                 self.leader_host = self.host
@@ -136,7 +118,6 @@ class ReplicationManager:
 
 
     def _start_heartbeat(self) -> None:
-        """Start sending heartbeats to followers"""
         if self.heartbeat_thread is None:
             self.heartbeat_thread = threading.Thread(target=self._send_heartbeats, daemon=True)
             self.heartbeat_thread.start()
@@ -147,7 +128,6 @@ class ReplicationManager:
                 try:
                     channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
                     stub = chat_pb2_grpc.ChatServerStub(channel)
-
                     heartbeat = chat_pb2.Heartbeat(commit_index=self.commit_index)
                     request = chat_pb2.ReplicationMessage(
                         type=chat_pb2.ReplicationType.HEARTBEAT,
@@ -156,69 +136,68 @@ class ReplicationManager:
                         heartbeat=heartbeat,
                         timestamp=time.time(),
                     )
-
                     response = stub.HandleReplication(request)
                     replica.is_alive = True
                     replica.last_heartbeat = time.time()
-                    logging.debug(f"Heartbeat sent to {addr} successfully.")
+                    channel.close()
                 except Exception as e:
                     logging.error(f"Failed to send heartbeat to {addr}: {e}")
                     replica.is_alive = False
             time.sleep(0.05)
 
-
-    def replicate_message(self, message_id: int, sender: str, recipient: str, content: str) -> bool:
+    def replicate_account(self, username: str) -> bool:
         """
-        Replicate a message to all followers and wait for majority acknowledgment.
-
-        Returns:
-            bool: True if message was replicated to a majority of followers
+        Replicate account creation to all followers and wait for majority acknowledgment.
+        Returns True if the account creation was replicated to a majority of followers.
         """
         if self.role != ServerRole.LEADER:
+            logging.error("Attempt to replicate account on a non-leader server.")
             return False
 
         acks = 1  # Count self
-        message_replication = chat_pb2.MessageReplication(
-            message_id=message_id, sender=sender, recipient=recipient, content=content
-        )
-
+        account_replication = chat_pb2.AccountReplication(username=username)
         request = chat_pb2.ReplicationMessage(
-            type=chat_pb2.ReplicationType.REPLICATE_MESSAGE,
+            type=chat_pb2.ReplicationType.REPLICATE_ACCOUNT,
             term=self.term,
             server_id=f"{self.host}:{self.port}",
-            message_replication=message_replication,
+            account_replication=account_replication,
             timestamp=time.time(),
         )
+        logging.debug(f"Replicating account creation for '{username}' to followers. Request: {request}")
 
         for addr, replica in self.replicas.items():
             if not replica.is_alive:
+                logging.info(f"Skipping replica {addr} because it is marked not alive.")
                 continue
-
             try:
+                logging.debug(f"Creating channel to replica {addr} at {replica.host}:{replica.port}.")
                 channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
                 stub = chat_pb2_grpc.ChatServerStub(channel)
-
-                response = stub.HandleReplication(request)
-                if (
-                    response.type == chat_pb2.ReplicationType.REPLICATION_RESPONSE
-                    and response.replication_response.success
-                ):
+                logging.debug(f"Sending replication request to {addr} with 1.0s timeout.")
+                start_time = time.time()
+                response = stub.HandleReplication(request, timeout=1.0)
+                duration = time.time() - start_time
+                logging.debug(f"Received response from {addr} in {duration:.3f}s: {response}")
+                channel.close()
+                if (response.type == chat_pb2.ReplicationType.REPLICATION_RESPONSE and 
+                    response.replication_response.success):
                     acks += 1
-
+                    logging.debug(f"Account replication acknowledged from {addr}.")
+                else:
+                    logging.error(f"Account replication from {addr} returned failure: {response}")
             except Exception as e:
-                print(f"Failed to replicate message to {addr}: {e}")
+                logging.exception(f"Failed to replicate account to {addr}: {e}")
                 continue
 
+        logging.info(f"Total acknowledgments received: {acks} (including self).")
         success = acks > (len(self.replicas) + 1) / 2
         if success:
-            self.last_log_index += 1
-            self.last_log_term = self.term
-            self.commit_index = self.last_log_index
+            logging.info(f"Account '{username}' replicated successfully with {acks} acks.")
+        else:
+            logging.error(f"Account '{username}' replication failed. Acks: {acks}")
         return success
 
-    def handle_replication_message(
-        self, message: chat_pb2.ReplicationMessage
-    ) -> chat_pb2.ReplicationMessage:
+    def handle_replication_message(self, message: chat_pb2.ReplicationMessage) -> chat_pb2.ReplicationMessage:
         """Handle incoming replication messages from other servers"""
         if message.term < self.term:
             return chat_pb2.ReplicationMessage(
@@ -255,7 +234,6 @@ class ReplicationManager:
             self.election_timeout.set()  # Reset election timeout
             self.leader_host, self.leader_port = message.server_id.split(":")
             self.leader_port = int(self.leader_port)
-
             return chat_pb2.ReplicationMessage(
                 type=chat_pb2.ReplicationType.REPLICATION_SUCCESS,
                 term=self.term,
@@ -264,16 +242,13 @@ class ReplicationManager:
             )
 
         elif message.type == chat_pb2.ReplicationType.REPLICATE_MESSAGE:
-            success = True
+            # For simplicity, assume message replication always succeeds.
             msg_id = message.message_replication.message_id
-
             return chat_pb2.ReplicationMessage(
                 type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
                 term=self.term,
                 server_id=f"{self.host}:{self.port}",
-                replication_response=chat_pb2.ReplicationResponse(
-                    success=success, message_id=msg_id
-                ),
+                replication_response=chat_pb2.ReplicationResponse(success=True, message_id=msg_id),
                 timestamp=time.time(),
             )
 

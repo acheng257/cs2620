@@ -29,6 +29,7 @@ class ReplicationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     REPLICATION_RESPONSE: _ClassVar[ReplicationType]
     REPLICATION_SUCCESS: _ClassVar[ReplicationType]
     REPLICATION_ERROR: _ClassVar[ReplicationType]
+    REPLICATE_ACCOUNT: _ClassVar[ReplicationType]
 CREATE_ACCOUNT: MessageType
 LOGIN: MessageType
 LIST_ACCOUNTS: MessageType
@@ -47,6 +48,7 @@ VOTE_RESPONSE: ReplicationType
 REPLICATION_RESPONSE: ReplicationType
 REPLICATION_SUCCESS: ReplicationType
 REPLICATION_ERROR: ReplicationType
+REPLICATE_ACCOUNT: ReplicationType
 
 class ChatMessage(_message.Message):
     __slots__ = ("type", "payload", "sender", "recipient", "timestamp")
@@ -63,7 +65,7 @@ class ChatMessage(_message.Message):
     def __init__(self, type: _Optional[_Union[MessageType, str]] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., sender: _Optional[str] = ..., recipient: _Optional[str] = ..., timestamp: _Optional[float] = ...) -> None: ...
 
 class ReplicationMessage(_message.Message):
-    __slots__ = ("type", "term", "server_id", "vote_request", "vote_response", "message_replication", "replication_response", "heartbeat", "timestamp")
+    __slots__ = ("type", "term", "server_id", "vote_request", "vote_response", "message_replication", "replication_response", "heartbeat", "account_replication", "timestamp")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     TERM_FIELD_NUMBER: _ClassVar[int]
     SERVER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -72,6 +74,7 @@ class ReplicationMessage(_message.Message):
     MESSAGE_REPLICATION_FIELD_NUMBER: _ClassVar[int]
     REPLICATION_RESPONSE_FIELD_NUMBER: _ClassVar[int]
     HEARTBEAT_FIELD_NUMBER: _ClassVar[int]
+    ACCOUNT_REPLICATION_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     type: ReplicationType
     term: int
@@ -81,8 +84,9 @@ class ReplicationMessage(_message.Message):
     message_replication: MessageReplication
     replication_response: ReplicationResponse
     heartbeat: Heartbeat
+    account_replication: AccountReplication
     timestamp: float
-    def __init__(self, type: _Optional[_Union[ReplicationType, str]] = ..., term: _Optional[int] = ..., server_id: _Optional[str] = ..., vote_request: _Optional[_Union[VoteRequest, _Mapping]] = ..., vote_response: _Optional[_Union[VoteResponse, _Mapping]] = ..., message_replication: _Optional[_Union[MessageReplication, _Mapping]] = ..., replication_response: _Optional[_Union[ReplicationResponse, _Mapping]] = ..., heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., timestamp: _Optional[float] = ...) -> None: ...
+    def __init__(self, type: _Optional[_Union[ReplicationType, str]] = ..., term: _Optional[int] = ..., server_id: _Optional[str] = ..., vote_request: _Optional[_Union[VoteRequest, _Mapping]] = ..., vote_response: _Optional[_Union[VoteResponse, _Mapping]] = ..., message_replication: _Optional[_Union[MessageReplication, _Mapping]] = ..., replication_response: _Optional[_Union[ReplicationResponse, _Mapping]] = ..., heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., account_replication: _Optional[_Union[AccountReplication, _Mapping]] = ..., timestamp: _Optional[float] = ...) -> None: ...
 
 class VoteRequest(_message.Message):
     __slots__ = ("last_log_term", "last_log_index")
@@ -123,3 +127,9 @@ class Heartbeat(_message.Message):
     COMMIT_INDEX_FIELD_NUMBER: _ClassVar[int]
     commit_index: int
     def __init__(self, commit_index: _Optional[int] = ...) -> None: ...
+
+class AccountReplication(_message.Message):
+    __slots__ = ("username",)
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    username: str
+    def __init__(self, username: _Optional[str] = ...) -> None: ...

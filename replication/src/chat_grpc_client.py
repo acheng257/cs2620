@@ -147,14 +147,12 @@ class ChatClient:
             details = deser.get("text", "")
             print(f"Login successful. {details}")
         else:
+            self.logged_in = False
             error_text = deser.get("text", "Login failed.")
             print(f"Login failed: {error_text}")
         return self.logged_in
 
     def login_sync(self, password: str) -> Tuple[bool, Optional[str]]:
-        """
-        Synchronous login wrapper that returns (success, error_message).
-        """
         payload = {"username": self.username, "password": password}
         start_ser = time.perf_counter()
         parsed_payload = ParseDict(payload, Struct())
@@ -178,8 +176,10 @@ class ChatClient:
             self.logged_in = True
             return True, None
         else:
+            self.logged_in = False
             error_text = deser.get("text", "Login failed.")
             return False, error_text
+
 
     def send_message(self, recipient: str, text: str) -> bool:
         try:

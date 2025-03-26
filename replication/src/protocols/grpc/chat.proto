@@ -16,7 +16,7 @@ enum MessageType {
   ERROR = 7;
   SUCCESS = 8;
   LIST_CHAT_PARTNERS = 9;
-  GET_LEADER = 10;   // <-- New message type for leader query
+  GET_LEADER = 10;   // New message type for leader query
 }
 
 // Main message structure used for client-server communication
@@ -37,6 +37,7 @@ enum ReplicationType {
   REPLICATION_RESPONSE = 4;
   REPLICATION_SUCCESS = 5;
   REPLICATION_ERROR = 6;
+  REPLICATE_ACCOUNT = 7; // New replication type for account creation
 }
 
 // Message structure for server-server replication
@@ -50,6 +51,7 @@ message ReplicationMessage {
     MessageReplication message_replication = 6;
     ReplicationResponse replication_response = 7;
     Heartbeat heartbeat = 8;
+    AccountReplication account_replication = 10;  // New field for account replication
   }
   double timestamp = 9;
 }
@@ -79,6 +81,11 @@ message Heartbeat {
   int32 commit_index = 1;
 }
 
+// New message for replicating account creation
+message AccountReplication {
+  string username = 1;
+}
+
 // The chat service definition
 service ChatServer {
   // Client-facing RPCs
@@ -91,7 +98,7 @@ service ChatServer {
   rpc ListAccounts(ChatMessage) returns (ChatMessage) {}
   rpc ListChatPartners(ChatMessage) returns (ChatMessage) {}
   rpc ReadConversation(ChatMessage) returns (ChatMessage) {}
-  rpc GetLeader(ChatMessage) returns (ChatMessage) {}   // <-- New RPC
+  rpc GetLeader(ChatMessage) returns (ChatMessage) {}   // New RPC
 
   // Server-server replication RPCs
   rpc HandleReplication(ReplicationMessage) returns (ReplicationMessage) {}
