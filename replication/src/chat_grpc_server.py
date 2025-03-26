@@ -36,10 +36,13 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         self.active_users: Dict[str, Set[chat_pb2_grpc.ChatServer_SubscribeStub]] = {}
         self.lock: threading.Lock = threading.Lock()
 
-        # Initialize replication manager
         self.replication_manager = ReplicationManager(
-            host=host, port=port, replica_addresses=replica_addresses or []
+            host=host,
+            port=port,
+            replica_addresses=replica_addresses or [],
+            db=self.db
         )
+
 
     def CreateAccount(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
         logging.debug("role is: %s", self.replication_manager.role)

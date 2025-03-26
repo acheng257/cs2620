@@ -32,9 +32,10 @@ class ReplicationManager:
     Implements a basic leader-follower protocol with majority acknowledgment.
     """
 
-    def __init__(self, host: str, port: int, replica_addresses: List[str]) -> None:
+    def __init__(self, host: str, port: int, replica_addresses: List[str], db) -> None:
         self.host = host
         self.port = port
+        self.db = db  # Reference to the ChatServer's DatabaseManager
         self.role = ServerRole.FOLLOWER
         self.leader_host: Optional[str] = None
         self.leader_port: Optional[int] = None
@@ -49,9 +50,11 @@ class ReplicationManager:
         # Parse and store replica addresses
         for addr in replica_addresses:
             if addr:
-                host, port = addr.split(":")
-                if host != self.host or int(port) != self.port:  # Don't add self
-                    self.replicas[addr] = ReplicaInfo(host=host, port=int(port))
+                host, port_str = addr.split(":")
+                port = int(port_str)
+                # Don't add self
+                if host != self.host or port != self.port:
+                    self.replicas[addr] = ReplicaInfo(host=host, port=port)
 
         # Start election timeout thread
         self.election_timeout = threading.Event()
@@ -64,7 +67,6 @@ class ReplicationManager:
             self._start_heartbeat()
 
     def _run_election_timer(self) -> None:
-        """Run the election timeout loop"""
         while True:
             timeout = random.uniform(0.3, 0.5)  # 300–500ms
             if self.election_timeout.wait(timeout):
@@ -78,7 +80,7 @@ class ReplicationManager:
             self.term += 1
             self.role = ServerRole.CANDIDATE
             self.voted_for = f"{self.host}:{self.port}"
-            votes = 1  # Vote for self
+            votes = 1  # vote for self
             logging.debug(f"Starting election for term {self.term} from {self.host}:{self.port}")
             logging.debug(f"Current replicas: {self.replicas}")
 
@@ -116,7 +118,6 @@ class ReplicationManager:
                 self.role = ServerRole.FOLLOWER
                 logging.info(f"Election failed. Remains follower. Current term: {self.term}")
 
-
     def _start_heartbeat(self) -> None:
         if self.heartbeat_thread is None:
             self.heartbeat_thread = threading.Thread(target=self._send_heartbeats, daemon=True)
@@ -146,10 +147,6 @@ class ReplicationManager:
             time.sleep(0.05)
 
     def replicate_message(self, message_id: int, sender: str, recipient: str, content: str) -> bool:
-        """
-        Replicate a message to all followers and wait for a majority of acknowledgments.
-        Returns True if replicated successfully.
-        """
         if self.role != ServerRole.LEADER:
             logging.error("Attempt to replicate message on a non-leader server.")
             return False
@@ -190,10 +187,6 @@ class ReplicationManager:
         return success
 
     def replicate_account(self, username: str) -> bool:
-        """
-        Replicate account creation to all followers and wait for majority acknowledgment.
-        Returns True if the account creation was replicated to a majority of followers.
-        """
         if self.role != ServerRole.LEADER:
             logging.error("Attempt to replicate account on a non-leader server.")
             return False
@@ -242,7 +235,6 @@ class ReplicationManager:
         return success
 
     def handle_replication_message(self, message: chat_pb2.ReplicationMessage) -> chat_pb2.ReplicationMessage:
-        """Handle incoming replication messages from other servers"""
         if message.term < self.term:
             return chat_pb2.ReplicationMessage(
                 type=chat_pb2.ReplicationType.REPLICATION_ERROR,
@@ -265,7 +257,6 @@ class ReplicationManager:
                 ):
                     vote_granted = True
                     self.voted_for = message.server_id
-
             return chat_pb2.ReplicationMessage(
                 type=chat_pb2.ReplicationType.VOTE_RESPONSE,
                 term=self.term,
@@ -273,7 +264,6 @@ class ReplicationManager:
                 vote_response=chat_pb2.VoteResponse(vote_granted=vote_granted),
                 timestamp=time.time(),
             )
-
         elif message.type == chat_pb2.ReplicationType.HEARTBEAT:
             self.election_timeout.set()  # Reset election timeout
             self.leader_host, self.leader_port = message.server_id.split(":")
@@ -284,18 +274,33 @@ class ReplicationManager:
                 server_id=f"{self.host}:{self.port}",
                 timestamp=time.time(),
             )
-
         elif message.type == chat_pb2.ReplicationType.REPLICATE_MESSAGE:
-            # For simplicity, assume message replication always succeeds.
+            # On the follower side, store the replicated message in the local database.
             msg_id = message.message_replication.message_id
-            return chat_pb2.ReplicationMessage(
-                type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
-                term=self.term,
-                server_id=f"{self.host}:{self.port}",
-                replication_response=chat_pb2.ReplicationResponse(success=True, message_id=msg_id),
-                timestamp=time.time(),
-            )
+            sender = message.message_replication.sender
+            recipient = message.message_replication.recipient
+            content = message.message_replication.content
+            # For followers, we mark delivered as False.
+            delivered = False
+            stored_id = self.db.store_message(sender, recipient, content, delivered)
+            if stored_id is not None:
+                return chat_pb2.ReplicationMessage(
+                    type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
+                    term=self.term,
+                    server_id=f"{self.host}:{self.port}",
+                    replication_response=chat_pb2.ReplicationResponse(success=True, message_id=msg_id),
+                    timestamp=time.time(),
+                )
+            else:
+                return chat_pb2.ReplicationMessage(
+                    type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
+                    term=self.term,
+                    server_id=f"{self.host}:{self.port}",
+                    replication_response=chat_pb2.ReplicationResponse(success=False, message_id=msg_id),
+                    timestamp=time.time(),
+                )
 
+        # Default case
         return chat_pb2.ReplicationMessage(
             type=chat_pb2.ReplicationType.REPLICATION_ERROR,
             term=self.term,
