@@ -97,17 +97,82 @@ def init_session_state() -> None:
         st.session_state.conversations = {}
 
 
+def check_and_reconnect_leader(client: ChatClient) -> bool:
+    """
+    Check if the current connection is to the leader by trying all known replicas.
+    Returns True if we're connected to the leader (either already or after reconnecting),
+    False otherwise.
+    """
+    # Known replica ports (hardcoded for now, could be made configurable)
+    REPLICA_PORTS = [50051, 50052, 50053, 50054, 50055]
+
+    # First try current connection
+    try:
+        leader = client.get_leader()
+        if leader:
+            leader_host, leader_port = leader
+            if leader_host != client.host or leader_port != client.port:
+                print(f"Detected leader change to {leader_host}:{leader_port}, reconnecting...")
+                client.host = leader_host
+                client.port = leader_port
+                if client.connect():
+                    print("Successfully reconnected to new leader")
+                    if client.read_thread:
+                        client.read_thread = None
+                    client.start_read_thread()
+                    return True
+            else:
+                return True  # Already connected to leader
+    except Exception as e:
+        print(f"Current connection failed: {e}")
+
+    # If current connection failed, try all known replicas
+    print("Trying all known replicas to find leader...")
+    for port in REPLICA_PORTS:
+        if port == client.port:  # Skip current port as we know it failed
+            continue
+        try:
+            print(f"Trying replica at port {port}...")
+            temp_client = ChatClient(username="", host="127.0.0.1", port=port)
+            if temp_client.connect(timeout=1):  # Short timeout for discovery
+                leader = temp_client.get_leader()
+                temp_client.close()
+                if leader:
+                    leader_host, leader_port = leader
+                    print(f"Found leader through replica {port}: {leader_host}:{leader_port}")
+                    # Update client connection
+                    client.host = leader_host
+                    client.port = leader_port
+                    if client.connect():
+                        print("Successfully connected to leader")
+                        if client.read_thread:
+                            client.read_thread = None
+                        client.start_read_thread()
+                        return True
+        except Exception as e:
+            print(f"Failed to check replica at port {port}: {e}")
+            continue
+
+    print("Could not find leader through any known replicas")
+    return False
+
+
 def get_chat_client() -> Optional[ChatClient]:
     """
-    Return the connected ChatClient if logged in, else None.
+    Return the connected ChatClient if logged in and connected to the leader, else None.
     """
     if (
         st.session_state.logged_in
         and st.session_state.client_connected
         and st.session_state.client is not None
     ):
-        return st.session_state.client
-    print("Chat client is not initialized or not connected.")
+        client = st.session_state.client
+        if check_and_reconnect_leader(client):
+            return client
+        else:
+            st.error("Lost connection to leader. Attempting to reconnect...")
+            st.session_state.client_connected = False
+    print("Chat client is not initialized or not connected to leader.")
     return None
 
 
@@ -152,17 +217,17 @@ def render_login_page() -> None:
                         port=st.session_state.server_port,
                     )
                     if temp_client.connect():
-                        leader = temp_client.get_leader()
-                        if leader:
-                            st.session_state.server_host, st.session_state.server_port = leader
+                        if check_and_reconnect_leader(temp_client):
                             st.session_state.server_connected = True
                             st.session_state.error_message = ""
-                            st.success(f"Connected to leader server at {leader[0]}:{leader[1]}")
+                            st.success(
+                                f"Connected to leader server at {temp_client.host}:{temp_client.port}"
+                            )
+                            st.rerun()  # Re-run the app to use leader's address
                         else:
                             st.session_state.error_message = "Could not determine leader server."
                             st.error(st.session_state.error_message)
                         temp_client.close()
-                        st.rerun()  # Re-run the app to use leader's address.
                     else:
                         st.session_state.server_connected = False
                         st.session_state.error_message = (
@@ -317,64 +382,84 @@ def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
 def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
     client = get_chat_client()
     if client:
-        try:
-            # Check if we're connected to the leader
-            leader = client.get_leader()
-            if leader:
-                leader_host, leader_port = leader
-                if leader_host != client.host or leader_port != client.port:
-                    # Reconnect to leader
-                    client.host = leader_host
-                    client.port = leader_port
-                    if not client.connect():
-                        st.error("Failed to connect to leader server.")
+        max_retries = 3
+        retry_delay = 1.0  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                # Try to reconnect to leader if needed
+                if not check_and_reconnect_leader(client):
+                    if attempt < max_retries - 1:
+                        print(f"Failed to find leader (attempt {attempt + 1}/{max_retries})")
+                        print("Waiting for leader election and retrying...")
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        st.error("Could not find leader after multiple attempts")
                         return
 
-            response = client.read_conversation_sync(partner, offset, limit)
-            result = MessageToDict(response.payload)
-            db_msgs = result.get("messages", [])
-            db_msgs_sorted = sorted(db_msgs, key=lambda x: x["timestamp"])
-            new_messages = []
-            unread_ids = []
-            for m in db_msgs_sorted:
-                msg_id = int(m["id"])
-                msg = {
-                    "sender": m["from"],
-                    "text": m["content"],
-                    "timestamp": m["timestamp"],
-                    "is_read": m.get("is_read", False),
-                    "is_delivered": m.get("is_delivered", True),
-                    "id": msg_id,
-                }
-                if msg["sender"].strip().lower() != st.session_state.username:
-                    msg["is_read"] = True
-                    unread_ids.append(msg_id)
-                new_messages.append(msg)
-            with st.session_state.lock:
-                st.session_state.messages = new_messages
-                st.session_state.displayed_messages = new_messages
-                st.session_state.messages_offset = offset
-                st.session_state.messages_limit = limit
-                st.session_state.scroll_to_bottom = False
-                st.session_state.scroll_to_top = True
-                st.session_state.unread_map[partner] = 0
-            st.write(f"Loaded {len(new_messages)} messages.")
+                # Try to read conversation
+                response = client.read_conversation_sync(partner, offset, limit)
+                result = MessageToDict(response.payload)
+                db_msgs = result.get("messages", [])
+                db_msgs_sorted = sorted(db_msgs, key=lambda x: x["timestamp"])
+                new_messages = []
+                unread_ids = []
+                for m in db_msgs_sorted:
+                    msg_id = int(m["id"])
+                    msg = {
+                        "sender": m["from"],
+                        "text": m["content"],
+                        "timestamp": m["timestamp"],
+                        "is_read": m.get("is_read", False),
+                        "is_delivered": m.get("is_delivered", True),
+                        "id": msg_id,
+                    }
+                    if msg["sender"].strip().lower() != st.session_state.username:
+                        msg["is_read"] = True
+                        unread_ids.append(msg_id)
+                    new_messages.append(msg)
 
-            # Instead of updating read status locally, call the MarkRead RPC.
-            if unread_ids:
-                mark_request = chat_pb2.ChatMessage(
-                    type=chat_pb2.MessageType.MARK_READ,  # Ensure MARK_READ is defined in your proto.
-                    payload=ParseDict({"message_ids": unread_ids}, Struct()),
-                    sender=st.session_state.username,
-                    recipient="SERVER",
-                    timestamp=time.time(),
-                )
-                mark_response = client.stub.MarkRead(mark_request)
-                mark_result = MessageToDict(mark_response.payload)
-                if "success" not in mark_result.get("text", "").lower():
-                    st.warning("Failed to update read status on server.")
-        except Exception as e:
-            st.warning(f"An error occurred while loading conversation: {e}")
+                with st.session_state.lock:
+                    st.session_state.messages = new_messages
+                    st.session_state.displayed_messages = new_messages
+                    st.session_state.messages_offset = offset
+                    st.session_state.messages_limit = limit
+                    st.session_state.scroll_to_bottom = False
+                    st.session_state.scroll_to_top = True
+                    st.session_state.unread_map[partner] = 0
+
+                # Mark messages as read
+                if unread_ids:
+                    try:
+                        mark_request = chat_pb2.ChatMessage(
+                            type=chat_pb2.MessageType.MARK_READ,
+                            payload=ParseDict({"message_ids": unread_ids}, Struct()),
+                            sender=st.session_state.username,
+                            recipient="SERVER",
+                            timestamp=time.time(),
+                        )
+                        mark_response = client.stub.MarkRead(mark_request)
+                        mark_result = MessageToDict(mark_response.payload)
+                        if "success" not in mark_result.get("text", "").lower():
+                            st.warning("Failed to update read status on server.")
+                    except Exception as e:
+                        st.warning(f"Failed to mark messages as read: {e}")
+
+                st.write(f"Loaded {len(new_messages)} messages.")
+                return  # Success, exit the retry loop
+
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"Failed to load conversation (attempt {attempt + 1}/{max_retries}): {e}")
+                    print("Retrying...")
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    st.error(f"Failed to load conversation: {e}")
+                    return
+
+        st.error("Failed to load conversation after multiple retries. Please try again later.")
     else:
         st.warning("Client is not connected.")
 
@@ -732,7 +817,7 @@ def main() -> None:
     args, unknown = parser.parse_known_args()
 
     st.set_page_config(page_title="Secure Chat", layout="wide")
-    st_autorefresh(interval=3000, key="auto_refresh_chat")
+    st_autorefresh(interval=1000, key="auto_refresh_chat")  # Refresh every second
 
     init_session_state()
 
@@ -742,28 +827,31 @@ def main() -> None:
         st.session_state.server_port = args.port
         temp_client = ChatClient(username="", host=args.host, port=args.port)
         if temp_client.connect():
-            leader = temp_client.get_leader()
-            print("leader is:", leader)
-            if leader:
-                st.session_state.server_host, st.session_state.server_port = leader
+            if check_and_reconnect_leader(temp_client):
                 st.session_state.server_connected = True
-                st.success(f"Automatically connected to leader at {leader[0]}:{leader[1]}.")
+                st.success(
+                    f"Automatically connected to leader at {temp_client.host}:{temp_client.port}"
+                )
             else:
                 st.error("Failed to determine leader server.")
         else:
-            st.error(f"Failed to connect automatically to {args.host}:{args.port} (from command line).")
+            st.error(
+                f"Failed to connect automatically to {args.host}:{args.port} (from command line)."
+            )
         temp_client.close()
         st.rerun()
 
     if not st.session_state.logged_in:
         render_login_page()
     else:
-        # Ensure the client's read thread is running on every run.
+        # Check if we need to reconnect to the leader
         if st.session_state.client is not None:
-            # If the client doesn't have a 'read_thread' attribute or it isn't alive, start it.
-            if not hasattr(st.session_state.client, "read_thread") or not st.session_state.client.read_thread.is_alive():
-                st.session_state.client.start_read_thread()
+            if not check_and_reconnect_leader(st.session_state.client):
+                st.error("Lost connection to leader. Please try reconnecting.")
+                st.session_state.client_connected = False
+                st.rerun()
 
+        # If we do have a connected client and user is logged in, go to chat UI
         if st.session_state.client_connected:
             try:
                 process_incoming_realtime_messages()

@@ -140,6 +140,9 @@ class ReplicationManager:
 
         with self.replica_lock:
             replicas = list(self.replicas.items())
+            total_nodes = len(replicas) + 1  # Include self
+            needed_votes = (total_nodes // 2) + 1
+            logging.debug(f"Need {needed_votes} votes out of {total_nodes} nodes")
 
         for addr, replica in replicas:
             try:
@@ -158,48 +161,63 @@ class ReplicationManager:
                     timestamp=time.time(),
                 )
 
-                response = stub.HandleReplication(request)
+                try:
+                    response = stub.HandleReplication(
+                        request, timeout=2.0
+                    )  # 2 second timeout for votes
+                    with self.role_lock:
+                        current_role = self.role
 
-                with self.role_lock:
-                    current_role = self.role
+                    with self.term_lock:
+                        if response.term > self.term:
+                            self.term = response.term
+                            with self.role_lock:
+                                self.role = ServerRole.FOLLOWER
+                            with self.vote_lock:
+                                self.voted_for = None
+                            self.election_in_progress = False
+                            logging.info(f"Stepping down - discovered higher term {response.term}")
+                            return
 
-                with self.term_lock:
-                    if response.term > self.term:
-                        self.term = response.term
-                        with self.role_lock:
-                            self.role = ServerRole.FOLLOWER
-                        with self.vote_lock:
-                            self.voted_for = None
-                        self.election_in_progress = False
-                        logging.info(f"Stepping down - discovered higher term {response.term}")
-                        return
-
-                    if (
-                        current_role == ServerRole.CANDIDATE
-                        and self.term == current_term
-                        and response.type == chat_pb2.ReplicationType.VOTE_RESPONSE
-                        and response.vote_response.vote_granted
-                    ):
-                        votes += 1
-                        logging.debug(f"Vote granted from {addr}")
-
+                        if (
+                            current_role == ServerRole.CANDIDATE
+                            and self.term == current_term
+                            and response.type == chat_pb2.ReplicationType.VOTE_RESPONSE
+                            and response.vote_response.vote_granted
+                        ):
+                            votes += 1
+                            logging.debug(
+                                f"Vote granted from {addr}, total votes: {votes}/{needed_votes}"
+                            )
+                            if votes >= needed_votes:
+                                with self.role_lock:
+                                    if (
+                                        self.role == ServerRole.CANDIDATE
+                                    ):  # Double check we're still candidate
+                                        self.role = ServerRole.LEADER
+                                        with self.leader_lock:
+                                            self.leader_host = self.host
+                                            self.leader_port = self.port
+                                        logging.info(
+                                            f"Elected as leader for term {current_term} with {votes}/{total_nodes} votes"
+                                        )
+                                        self._send_initial_heartbeat()
+                                        return
+                except grpc.RpcError as e:
+                    logging.error(f"RPC error requesting vote from {addr}: {e}")
+                    replica.is_alive = False
+                finally:
+                    channel.close()
             except Exception as e:
                 logging.error(f"Failed to request vote from {addr}: {e}")
+                replica.is_alive = False
 
         with self.role_lock:
             if self.role == ServerRole.CANDIDATE:
-                if votes > (len(self.replicas) + 1) / 2:
-                    self.role = ServerRole.LEADER
-                    with self.leader_lock:
-                        self.leader_host = self.host
-                        self.leader_port = self.port
-                    logging.info(f"Elected as leader for term {current_term}")
-                    self._send_initial_heartbeat()
-                else:
-                    self.role = ServerRole.FOLLOWER
-                    logging.info(
-                        f"Election failed. Returning to follower state. Term: {current_term}"
-                    )
+                self.role = ServerRole.FOLLOWER
+                logging.info(
+                    f"Election failed. Returning to follower state. Got {votes}/{total_nodes} votes"
+                )
 
         self.election_in_progress = False
 
@@ -237,7 +255,10 @@ class ReplicationManager:
                     if self.role == ServerRole.LEADER:
                         with self.replica_lock:
                             replicas = list(self.replicas.items())
+                            total_nodes = len(replicas) + 1  # Include self
+                            min_alive = (total_nodes // 2) + 1  # Minimum nodes needed for quorum
 
+                        alive_count = 1  # Count self as alive
                         for addr, replica in replicas:
                             try:
                                 channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
@@ -252,20 +273,34 @@ class ReplicationManager:
                                     timestamp=time.time(),
                                 )
 
-                                response = stub.HandleReplication(request)
-                                replica.is_alive = True
-                                replica.last_heartbeat = time.time()
-                                logging.debug(f"Heartbeat sent to {addr} successfully.")
-                            except Exception as e:
-                                logging.error(f"Failed to send heartbeat to {addr}: {e}")
-                                replica.is_alive = False
-                            finally:
-                                if "channel" in locals():
+                                try:
+                                    response = stub.HandleReplication(request, timeout=1.0)
+                                    replica.is_alive = True
+                                    replica.last_heartbeat = time.time()
+                                    alive_count += 1
+                                    logging.debug(f"Heartbeat sent to {addr} successfully.")
+                                except grpc.RpcError:
+                                    replica.is_alive = False
+                                    logging.warning(f"Failed to send heartbeat to {addr}")
+                                finally:
                                     channel.close()
+                            except Exception as e:
+                                logging.error(f"Error sending heartbeat to {addr}: {e}")
+                                replica.is_alive = False
+
+                        if alive_count < min_alive:
+                            logging.warning(
+                                f"Quorum lost! Only {alive_count}/{total_nodes} nodes alive (need {min_alive})"
+                            )
+                            # Step down if we can't maintain quorum
+                            with self.role_lock:
+                                if self.role == ServerRole.LEADER:
+                                    self.role = ServerRole.FOLLOWER
+                                    logging.info("Stepping down as leader due to lost quorum")
             except Exception as e:
                 logging.error(f"Error in heartbeat loop: {e}")
             finally:
-                time.sleep(self.HEARTBEAT_INTERVAL)  # Sleep for heartbeat interval
+                time.sleep(self.HEARTBEAT_INTERVAL)
 
     def replicate_message(self, message_id: int, sender: str, recipient: str, content: str) -> bool:
         if self.role != ServerRole.LEADER:

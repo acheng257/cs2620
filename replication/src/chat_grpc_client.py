@@ -182,39 +182,55 @@ class ChatClient:
             return False, error_text
 
     def send_message(self, recipient: str, text: str) -> bool:
-        try:
-            payload = {"text": text}
-            start_ser = time.perf_counter()
-            parsed_payload = ParseDict(payload, Struct())
-            end_ser = time.perf_counter()
-            print(f"[send_message] Serialization took {end_ser - start_ser:.6f} seconds")
+        max_retries = 20
+        retry_delay = 1.0  # seconds
 
-            message = chat_pb2.ChatMessage(
-                type=chat_pb2.MessageType.SEND_MESSAGE,
-                payload=parsed_payload,
-                sender=self.username,
-                recipient=recipient,
-                timestamp=time.time(),
-            )
-            response = self.stub.SendMessage(message)
-            start_deser = time.perf_counter()
-            _ = MessageToDict(response.payload)
-            end_deser = time.perf_counter()
-            print(f"[send_message] Deserialization took {end_deser - start_deser:.6f} seconds")
+        for attempt in range(max_retries):
+            try:
+                payload = {"text": text}
+                parsed_payload = ParseDict(payload, Struct())
 
-            if response.type == chat_pb2.MessageType.SUCCESS:
-                print("Message sent successfully.")
-                return True
-            elif response.type == chat_pb2.MessageType.ERROR:
-                error_message = MessageToDict(response.payload).get("text", "Unknown error.")
-                print(f"Error sending message: {error_message}")
+                message = chat_pb2.ChatMessage(
+                    type=chat_pb2.MessageType.SEND_MESSAGE,
+                    payload=parsed_payload,
+                    sender=self.username,
+                    recipient=recipient,
+                    timestamp=time.time(),
+                )
+
+                response = self.stub.SendMessage(message)
+
+                if response.type == chat_pb2.MessageType.SUCCESS:
+                    print("Message sent successfully.")
+                    return True
+                elif response.type == chat_pb2.MessageType.ERROR:
+                    error_message = MessageToDict(response.payload).get("text", "Unknown error.")
+                    print(f"Error sending message: {error_message}")
+
+                    # If error indicates leader issues, wait for leader election
+                    if "leader" in error_message.lower():
+                        if attempt < max_retries - 1:  # Don't sleep on last attempt
+                            print(
+                                f"Waiting for leader election (attempt {attempt + 1}/{max_retries})..."
+                            )
+                            time.sleep(retry_delay)
+                            continue
+                    return False
+                else:
+                    print("Unexpected response from server.")
+                    return False
+
+            except grpc.RpcError as e:
+                print(f"RPC error while sending message: {e.details()}")
+                if attempt < max_retries - 1:  # Don't sleep on last attempt
+                    print(
+                        f"Retrying in {retry_delay} seconds (attempt {attempt + 1}/{max_retries})..."
+                    )
+                    time.sleep(retry_delay)
+                    continue
                 return False
-            else:
-                print("Unexpected response from server.")
-                return False
-        except grpc.RpcError as e:
-            print(f"RPC error while sending message: {e.details()}")
-            return False
+
+        return False
 
     def send_message_sync(self, recipient: str, text: str) -> chat_pb2.ChatMessage:
         payload = {"text": text}
@@ -493,17 +509,59 @@ class ChatClient:
         """Periodically check if we're still connected to the leader"""
         while self.running:
             try:
-                leader = self.get_leader()
-                if leader:
-                    leader_host, leader_port = leader
-                    if leader_host != self.host or leader_port != self.port:
-                        print(f"Leader changed to {leader_host}:{leader_port}, reconnecting...")
-                        self.host = leader_host
-                        self.port = leader_port
-                        self.connect()
+                # Try current connection first
+                try:
+                    leader = self.get_leader()
+                    if leader:
+                        leader_host, leader_port = leader
+                        if leader_host != self.host or leader_port != self.port:
+                            print(f"Leader changed to {leader_host}:{leader_port}, reconnecting...")
+                            self.host = leader_host
+                            self.port = leader_port
+                            if self.connect():
+                                print("Successfully reconnected to new leader")
+                                # Restart read thread with new connection
+                                if self.read_thread:
+                                    self.read_thread = None
+                                    self.start_read_thread()
+                            else:
+                                print("Failed to connect to new leader, will try other servers...")
+                                raise Exception("Failed to connect to leader")
+                except Exception:
+                    # Current connection failed, try all known ports
+                    found_leader = False
+                    for port in range(50051, 50056):  # Try ports 50051-50055
+                        if port != self.port:  # Don't try current port
+                            try:
+                                temp_client = ChatClient(username="", host="127.0.0.1", port=port)
+                                if temp_client.connect(timeout=1):  # Shorter timeout for discovery
+                                    leader = temp_client.get_leader()
+                                    temp_client.close()
+                                    if leader:
+                                        leader_host, leader_port = leader
+                                        print(
+                                            f"Found leader through port {port}: {leader_host}:{leader_port}"
+                                        )
+                                        self.host = leader_host
+                                        self.port = leader_port
+                                        if self.connect():
+                                            print("Successfully reconnected to leader")
+                                            if self.read_thread:
+                                                self.read_thread = None
+                                                self.start_read_thread()
+                                            found_leader = True
+                                            break
+                            except Exception as e:
+                                print(f"Failed to check port {port}: {e}")
+                                continue
+
+                    if not found_leader:
+                        print("Could not find leader through any known ports, will retry...")
+
             except Exception as e:
-                print(f"Error checking leader: {e}")
-            time.sleep(5)  # Check every 5 seconds
+                print(f"Error in leader check: {e}")
+
+            time.sleep(0.2)  # Check every 200ms
 
     def start_leader_check_thread(self) -> None:
         """Start the leader check thread"""
