@@ -180,6 +180,7 @@ def render_login_page() -> None:
     else:
         st.success("Successfully connected to server.")
 
+    # Ask for username if not already provided.
     if not st.session_state.pending_username:
         with st.form("enter_username_form"):
             username = st.text_input("Enter your unique username", key="username_input")
@@ -199,8 +200,10 @@ def render_login_page() -> None:
         )
         if temp_client.connect():
             success, error = temp_client.login_sync("dummy_password")
-            # If login fails with an error containing "does not exist", then account doesn't exist.
-            if not success and error and "does not exist" in error.lower():
+            # If login fails with an error indicating non-existence, account does not exist.
+            if not success and error and (
+                "does not exist" in error.lower() or "will be created automatically" in error.lower()
+            ):
                 account_exists = False
             else:
                 account_exists = True
@@ -229,7 +232,8 @@ def render_login_page() -> None:
                         st.success("Logged in successfully!")
                         client.start_read_thread()
                     else:
-                        if error and "does not exist" in error.lower():
+                        # If error indicates account does not exist, offer to create it.
+                        if error and ("does not exist" in error.lower() or "will be created automatically" in error.lower()):
                             st.info("Account does not exist. Creating account automatically...")
                             created = client.create_account_sync(password)
                             if created:
@@ -241,7 +245,7 @@ def render_login_page() -> None:
                                 st.success("Account created and logged in successfully!")
                                 client.start_read_thread()
                                 st.session_state.pending_username = ""  # Clear pending username
-                                st.rerun()  # Automatically re-run to update UI state.
+                                st.rerun()  # Update UI state.
                             else:
                                 st.error("Failed to create account.")
                         else:
@@ -283,7 +287,6 @@ def render_login_page() -> None:
 
     if st.button("Change Username"):
         st.session_state.pending_username = ""
-
 
 def fetch_accounts(pattern: str = "", page: int = 1) -> None:
     client = get_chat_client()
