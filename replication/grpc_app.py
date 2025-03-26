@@ -12,6 +12,7 @@ from src.chat_grpc_client import ChatClient
 from src.database.db_manager import DatabaseManager
 from google.protobuf.struct_pb2 import Struct
 
+
 def get_leader(self) -> Optional[Tuple[str, int]]:
     """
     Queries the server for the current leader and returns a tuple (host, port).
@@ -35,8 +36,10 @@ def get_leader(self) -> Optional[Tuple[str, int]]:
         print(f"Error retrieving leader: {e}")
     return None
 
+
 # Attach this new method to ChatClient (monkey-patching for simplicity)
 ChatClient.get_leader = get_leader
+
 
 def init_session_state() -> None:
     """Initialize all necessary session states."""
@@ -93,6 +96,7 @@ def init_session_state() -> None:
     if "conversations" not in st.session_state:
         st.session_state.conversations = {}
 
+
 def get_chat_client() -> Optional[ChatClient]:
     """
     Return the connected ChatClient if logged in, else None.
@@ -106,7 +110,12 @@ def get_chat_client() -> Optional[ChatClient]:
     print("Chat client is not initialized or not connected.")
     return None
 
+
 def render_login_page() -> None:
+    # If the user is already logged in, don't render the login page.
+    if st.session_state.logged_in:
+        return
+
     st.title("Secure Chat - Login / Sign Up")
 
     if st.session_state.error_message:
@@ -137,22 +146,18 @@ def render_login_page() -> None:
                 else:
                     st.session_state.server_host = server_host
                     st.session_state.server_port = int(server_port)
-                    # Create a temporary client to test the connection.
                     temp_client = ChatClient(
                         username="",
                         host=st.session_state.server_host,
                         port=st.session_state.server_port,
                     )
                     if temp_client.connect():
-                        # query the leader from this server.
                         leader = temp_client.get_leader()
                         if leader:
                             st.session_state.server_host, st.session_state.server_port = leader
                             st.session_state.server_connected = True
                             st.session_state.error_message = ""
-                            st.success(
-                                f"Connected to leader server at {leader[0]}:{leader[1]}"
-                            )
+                            st.success(f"Connected to leader server at {leader[0]}:{leader[1]}")
                         else:
                             st.session_state.error_message = "Could not determine leader server."
                             st.error(st.session_state.error_message)
@@ -166,7 +171,6 @@ def render_login_page() -> None:
                         )
                         st.error(st.session_state.error_message)
                         temp_client.close()
-
 
     st.markdown("---")
 
@@ -185,7 +189,7 @@ def render_login_page() -> None:
 
     username = st.session_state.pending_username
 
-    # Check account existence using a dummy password attempt
+    # Check account existence using a dummy password attempt.
     account_exists = False
     try:
         temp_client = ChatClient(
@@ -194,20 +198,12 @@ def render_login_page() -> None:
             port=st.session_state.server_port,
         )
         if temp_client.connect():
-            try:
-                # Try logging in with a dummy password
-                success, error = temp_client.login_sync("dummy_password")
+            success, error = temp_client.login_sync("dummy_password")
+            # If login fails with an error containing "does not exist", then account doesn't exist.
+            if not success and error and "does not exist" in error.lower():
+                account_exists = False
+            else:
                 account_exists = True
-            except Exception as e:
-                error_str = str(e).lower()
-                if "invalid password" in error_str:
-                    account_exists = True
-                elif "does not exist" in error_str:
-                    account_exists = False
-                else:
-                    st.error(f"Unexpected error during account check: {e}")
-                    temp_client.close()
-                    return
         temp_client.close()
     except Exception as e:
         st.error(f"Error checking account existence: {e}")
@@ -233,7 +229,23 @@ def render_login_page() -> None:
                         st.success("Logged in successfully!")
                         client.start_read_thread()
                     else:
-                        st.error(f"Login failed: {error}")
+                        if error and "does not exist" in error.lower():
+                            st.info("Account does not exist. Creating account automatically...")
+                            created = client.create_account_sync(password)
+                            if created:
+                                st.session_state.username = username
+                                st.session_state.logged_in = True
+                                st.session_state.client = client
+                                st.session_state.client_connected = True
+                                st.session_state.global_message_limit = 50
+                                st.success("Account created and logged in successfully!")
+                                client.start_read_thread()
+                                st.session_state.pending_username = ""  # Clear pending username
+                                st.rerun()  # Automatically re-run to update UI state.
+                            else:
+                                st.error("Failed to create account.")
+                        else:
+                            st.error(f"Login failed: {error}")
                 else:
                     st.error("Failed to connect to the server.")
     else:
@@ -262,6 +274,8 @@ def render_login_page() -> None:
                             st.session_state.global_message_limit = 50
                             st.success("Account created and logged in successfully!")
                             client.start_read_thread()
+                            st.session_state.pending_username = ""  # Clear pending username
+                            st.rerun()  # Re-run so the new logged-in state takes effect.
                         else:
                             st.error("Account creation failed. Username may already exist.")
                     else:
@@ -269,6 +283,7 @@ def render_login_page() -> None:
 
     if st.button("Change Username"):
         st.session_state.pending_username = ""
+
 
 def fetch_accounts(pattern: str = "", page: int = 1) -> None:
     client = get_chat_client()
@@ -281,6 +296,7 @@ def fetch_accounts(pattern: str = "", page: int = 1) -> None:
             st.warning(f"An error occurred while fetching accounts: {e}")
     else:
         st.warning("Client is not connected.")
+
 
 def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
     if "chat_partners" in st.session_state and st.session_state.chat_partners:
@@ -297,10 +313,23 @@ def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
         return partners, unread_map
     return [], {}
 
+
 def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
     client = get_chat_client()
     if client:
         try:
+            # Check if we're connected to the leader
+            leader = client.get_leader()
+            if leader:
+                leader_host, leader_port = leader
+                if leader_host != client.host or leader_port != client.port:
+                    # Reconnect to leader
+                    client.host = leader_host
+                    client.port = leader_port
+                    if not client.connect():
+                        st.error("Failed to connect to leader server.")
+                        return
+
             response = client.read_conversation_sync(partner, offset, limit)
             result = MessageToDict(response.payload)
             db_msgs = result.get("messages", [])
@@ -331,16 +360,24 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
                 st.session_state.unread_map[partner] = 0
             st.write(f"Loaded {len(new_messages)} messages.")
 
+            # Instead of updating read status locally, call the MarkRead RPC.
             if unread_ids:
-                db_manager = DatabaseManager()
-                success = db_manager.mark_messages_as_read(st.session_state.username, unread_ids)
-                if not success:
-                    st.warning("Failed to update read status in database.")
-
+                mark_request = chat_pb2.ChatMessage(
+                    type=chat_pb2.MessageType.MARK_READ,  # Ensure MARK_READ is defined in your proto.
+                    payload=ParseDict({"message_ids": unread_ids}, Struct()),
+                    sender=st.session_state.username,
+                    recipient="SERVER",
+                    timestamp=time.time(),
+                )
+                mark_response = client.stub.MarkRead(mark_request)
+                mark_result = MessageToDict(mark_response.payload)
+                if "success" not in mark_result.get("text", "").lower():
+                    st.warning("Failed to update read status on server.")
         except Exception as e:
             st.warning(f"An error occurred while loading conversation: {e}")
     else:
         st.warning("Client is not connected.")
+
 
 def process_incoming_realtime_messages() -> None:
     client = get_chat_client()
@@ -372,7 +409,9 @@ def process_incoming_realtime_messages() -> None:
                             conv = st.session_state.conversations[st.session_state.current_chat]
                             conv["displayed_messages"].append(new_message)
                             if len(conv["displayed_messages"]) > conv["limit"]:
-                                conv["displayed_messages"] = conv["displayed_messages"][-conv["limit"]:]
+                                conv["displayed_messages"] = conv["displayed_messages"][
+                                    -conv["limit"] :
+                                ]
                     else:
                         st.session_state.unread_map[sender] = (
                             st.session_state.unread_map.get(sender, 0) + 1
@@ -385,6 +424,7 @@ def process_incoming_realtime_messages() -> None:
                 st.success(f"New message from {sender}: {text}")
         if new_partner_detected or new_message_received:
             st.rerun()
+
 
 def render_sidebar() -> None:
     st.sidebar.title("Menu")
@@ -482,6 +522,7 @@ def render_sidebar() -> None:
                             st.error("Client is not connected.")
                     else:
                         st.warning("Please confirm the deletion.")
+
 
 def render_chat_page_with_deletion() -> None:
     st.title("Secure Chat")
@@ -593,7 +634,9 @@ def render_chat_page_with_deletion() -> None:
                                     st.success("Selected messages have been deleted.")
                                     load_conversation(partner, 0, conv["limit"])
                                     conv["offset"] = 0
-                                    conv["displayed_messages"] = st.session_state.displayed_messages.copy()
+                                    conv["displayed_messages"] = (
+                                        st.session_state.displayed_messages.copy()
+                                    )
                                 else:
                                     st.error("Failed to delete selected messages.")
                             except Exception as e:
@@ -681,6 +724,7 @@ def render_chat_page_with_deletion() -> None:
     else:
         st.info("Select a user from the sidebar or search to begin chat.")
 
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="", help="Server host address")
@@ -705,9 +749,7 @@ def main() -> None:
             if leader:
                 st.session_state.server_host, st.session_state.server_port = leader
                 st.session_state.server_connected = True
-                st.success(
-                    f"Automatically connected to leader at {leader[0]}:{leader[1]}."
-                )
+                st.success(f"Automatically connected to leader at {leader[0]}:{leader[1]}.")
             else:
                 st.error("Failed to determine leader server.")
         else:
@@ -730,6 +772,7 @@ def main() -> None:
             render_chat_page_with_deletion()
         else:
             st.error("Client is not connected. Please try logging in again.")
+
 
 if __name__ == "__main__":
     main()

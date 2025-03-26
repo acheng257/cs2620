@@ -2,7 +2,7 @@ import threading
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
 import grpc
 from google.protobuf.json_format import MessageToDict, ParseDict
@@ -37,17 +37,10 @@ class ReplicationManager:
     Implements a basic leader-follower protocol with majority acknowledgment.
     """
 
-    def __init__(self, host: str, port: int, replica_addresses: List[str]) -> None:
-        """
-        Initialize the replication manager.
-
-        Args:
-            host: The host address of this server
-            port: The port of this server
-            replica_addresses: List of "host:port" strings for all replicas
-        """
+    def __init__(self, host: str, port: int, replica_addresses: List[str], db) -> None:
         self.host = host
         self.port = port
+        self.db = db  # Reference to the ChatServer's DatabaseManager
         self.role = ServerRole.FOLLOWER
         self.leader_host: Optional[str] = None
         self.leader_port: Optional[int] = None
@@ -77,9 +70,11 @@ class ReplicationManager:
         for addr in replica_addresses:
             if addr:
                 host, port = addr.split(":")
-                if host != self.host or int(port) != self.port:  # Don't add self
+                port = int(port)
+                # Don't add self
+                if host != self.host or port != self.port:
                     with self.replica_lock:
-                        self.replicas[addr] = ReplicaInfo(host=host, port=int(port))
+                        self.replicas[addr] = ReplicaInfo(host=host, port=port)
 
         # Start election timeout thread
         self.election_timeout = threading.Event()
@@ -237,45 +232,50 @@ class ReplicationManager:
     def _send_heartbeats(self) -> None:
         """Send heartbeats to all followers if we're the leader"""
         while True:
-            if self.role == ServerRole.LEADER:
-                for addr, replica in self.replicas.items():
-                    try:
-                        channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
-                        stub = chat_pb2_grpc.ChatServerStub(channel)
+            try:
+                with self.role_lock:
+                    if self.role == ServerRole.LEADER:
+                        with self.replica_lock:
+                            replicas = list(self.replicas.items())
 
-                        heartbeat = chat_pb2.Heartbeat(commit_index=self.commit_index)
-                        request = chat_pb2.ReplicationMessage(
-                            type=chat_pb2.ReplicationType.HEARTBEAT,
-                            term=self.term,
-                            server_id=f"{self.host}:{self.port}",
-                            heartbeat=heartbeat,
-                            timestamp=time.time(),
-                        )
+                        for addr, replica in replicas:
+                            try:
+                                channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
+                                stub = chat_pb2_grpc.ChatServerStub(channel)
 
-                        response = stub.HandleReplication(request)
-                        replica.is_alive = True
-                        replica.last_heartbeat = time.time()
-                        logging.debug(f"Heartbeat sent to {addr} successfully.")
-                    except Exception as e:
-                        logging.error(f"Failed to send heartbeat to {addr}: {e}")
-                        replica.is_alive = False
-            time.sleep(self.HEARTBEAT_INTERVAL)  # Sleep for heartbeat interval
+                                heartbeat = chat_pb2.Heartbeat(commit_index=self.commit_index)
+                                request = chat_pb2.ReplicationMessage(
+                                    type=chat_pb2.ReplicationType.HEARTBEAT,
+                                    term=self.term,
+                                    server_id=f"{self.host}:{self.port}",
+                                    heartbeat=heartbeat,
+                                    timestamp=time.time(),
+                                )
+
+                                response = stub.HandleReplication(request)
+                                replica.is_alive = True
+                                replica.last_heartbeat = time.time()
+                                logging.debug(f"Heartbeat sent to {addr} successfully.")
+                            except Exception as e:
+                                logging.error(f"Failed to send heartbeat to {addr}: {e}")
+                                replica.is_alive = False
+                            finally:
+                                if "channel" in locals():
+                                    channel.close()
+            except Exception as e:
+                logging.error(f"Error in heartbeat loop: {e}")
+            finally:
+                time.sleep(self.HEARTBEAT_INTERVAL)  # Sleep for heartbeat interval
 
     def replicate_message(self, message_id: int, sender: str, recipient: str, content: str) -> bool:
-        """
-        Replicate a message to all followers and wait for majority acknowledgment.
-
-        Returns:
-            bool: True if message was replicated to a majority of followers
-        """
         if self.role != ServerRole.LEADER:
+            logging.error("Attempt to replicate message on a non-leader server.")
             return False
 
-        acks = 1  # Count self
+        acks = 1  # Leader counts as one ack
         message_replication = chat_pb2.MessageReplication(
             message_id=message_id, sender=sender, recipient=recipient, content=content
         )
-
         request = chat_pb2.ReplicationMessage(
             type=chat_pb2.ReplicationType.REPLICATE_MESSAGE,
             term=self.term,
@@ -283,31 +283,84 @@ class ReplicationManager:
             message_replication=message_replication,
             timestamp=time.time(),
         )
-
         for addr, replica in self.replicas.items():
             if not replica.is_alive:
                 continue
-
             try:
                 channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
                 stub = chat_pb2_grpc.ChatServerStub(channel)
-
-                response = stub.HandleReplication(request)
+                response = stub.HandleReplication(request, timeout=1.0)
                 if (
                     response.type == chat_pb2.ReplicationType.REPLICATION_RESPONSE
                     and response.replication_response.success
                 ):
                     acks += 1
-
+                    logging.debug(f"Message replication acknowledged from {addr}.")
+                channel.close()
             except Exception as e:
-                print(f"Failed to replicate message to {addr}: {e}")
+                logging.error(f"Failed to replicate message to {addr}: {e}")
                 continue
 
+        logging.info(f"Total acknowledgments received: {acks} (including self).")
         success = acks > (len(self.replicas) + 1) / 2
         if success:
             self.last_log_index += 1
             self.last_log_term = self.term
             self.commit_index = self.last_log_index
+        return success
+
+    def replicate_account(self, username: str) -> bool:
+        if self.role != ServerRole.LEADER:
+            logging.error("Attempt to replicate account on a non-leader server.")
+            return False
+
+        acks = 1  # Count self
+        account_replication = chat_pb2.AccountReplication(username=username)
+        request = chat_pb2.ReplicationMessage(
+            type=chat_pb2.ReplicationType.REPLICATE_ACCOUNT,
+            term=self.term,
+            server_id=f"{self.host}:{self.port}",
+            account_replication=account_replication,
+            timestamp=time.time(),
+        )
+        logging.debug(
+            f"Replicating account creation for '{username}' to followers. Request: {request}"
+        )
+
+        for addr, replica in self.replicas.items():
+            if not replica.is_alive:
+                logging.info(f"Skipping replica {addr} because it is marked not alive.")
+                continue
+            try:
+                logging.debug(
+                    f"Creating channel to replica {addr} at {replica.host}:{replica.port}."
+                )
+                channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
+                stub = chat_pb2_grpc.ChatServerStub(channel)
+                logging.debug(f"Sending replication request to {addr} with 1.0s timeout.")
+                start_time = time.time()
+                response = stub.HandleReplication(request, timeout=1.0)
+                duration = time.time() - start_time
+                logging.debug(f"Received response from {addr} in {duration:.3f}s: {response}")
+                channel.close()
+                if (
+                    response.type == chat_pb2.ReplicationType.REPLICATION_RESPONSE
+                    and response.replication_response.success
+                ):
+                    acks += 1
+                    logging.debug(f"Account replication acknowledged from {addr}.")
+                else:
+                    logging.error(f"Account replication from {addr} returned failure: {response}")
+            except Exception as e:
+                logging.exception(f"Failed to replicate account to {addr}: {e}")
+                continue
+
+        logging.info(f"Total acknowledgments received: {acks} (including self).")
+        success = acks > (len(self.replicas) + 1) / 2
+        if success:
+            logging.info(f"Account '{username}' replicated successfully with {acks} acks.")
+        else:
+            logging.error(f"Account '{username}' replication failed. Acks: {acks}")
         return success
 
     def handle_replication_message(
@@ -353,7 +406,6 @@ class ReplicationManager:
                 vote_response=chat_pb2.VoteResponse(vote_granted=vote_granted),
                 timestamp=time.time(),
             )
-
         elif message.type == chat_pb2.ReplicationType.HEARTBEAT:
             with self.role_lock:
                 if self.term == message.term and self.role != ServerRole.FOLLOWER:
@@ -374,24 +426,56 @@ class ReplicationManager:
                 server_id=f"{self.host}:{self.port}",
                 timestamp=time.time(),
             )
-
         elif message.type == chat_pb2.ReplicationType.REPLICATE_MESSAGE:
             if message.term == self.term:
                 self.last_leader_contact = time.time()
 
-            success = True
             msg_id = message.message_replication.message_id
+            sender = message.message_replication.sender
+            recipient = message.message_replication.recipient
+            content = message.message_replication.content
+            # For followers, we mark delivered as False.
+            delivered = False
 
-            return chat_pb2.ReplicationMessage(
-                type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
-                term=self.term,
-                server_id=f"{self.host}:{self.port}",
-                replication_response=chat_pb2.ReplicationResponse(
-                    success=success, message_id=msg_id
-                ),
-                timestamp=time.time(),
-            )
+            # Check if message already exists
+            existing_messages = self.db.get_messages_between_users(sender, recipient)
+            for msg in existing_messages.get("messages", []):
+                if msg.get("id") == msg_id:
+                    # Message already exists, just acknowledge it
+                    return chat_pb2.ReplicationMessage(
+                        type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
+                        term=self.term,
+                        server_id=f"{self.host}:{self.port}",
+                        replication_response=chat_pb2.ReplicationResponse(
+                            success=True, message_id=msg_id
+                        ),
+                        timestamp=time.time(),
+                    )
 
+            # Message doesn't exist, store it
+            stored_id = self.db.store_message(sender, recipient, content, delivered)
+            if stored_id is not None:
+                return chat_pb2.ReplicationMessage(
+                    type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
+                    term=self.term,
+                    server_id=f"{self.host}:{self.port}",
+                    replication_response=chat_pb2.ReplicationResponse(
+                        success=True, message_id=msg_id
+                    ),
+                    timestamp=time.time(),
+                )
+            else:
+                return chat_pb2.ReplicationMessage(
+                    type=chat_pb2.ReplicationType.REPLICATION_RESPONSE,
+                    term=self.term,
+                    server_id=f"{self.host}:{self.port}",
+                    replication_response=chat_pb2.ReplicationResponse(
+                        success=False, message_id=msg_id
+                    ),
+                    timestamp=time.time(),
+                )
+
+        # Default case
         return chat_pb2.ReplicationMessage(
             type=chat_pb2.ReplicationType.REPLICATION_ERROR,
             term=self.term,

@@ -5,7 +5,7 @@ import warnings
 
 from src.protocols.grpc import chat_pb2 as src_dot_protocols_dot_grpc_dot_chat__pb2
 
-GRPC_GENERATED_VERSION = '1.71.0'
+GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -85,6 +85,11 @@ class ChatServerStub(object):
                 request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
                 response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                 _registered_method=True)
+        self.MarkRead = channel.unary_unary(
+                '/chat.ChatServer/MarkRead',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                _registered_method=True)
         self.HandleReplication = channel.unary_unary(
                 '/chat.ChatServer/HandleReplication',
                 request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ReplicationMessage.SerializeToString,
@@ -157,6 +162,12 @@ class ChatServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def MarkRead(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def HandleReplication(self, request, context):
         """Server-server replication RPCs
         """
@@ -214,6 +225,11 @@ def add_ChatServerServicer_to_server(servicer, server):
             ),
             'GetLeader': grpc.unary_unary_rpc_method_handler(
                     servicer.GetLeader,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            ),
+            'MarkRead': grpc.unary_unary_rpc_method_handler(
+                    servicer.MarkRead,
                     request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
                     response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
@@ -492,6 +508,33 @@ class ChatServer(object):
             request,
             target,
             '/chat.ChatServer/GetLeader',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def MarkRead(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/chat.ChatServer/MarkRead',
             src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
