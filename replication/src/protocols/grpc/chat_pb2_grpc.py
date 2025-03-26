@@ -95,6 +95,11 @@ class ChatServerStub(object):
                 request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ReplicationMessage.SerializeToString,
                 response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ReplicationMessage.FromString,
                 _registered_method=True)
+        self.GetClusterNodes = channel.unary_unary(
+                '/chat.ChatServer/GetClusterNodes',
+                request_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+                response_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                _registered_method=True)
 
 
 class ChatServerServicer(object):
@@ -175,6 +180,12 @@ class ChatServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetClusterNodes(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ChatServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -237,6 +248,11 @@ def add_ChatServerServicer_to_server(servicer, server):
                     servicer.HandleReplication,
                     request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ReplicationMessage.FromString,
                     response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ReplicationMessage.SerializeToString,
+            ),
+            'GetClusterNodes': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetClusterNodes,
+                    request_deserializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
+                    response_serializer=src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -564,6 +580,33 @@ class ChatServer(object):
             '/chat.ChatServer/HandleReplication',
             src_dot_protocols_dot_grpc_dot_chat__pb2.ReplicationMessage.SerializeToString,
             src_dot_protocols_dot_grpc_dot_chat__pb2.ReplicationMessage.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetClusterNodes(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/chat.ChatServer/GetClusterNodes',
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.SerializeToString,
+            src_dot_protocols_dot_grpc_dot_chat__pb2.ChatMessage.FromString,
             options,
             channel_credentials,
             insecure,

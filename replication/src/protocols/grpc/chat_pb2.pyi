@@ -21,6 +21,7 @@ class MessageType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     LIST_CHAT_PARTNERS: _ClassVar[MessageType]
     GET_LEADER: _ClassVar[MessageType]
     MARK_READ: _ClassVar[MessageType]
+    GET_CLUSTER_NODES: _ClassVar[MessageType]
 
 class ReplicationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -47,6 +48,7 @@ SUCCESS: MessageType
 LIST_CHAT_PARTNERS: MessageType
 GET_LEADER: MessageType
 MARK_READ: MessageType
+GET_CLUSTER_NODES: MessageType
 HEARTBEAT: ReplicationType
 REQUEST_VOTE: ReplicationType
 REPLICATE_MESSAGE: ReplicationType

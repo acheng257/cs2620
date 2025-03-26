@@ -93,6 +93,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         port: int = 50051,
         db_path: str = None,
         replica_addresses: List[str] = None,
+        cluster_nodes = None,
     ) -> None:
         self.host = host
         self.port = port
@@ -106,6 +107,8 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         self.replication_manager = ReplicationManager(
             host=host, port=port, replica_addresses=replica_addresses or [], db=self.db
         )
+
+        self.cluster_nodes = cluster_nodes or []
 
     def CreateAccount(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
@@ -796,6 +799,24 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             sender="SERVER",
             recipient=username,
             timestamp=time.time(),
+        )
+    
+    def GetClusterNodes(self, request, context):
+        """
+        Return the current cluster membership as a list of "host:port" strings.
+        """
+        # Build a dictionary that will go into the 'payload' field
+        payload_dict = {
+            "nodes": [f"{host}:{port}" for (host, port) in self.cluster_nodes]
+        }
+        payload_struct = ParseDict(payload_dict, Struct())
+
+        return chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.GET_CLUSTER_NODES,
+            payload=payload_struct,
+            sender="SERVER",
+            recipient=request.sender,  # or "SERVER" if you prefer
+            timestamp=time.time()
         )
 
 

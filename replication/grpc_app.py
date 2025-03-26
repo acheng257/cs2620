@@ -67,8 +67,35 @@ def get_leader(self) -> Optional[Tuple[str, int]]:
     return None
 
 
+def get_cluster_nodes(self) -> List[Tuple[str, int]]:
+    """
+    Queries the server (presumably the leader) for its known cluster membership.
+    Returns a list of (host, port) tuples.
+    """
+    try:
+        empty_payload = ParseDict({}, Struct())
+        request = chat_pb2.ChatMessage(
+            type=chat_pb2.MessageType.GET_CLUSTER_NODES,
+            payload=empty_payload,
+            sender="",      # not needed
+            recipient="SERVER",
+            timestamp=time.time(),
+        )
+        response = self.stub.GetClusterNodes(request)
+        node_list_str = MessageToDict(response.payload).get("nodes", [])
+        node_list = []
+        for node_str in node_list_str:
+            host, port_str = node_str.split(":")
+            node_list.append((host, int(port_str)))
+        return node_list
+    except Exception as e:
+        print(f"Error retrieving cluster nodes: {e}")
+    return []
+
+
 # Attach this new method to ChatClient (monkey-patching for simplicity)
 ChatClient.get_leader = get_leader
+ChatClient.get_cluster_nodes = get_cluster_nodes
 
 
 def init_session_state() -> None:
@@ -136,68 +163,211 @@ def init_session_state() -> None:
         st.session_state.conversations = {}
 
 
+# def check_and_reconnect_leader(client: ChatClient) -> bool:
+#     """
+#     Check if the current connection is to the leader.
+#     Returns True if we're connected to the leader (either already or after reconnecting),
+#     False otherwise.
+#     """
+#     # First try current connection
+#     try:
+#         leader = client.get_leader()
+#         if leader:
+#             leader_host, leader_port = leader
+#             if leader_host != client.host or leader_port != client.port:
+#                 print(f"Detected leader change to {leader_host}:{leader_port}, reconnecting...")
+#                 client.host = leader_host
+#                 client.port = leader_port
+#                 if client.connect():
+#                     print("Successfully reconnected to new leader")
+#                     if client.read_thread:
+#                         client.read_thread = None
+#                     client.start_read_thread()
+#                     return True
+#             else:
+#                 return True  # Already connected to leader
+#     except Exception as e:
+#         print(f"Current connection failed: {e}")
+
+#     # If current connection failed, try all known cluster nodes
+#     print("Trying all known cluster nodes to find leader...")
+#     for node_host, node_port in client.cluster_nodes:
+#         if (node_host, node_port) == (
+#             client.host,
+#             client.port,
+#         ):  # Skip current node as we know it failed
+#             continue
+#         try:
+#             print(f"Trying node at {node_host}:{node_port}...")
+#             temp_client = ChatClient(
+#                 username="", host=node_host, port=node_port, cluster_nodes=client.cluster_nodes
+#             )
+#             if temp_client.connect(timeout=1):  # Short timeout for discovery
+#                 leader = temp_client.get_leader()
+#                 temp_client.close()
+#                 if leader:
+#                     leader_host, leader_port = leader
+#                     print(
+#                         f"Found leader through node {node_host}:{node_port}: {leader_host}:{leader_port}"
+#                     )
+#                     # Update client connection
+#                     client.host = leader_host
+#                     client.port = leader_port
+#                     if client.connect():
+#                         print("Successfully connected to leader")
+#                         if client.read_thread:
+#                             client.read_thread = None
+#                         client.start_read_thread()
+#                         return True
+#         except Exception as e:
+#             print(f"Failed to check node at {node_host}:{node_port}: {e}")
+#             continue
+
+#     print("Could not find leader through any known nodes")
+#     return False
 def check_and_reconnect_leader(client: ChatClient) -> bool:
     """
     Check if the current connection is to the leader.
     Returns True if we're connected to the leader (either already or after reconnecting),
     False otherwise.
+
+    If we detect a new leader (host/port differs from what we were using),
+    we clear local chat state so we can reload messages from scratch.
     """
-    # First try current connection
+
+    old_host, old_port = client.host, client.port  # remember the current host/port
+
+    # 1. First try the current node
     try:
         leader = client.get_leader()
         if leader:
             leader_host, leader_port = leader
-            if leader_host != client.host or leader_port != client.port:
+
+            # If we're already connected to that leader, just refresh cluster membership
+            if (leader_host == client.host) and (leader_port == client.port):
+                try:
+                    updated_nodes = client.get_cluster_nodes()
+                    if updated_nodes:
+                        client.cluster_nodes = updated_nodes
+                        print(f"Refreshed cluster nodes: {client.cluster_nodes}")
+                except Exception as e:
+                    print(f"Warning: Could not refresh cluster nodes from leader: {e}")
+                return True
+            else:
+                # We are connected to a follower. Reconnect to the real leader
                 print(f"Detected leader change to {leader_host}:{leader_port}, reconnecting...")
                 client.host = leader_host
                 client.port = leader_port
                 if client.connect():
-                    print("Successfully reconnected to new leader")
+                    print("Successfully reconnected to new leader.")
+                    # Start read thread
                     if client.read_thread:
                         client.read_thread = None
                     client.start_read_thread()
+
+                    # --- CLEAR SESSION STATE IF CHANGED LEADERS ---
+                    if (leader_host != old_host) or (leader_port != old_port):
+                        _clear_local_chat_state()
+
+                    # Now fetch updated cluster membership
+                    try:
+                        updated_nodes = client.get_cluster_nodes()
+                        if updated_nodes:
+                            client.cluster_nodes = updated_nodes
+                            print(f"Refreshed cluster nodes: {client.cluster_nodes}")
+                    except Exception as e:
+                        print(f"Warning: Could not refresh cluster nodes from new leader: {e}")
                     return True
-            else:
-                return True  # Already connected to leader
     except Exception as e:
         print(f"Current connection failed: {e}")
+        # Remove the current node from the list so we don't keep retrying it
+        if (client.host, client.port) in client.cluster_nodes:
+            client.cluster_nodes.remove((client.host, client.port))
 
-    # If current connection failed, try all known cluster nodes
+    # 2. If current node fails, try each known cluster node in turn
     print("Trying all known cluster nodes to find leader...")
-    for node_host, node_port in client.cluster_nodes:
-        if (node_host, node_port) == (
-            client.host,
-            client.port,
-        ):  # Skip current node as we know it failed
-            continue
+    cluster_copy = list(client.cluster_nodes)
+    for node_host, node_port in cluster_copy:
         try:
+            # Skip if it's the one we just tried
+            if node_host == client.host and node_port == client.port:
+                continue
             print(f"Trying node at {node_host}:{node_port}...")
             temp_client = ChatClient(
                 username="", host=node_host, port=node_port, cluster_nodes=client.cluster_nodes
             )
-            if temp_client.connect(timeout=1):  # Short timeout for discovery
+            if temp_client.connect(timeout=1):
+                # If we got a connection, ask this node for the leader
                 leader = temp_client.get_leader()
                 temp_client.close()
                 if leader:
                     leader_host, leader_port = leader
-                    print(
-                        f"Found leader through node {node_host}:{node_port}: {leader_host}:{leader_port}"
-                    )
-                    # Update client connection
+                    print(f"Found leader through node {node_host}:{node_port}: {leader_host}:{leader_port}")
+                    # Connect directly to the discovered leader
                     client.host = leader_host
                     client.port = leader_port
                     if client.connect():
-                        print("Successfully connected to leader")
+                        print("Successfully connected to leader.")
                         if client.read_thread:
                             client.read_thread = None
                         client.start_read_thread()
+
+                        # --- CLEAR SESSION STATE IF CHANGED LEADERS ---
+                        if (leader_host != old_host) or (leader_port != old_port):
+                            _clear_local_chat_state()
+
+                        # Now fetch updated cluster membership
+                        try:
+                            updated_nodes = client.get_cluster_nodes()
+                            if updated_nodes:
+                                client.cluster_nodes = updated_nodes
+                                print(f"Refreshed cluster nodes: {client.cluster_nodes}")
+                        except Exception as e:
+                            print(f"Warning: Could not refresh cluster nodes from new leader: {e}")
                         return True
+                    else:
+                        # If we fail to connect to the actual leader, remove it
+                        print(f"Could not connect to the actual leader at {leader_host}:{leader_port}.")
+                        if (leader_host, leader_port) in client.cluster_nodes:
+                            client.cluster_nodes.remove((leader_host, leader_port))
+                else:
+                    # The node responded but didn't give us a valid leader => remove it
+                    print(f"Node {node_host}:{node_port} responded but gave no leader, removing it.")
+                    if (node_host, node_port) in client.cluster_nodes:
+                        client.cluster_nodes.remove((node_host, node_port))
+            else:
+                # If connect() failed, remove that node
+                print(f"Failed to connect to {node_host}:{node_port}, removing it.")
+                if (node_host, node_port) in client.cluster_nodes:
+                    client.cluster_nodes.remove((node_host, node_port))
         except Exception as e:
             print(f"Failed to check node at {node_host}:{node_port}: {e}")
+            if (node_host, node_port) in client.cluster_nodes:
+                client.cluster_nodes.remove((node_host, node_port))
             continue
 
-    print("Could not find leader through any known nodes")
+    print("Could not find leader through any known nodes.")
     return False
+
+
+def _clear_local_chat_state():
+    """
+    Clears out the local Streamlit session state for conversations, messages, etc.
+    so we reload everything from the new leader from scratch.
+    """
+    # You can adjust exactly which fields you want to clear.
+    # Typically we clear messages, displayed_messages, current_chat, and conversation caches.
+    print("Clearing local chat state due to leader change...")
+    st.session_state.messages = []
+    st.session_state.displayed_messages = []
+    st.session_state.conversations = {}
+    st.session_state.current_chat = None
+    st.session_state.unread_map = {}
+    st.session_state.messages_offset = 0
+    st.session_state.messages_limit = 50
+    st.session_state.scroll_to_bottom = True
+    st.session_state.scroll_to_top = False
+
 
 
 def get_chat_client() -> Optional[ChatClient]:
@@ -607,6 +777,7 @@ def process_incoming_realtime_messages() -> None:
                 with st.session_state.lock:
                     if st.session_state.current_chat == sender:
                         st.session_state.messages.append(new_message)
+                        st.session_state.messages = deduplicate_messages(st.session_state.messages)
                         new_message_received = True
                         if (
                             "conversations" in st.session_state
@@ -614,6 +785,7 @@ def process_incoming_realtime_messages() -> None:
                         ):
                             conv = st.session_state.conversations[st.session_state.current_chat]
                             conv["displayed_messages"].append(new_message)
+                            conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
                             if len(conv["displayed_messages"]) > conv["limit"]:
                                 conv["displayed_messages"] = conv["displayed_messages"][
                                     -conv["limit"] :
@@ -738,6 +910,29 @@ def render_sidebar() -> None:
                     else:
                         st.warning("Please confirm the deletion.")
 
+def deduplicate_messages(messages):
+    """
+    Return a new list of messages with duplicates removed.
+    A 'duplicate' is defined by having the same (sender, text, timestamp).
+    """
+    seen = set()
+    unique = []
+    for msg in messages:
+        # Build a key that identifies the message logically
+        # If your 'id' is globally unique across servers, you could just use (msg["id"]).
+        # Otherwise, use (sender, text, timestamp).
+        # Round the timestamp slightly to avoid floating-point differences if desired.
+        sender = msg.get("sender")
+        text = msg.get("text")
+        ts = float(msg.get("timestamp", 0.0))
+        
+        key = (sender, text, round(ts, 3))
+
+        if key not in seen:
+            seen.add(key)
+            unique.append(msg)
+    return unique
+
 
 def render_chat_page_with_deletion() -> None:
     """
@@ -778,6 +973,7 @@ def render_chat_page_with_deletion() -> None:
         if not conv["displayed_messages"]:
             load_conversation(partner, conv["offset"], conv["limit"])
             conv["displayed_messages"] = st.session_state.displayed_messages.copy()
+            conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
 
         new_limit = st.number_input(
             "Number of recent messages to display",
@@ -792,6 +988,7 @@ def render_chat_page_with_deletion() -> None:
             conv["offset"] = 0
             load_conversation(partner, 0, new_limit)
             conv["displayed_messages"] = st.session_state.displayed_messages.copy()
+            conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
             st.session_state.scroll_to_bottom = True
             st.session_state.scroll_to_top = False
             db_manager = DatabaseManager()
@@ -818,7 +1015,7 @@ def render_chat_page_with_deletion() -> None:
                         except Exception:
                             formatted_timestamp = "Unknown Time"
 
-                    sender_name = "You" if sender == st.session_state.username else sender
+                    sender_name = "You" if sender == st.session_state.username else sender 
                     cols = st.columns([4, 1])
                     with cols[0]:
                         st.markdown(f"**{sender_name}** [{formatted_timestamp}]:")
@@ -868,6 +1065,7 @@ def render_chat_page_with_deletion() -> None:
                                     conv["displayed_messages"] = (
                                         st.session_state.displayed_messages.copy()
                                     )
+                                    conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
                                 else:
                                     st.error("Failed to delete selected messages.")
                             except Exception as e:
@@ -921,6 +1119,7 @@ def render_chat_page_with_deletion() -> None:
             load_conversation(partner, new_offset, conv["limit"])
             conv["offset"] = new_offset
             conv["displayed_messages"] = st.session_state.displayed_messages.copy()
+            conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
             st.session_state.scroll_to_top = True
             st.session_state.scroll_to_bottom = False
 
@@ -937,21 +1136,22 @@ def render_chat_page_with_deletion() -> None:
                 if client:
                     try:
                         response = client.send_message_sync(partner, new_msg)
-                        if (
-                            MessageToDict(response.payload).get("text", "").lower().find("success")
-                            != -1
-                        ):
+                        if "success" in MessageToDict(response.payload).get("text", "").lower():
                             st.success("Message sent.")
                             st.session_state["clear_message_area"] = True
+                            # Remove the call to load_conversation(...) here
+                            # Let process_incoming_realtime_messages handle it
                             load_conversation(partner, 0, conv["limit"])
                             conv["offset"] = 0
                             conv["displayed_messages"] = st.session_state.displayed_messages.copy()
+                            conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
                         else:
                             st.error("Failed to send message.")
                     except Exception as e:
                         st.error(f"An error occurred while sending the message: {e}")
                 else:
                     st.error("Client is not connected.")
+
     else:
         st.info("Select a user from the sidebar or search to begin chat.")
 

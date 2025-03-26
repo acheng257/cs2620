@@ -18,6 +18,7 @@ enum MessageType {
   LIST_CHAT_PARTNERS = 9;
   GET_LEADER = 10;   // New message type for leader query
   MARK_READ = 11;    // New message type for marking messages as read
+  GET_CLUSTER_NODES = 12;
 }
 
 // Main message structure used for client-server communication
@@ -114,4 +115,5 @@ service ChatServer {
 
   // Server-server replication RPCs
   rpc HandleReplication(ReplicationMessage) returns (ReplicationMessage) {}
+  rpc GetClusterNodes(ChatMessage) returns (ChatMessage);
 }
