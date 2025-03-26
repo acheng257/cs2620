@@ -1,3 +1,33 @@
+"""
+A Streamlit-based web interface for the replicated chat system.
+
+This module provides a web interface for users to:
+1. Connect to the chat server cluster
+2. Create and manage accounts
+3. Send and receive messages
+4. View and manage chat history
+5. Delete messages and accounts
+
+The application uses the ChatClient class to handle all communication with the
+server cluster, including automatic leader discovery and reconnection. The UI
+is built using Streamlit and provides real-time updates for new messages.
+
+The application maintains session state to track:
+- User login status
+- Server connection details
+- Chat history and preferences
+- UI state (selected chat partner, scroll position, etc.)
+
+Example:
+    ```bash
+    # Run with default settings (connects to localhost:50051)
+    streamlit run grpc_app.py
+
+    # Run with specific cluster configuration
+    streamlit run grpc_app.py -- --cluster-nodes "127.0.0.1:50051,127.0.0.1:50052"
+    ```
+"""
+
 import argparse
 import threading
 import time
@@ -42,7 +72,16 @@ ChatClient.get_leader = get_leader
 
 
 def init_session_state() -> None:
-    """Initialize all necessary session states."""
+    """
+    Initialize all necessary session state variables.
+
+    This function ensures all required session state variables exist with proper
+    default values. It handles:
+    - User authentication state (logged_in, username)
+    - Server connection details (host, port, cluster_nodes)
+    - Chat state (selected partner, messages, etc.)
+    - UI state (error messages, pending actions, etc.)
+    """
     if "username" not in st.session_state:
         st.session_state.username = None
     if "logged_in" not in st.session_state:
@@ -163,7 +202,14 @@ def check_and_reconnect_leader(client: ChatClient) -> bool:
 
 def get_chat_client() -> Optional[ChatClient]:
     """
-    Return the connected ChatClient if logged in and connected to the leader, else None.
+    Get the chat client from the session state, ensuring it's connected.
+
+    The client's built-in leader check thread handles reconnection automatically,
+    so this function only needs to verify the client exists and is logged in.
+
+    Returns:
+        Optional[ChatClient]: The connected chat client if available and logged in,
+            None otherwise.
     """
     if (
         st.session_state.logged_in
@@ -181,6 +227,22 @@ def get_chat_client() -> Optional[ChatClient]:
 
 
 def render_login_page() -> None:
+    """
+    Render the login/signup page with server connection settings.
+
+    This function:
+    1. Displays server connection settings (host, port, cluster nodes)
+    2. Handles server connection attempts
+    3. Manages username input
+    4. Handles account creation and login
+    5. Starts necessary background threads upon successful login
+
+    The page adapts its display based on the current state:
+    - Shows connection settings if not connected
+    - Prompts for username if not set
+    - Shows login form if account exists
+    - Shows signup form if account doesn't exist
+    """
     # If the user is already logged in, don't render the login page.
     if st.session_state.logged_in:
         return
@@ -419,6 +481,20 @@ def fetch_chat_partners() -> Tuple[List[str], Dict[str, int]]:
 
 
 def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
+    """
+    Load messages from a conversation with a chat partner.
+
+    This function:
+    1. Retrieves messages from the server
+    2. Updates the session state with the loaded messages
+    3. Marks unread messages as read
+    4. Updates the UI scroll position
+
+    Args:
+        partner (str): Username of the chat partner
+        offset (int, optional): Number of messages to skip. Defaults to 0
+        limit (int, optional): Maximum number of messages to load. Defaults to 50
+    """
     client = get_chat_client()
     if client:
         max_retries = 3
@@ -504,6 +580,15 @@ def load_conversation(partner: str, offset: int = 0, limit: int = 50) -> None:
 
 
 def process_incoming_realtime_messages() -> None:
+    """
+    Process new messages from the incoming messages queue.
+
+    This function runs periodically to:
+    1. Check for new messages in the client's incoming queue
+    2. Update the UI with new messages
+    3. Handle message delivery status
+    4. Update unread message counts
+    """
     client = get_chat_client()
     if client:
         new_partner_detected = False
@@ -551,6 +636,15 @@ def process_incoming_realtime_messages() -> None:
 
 
 def render_sidebar() -> None:
+    """
+    Render the application sidebar with user controls and chat partner list.
+
+    The sidebar includes:
+    1. User account information and logout button
+    2. Account deletion option
+    3. List of chat partners with unread message counts
+    4. Search functionality for finding users
+    """
     st.sidebar.title("Menu")
     st.sidebar.subheader(f"Logged in as: {st.session_state.username}")
 
@@ -649,6 +743,22 @@ def render_sidebar() -> None:
 
 
 def render_chat_page_with_deletion() -> None:
+    """
+    Render the main chat interface with message deletion capability.
+
+    This page shows:
+    1. The current chat conversation
+    2. Message input and send controls
+    3. Message deletion checkboxes and confirmation
+    4. Load more messages button
+    5. Conversation settings (message limit)
+
+    The page handles:
+    - Sending new messages
+    - Deleting selected messages
+    - Loading more messages
+    - Updating message display limits
+    """
     st.title("Secure Chat")
 
     if st.session_state.current_chat:
@@ -850,6 +960,17 @@ def render_chat_page_with_deletion() -> None:
 
 
 def main() -> None:
+    """
+    Main entry point for the Streamlit application.
+
+    This function:
+    1. Parses command line arguments for server configuration
+    2. Sets up the Streamlit page configuration
+    3. Initializes session state
+    4. Handles automatic server connection from command line args
+    5. Renders either the login page or chat interface based on login state
+    6. Manages background message processing
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="", help="Server host address")
     parser.add_argument("--port", type=int, default=0, help="Server port number")
