@@ -1,3 +1,38 @@
+"""
+A gRPC server implementation for the replicated chat system.
+
+This module provides the ChatServer class which implements a leader-follower
+replication protocol for a distributed chat system. The server can operate in
+three roles:
+1. Leader: Handles all client requests and replicates changes to followers
+2. Follower: Forwards client requests to the leader and maintains a replica
+3. Candidate: Temporarily assumed during leader election
+
+The server provides the following features:
+- Account management (creation, login, deletion)
+- Message handling (sending, receiving, delivery status)
+- Chat history and conversation management
+- Leader election and failover
+- State replication between servers
+
+The replication protocol ensures:
+- Strong consistency for all operations
+- Automatic leader election on failure
+- Majority acknowledgment for changes
+- Automatic client redirection to the leader
+
+Example:
+    ```python
+    # Start a server with replicas
+    server = ChatServer(
+        host="0.0.0.0",
+        port=50051,
+        replica_addresses=["127.0.0.1:50052", "127.0.0.1:50053"]
+    )
+    server.serve()
+    ```
+"""
+
 import argparse
 import queue
 import threading
@@ -21,8 +56,35 @@ logging.basicConfig(level=logging.DEBUG)
 
 class ChatServer(chat_pb2_grpc.ChatServerServicer):
     """
-    gRPC server implementation for the chat service.
-    Integrates with ReplicationManager for leader-follower replication.
+    gRPC server implementation for the replicated chat service.
+
+    This class implements the chat service defined in chat.proto, handling all
+    client requests and managing replication between servers. It integrates with
+    ReplicationManager for leader-follower coordination and DatabaseManager for
+    persistent storage.
+
+    The server maintains:
+    - Active user connections and their message queues
+    - Message delivery and read status
+    - Account state and authentication
+    - Leader-follower replication state
+
+    Attributes:
+        host (str): Server's bind address
+        port (int): Server's bind port
+        db (DatabaseManager): Database connection manager
+        active_users (Dict[str, Set[chat_pb2_grpc.ChatServer_SubscribeStub]]):
+            Map of usernames to their active connections
+        lock (threading.Lock): Lock for thread-safe operations
+        replication_manager (ReplicationManager): Manages leader-follower protocol
+
+    Args:
+        host (str, optional): Address to bind the server on. Defaults to "0.0.0.0"
+        port (int, optional): Port to bind the server on. Defaults to 50051
+        db_path (str, optional): Path to the SQLite database file.
+            Defaults to None (uses port-specific path)
+        replica_addresses (List[str], optional): List of other servers in the cluster.
+            Defaults to None
     """
 
     def __init__(
@@ -48,6 +110,19 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
     def CreateAccount(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """
+        Handle account creation requests.
+
+        If this server is not the leader, forwards the request to the leader.
+        Otherwise, creates the account locally and replicates to followers.
+
+        Args:
+            request (chat_pb2.ChatMessage): The account creation request
+            context (grpc.ServicerContext): gRPC request context
+
+        Returns:
+            chat_pb2.ChatMessage: Response indicating success or failure
+        """
         logging.debug("role is: %s", self.replication_manager.role)
         # If not leader, forward the request to the leader.
         if self.replication_manager.role != ServerRole.LEADER:
@@ -117,6 +192,19 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
     def Login(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """
+        Handle login requests.
+
+        Verifies user credentials and manages login state. If the account
+        doesn't exist, returns an error suggesting account creation.
+
+        Args:
+            request (chat_pb2.ChatMessage): The login request
+            context (grpc.ServicerContext): gRPC request context
+
+        Returns:
+            chat_pb2.ChatMessage: Response indicating success or failure
+        """
         logging.debug("Login request received from: %s", request.sender)
         start_time = time.time()
         username = request.sender
@@ -145,6 +233,20 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
     def SendMessage(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
     ) -> chat_pb2.ChatMessage:
+        """
+        Handle message sending requests.
+
+        If this server is not the leader, forwards the request to the leader.
+        Otherwise, stores the message locally, replicates to followers, and
+        delivers to active recipients.
+
+        Args:
+            request (chat_pb2.ChatMessage): The message send request
+            context (grpc.ServicerContext): gRPC request context
+
+        Returns:
+            chat_pb2.ChatMessage: Response indicating success or failure
+        """
         sender = request.sender
         recipient = request.recipient
         content = MessageToDict(request.payload).get("text", "")
@@ -258,6 +360,17 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         )
 
     def Subscribe(self, request: chat_pb2.ChatMessage, context) -> None:
+        """
+        Handle client subscription requests for real-time messages.
+
+        Maintains a queue of messages for each active user and delivers
+        messages as they arrive. The connection is maintained until the
+        client disconnects or the context is cancelled.
+
+        Args:
+            request (chat_pb2.ChatMessage): The subscription request
+            context: gRPC request context
+        """
         username = request.sender
         if not self.db.user_exists(username):
             return
@@ -280,6 +393,22 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
     def HandleReplication(
         self, request: chat_pb2.ReplicationMessage, context
     ) -> chat_pb2.ReplicationMessage:
+        """
+        Handle replication-related messages between servers.
+
+        Processes various types of replication messages:
+        - Account replication
+        - Message replication
+        - Vote requests
+        - Heartbeats
+
+        Args:
+            request (chat_pb2.ReplicationMessage): The replication request
+            context: gRPC request context
+
+        Returns:
+            chat_pb2.ReplicationMessage: Response to the replication request
+        """
         if request.type == chat_pb2.ReplicationType.REPLICATE_ACCOUNT:
             username = request.account_replication.username
             # If the account already exists, consider the replication successful.
