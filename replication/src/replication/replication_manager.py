@@ -11,7 +11,9 @@ import random
 
 from src.protocols.grpc import chat_pb2, chat_pb2_grpc
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
+
 
 class ServerRole(Enum):
     LEADER = "leader"
@@ -52,120 +54,212 @@ class ReplicationManager:
         self.term = 0
         self.voted_for: Optional[str] = None
         self.replicas: Dict[str, ReplicaInfo] = {}
-        self.lock = threading.Lock()
+
+        # Separate locks for different state components
+        self.role_lock = threading.Lock()
+        self.term_lock = threading.Lock()
+        self.vote_lock = threading.Lock()
+        self.leader_lock = threading.Lock()
+        self.replica_lock = threading.Lock()
+
         self.commit_index = 0
         self.last_log_index = 0
         self.last_log_term = 0
+        self.election_in_progress = False
+        self.last_leader_contact = time.time()
+
+        # Configuration constants
+        self.HEARTBEAT_INTERVAL = 0.1  # 100ms between heartbeats
+        self.MIN_ELECTION_TIMEOUT = 1.0  # Minimum election timeout 1 second
+        self.MAX_ELECTION_TIMEOUT = 2.0  # Maximum election timeout 2 seconds
 
         # Parse and store replica addresses
         for addr in replica_addresses:
             if addr:
                 host, port = addr.split(":")
                 if host != self.host or int(port) != self.port:  # Don't add self
-                    self.replicas[addr] = ReplicaInfo(host=host, port=int(port))
+                    with self.replica_lock:
+                        self.replicas[addr] = ReplicaInfo(host=host, port=int(port))
 
         # Start election timeout thread
         self.election_timeout = threading.Event()
         self.election_thread = threading.Thread(target=self._run_election_timer, daemon=True)
         self.election_thread.start()
 
-        # Start heartbeat thread if leader
-        self.heartbeat_thread: Optional[threading.Thread] = None
-        if self.role == ServerRole.LEADER:
-            self._start_heartbeat()
+        # Start heartbeat thread
+        self.heartbeat_thread = threading.Thread(target=self._send_heartbeats, daemon=True)
+        self.heartbeat_thread.start()
+
+        logging.info(
+            f"Server started at {self.host}:{self.port} with {len(self.replicas)} replicas"
+        )
 
     def _run_election_timer(self) -> None:
-        """Run the election timeout loop"""
+        """Run the election timeout loop with randomized timeouts"""
         while True:
-            # Random timeout between 150-300ms
-            # timeout = 0.15 + (hash(str(time.time())) % 150) / 1000
-            timeout = random.uniform(0.3, 0.5)  # 300–500ms
+            # Randomized election timeout between MIN and MAX timeout values
+            # This randomization helps prevent split votes
+            timeout = random.uniform(self.MIN_ELECTION_TIMEOUT, self.MAX_ELECTION_TIMEOUT)
+
             if self.election_timeout.wait(timeout):
                 self.election_timeout.clear()
                 continue
 
-            if self.role != ServerRole.LEADER:
+            # Only start election if:
+            # 1. We're a follower
+            # 2. No election is in progress
+            # 3. Haven't heard from leader for longer than timeout
+            with self.role_lock:
+                current_role = self.role
+
+            time_since_leader = time.time() - self.last_leader_contact
+
+            if (
+                current_role == ServerRole.FOLLOWER
+                and not self.election_in_progress
+                and time_since_leader > timeout
+            ):
+                logging.info(
+                    f"Haven't heard from leader for {time_since_leader:.2f}s (timeout was {timeout:.2f}s), starting election"
+                )
                 self._start_election()
 
     def _start_election(self) -> None:
-        with self.lock:
-            self.term += 1
+        """Start a new election following Raft protocol"""
+        with self.role_lock:
+            if self.election_in_progress:
+                return
+
+            self.election_in_progress = True
             self.role = ServerRole.CANDIDATE
+
+        with self.term_lock:
+            self.term += 1
+            current_term = self.term
+
+        with self.vote_lock:
             self.voted_for = f"{self.host}:{self.port}"
-            votes = 1  # Vote for self
-            logging.debug(f"Starting election for term {self.term} from {self.host}:{self.port}")
+            votes = 1
 
-            # Request votes from all replicas
-            for addr, replica in self.replicas.items():
-                try:
-                    channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
-                    stub = chat_pb2_grpc.ChatServerStub(channel)
+        logging.debug(f"Starting election for term {current_term}")
 
-                    vote_request = chat_pb2.VoteRequest(
-                        last_log_term=self.last_log_term, last_log_index=self.last_log_index
-                    )
+        with self.replica_lock:
+            replicas = list(self.replicas.items())
 
-                    request = chat_pb2.ReplicationMessage(
-                        type=chat_pb2.ReplicationType.REQUEST_VOTE,
-                        term=self.term,
-                        server_id=f"{self.host}:{self.port}",
-                        vote_request=vote_request,
-                        timestamp=time.time(),
-                    )
+        for addr, replica in replicas:
+            try:
+                channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
+                stub = chat_pb2_grpc.ChatServerStub(channel)
 
-                    response = stub.HandleReplication(request)
-                    if (response.type == chat_pb2.ReplicationType.VOTE_RESPONSE and 
-                        response.vote_response.vote_granted):
+                vote_request = chat_pb2.VoteRequest(
+                    last_log_term=self.last_log_term, last_log_index=self.last_log_index
+                )
+
+                request = chat_pb2.ReplicationMessage(
+                    type=chat_pb2.ReplicationType.REQUEST_VOTE,
+                    term=current_term,
+                    server_id=f"{self.host}:{self.port}",
+                    vote_request=vote_request,
+                    timestamp=time.time(),
+                )
+
+                response = stub.HandleReplication(request)
+
+                with self.role_lock:
+                    current_role = self.role
+
+                with self.term_lock:
+                    if response.term > self.term:
+                        self.term = response.term
+                        with self.role_lock:
+                            self.role = ServerRole.FOLLOWER
+                        with self.vote_lock:
+                            self.voted_for = None
+                        self.election_in_progress = False
+                        logging.info(f"Stepping down - discovered higher term {response.term}")
+                        return
+
+                    if (
+                        current_role == ServerRole.CANDIDATE
+                        and self.term == current_term
+                        and response.type == chat_pb2.ReplicationType.VOTE_RESPONSE
+                        and response.vote_response.vote_granted
+                    ):
                         votes += 1
                         logging.debug(f"Vote granted from {addr}")
 
-                except Exception as e:
-                    logging.error(f"Failed to request vote from {addr}: {e}")
+            except Exception as e:
+                logging.error(f"Failed to request vote from {addr}: {e}")
 
-            logging.debug(f"Election votes received: {votes}")
-            # If received majority votes, become leader
-            if votes > (len(self.replicas) + 1) / 2:
-                self.role = ServerRole.LEADER
-                self.leader_host = self.host
-                self.leader_port = self.port
-                logging.info(f"Elected as leader: {self.host}:{self.port} for term {self.term}")
-                self._start_heartbeat()
-            else:
-                self.role = ServerRole.FOLLOWER
-                logging.info(f"Election failed. Remains follower. Current term: {self.term}")
-
-
-    def _start_heartbeat(self) -> None:
-        """Start sending heartbeats to followers"""
-        if self.heartbeat_thread is None:
-            self.heartbeat_thread = threading.Thread(target=self._send_heartbeats, daemon=True)
-            self.heartbeat_thread.start()
-
-    def _send_heartbeats(self) -> None:
-        while self.role == ServerRole.LEADER:
-            for addr, replica in self.replicas.items():
-                try:
-                    channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
-                    stub = chat_pb2_grpc.ChatServerStub(channel)
-
-                    heartbeat = chat_pb2.Heartbeat(commit_index=self.commit_index)
-                    request = chat_pb2.ReplicationMessage(
-                        type=chat_pb2.ReplicationType.HEARTBEAT,
-                        term=self.term,
-                        server_id=f"{self.host}:{self.port}",
-                        heartbeat=heartbeat,
-                        timestamp=time.time(),
+        with self.role_lock:
+            if self.role == ServerRole.CANDIDATE:
+                if votes > (len(self.replicas) + 1) / 2:
+                    self.role = ServerRole.LEADER
+                    with self.leader_lock:
+                        self.leader_host = self.host
+                        self.leader_port = self.port
+                    logging.info(f"Elected as leader for term {current_term}")
+                    self._send_initial_heartbeat()
+                else:
+                    self.role = ServerRole.FOLLOWER
+                    logging.info(
+                        f"Election failed. Returning to follower state. Term: {current_term}"
                     )
 
-                    response = stub.HandleReplication(request)
-                    replica.is_alive = True
-                    replica.last_heartbeat = time.time()
-                    logging.debug(f"Heartbeat sent to {addr} successfully.")
-                except Exception as e:
-                    logging.error(f"Failed to send heartbeat to {addr}: {e}")
-                    replica.is_alive = False
-            time.sleep(0.05)
+        self.election_in_progress = False
 
+    def _send_initial_heartbeat(self) -> None:
+        """Send immediate heartbeat to all followers after becoming leader"""
+        if self.role != ServerRole.LEADER:
+            return
+
+        for addr, replica in self.replicas.items():
+            try:
+                channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
+                stub = chat_pb2_grpc.ChatServerStub(channel)
+
+                heartbeat = chat_pb2.Heartbeat(commit_index=self.commit_index)
+                request = chat_pb2.ReplicationMessage(
+                    type=chat_pb2.ReplicationType.HEARTBEAT,
+                    term=self.term,
+                    server_id=f"{self.host}:{self.port}",
+                    heartbeat=heartbeat,
+                    timestamp=time.time(),
+                )
+
+                response = stub.HandleReplication(request)
+                replica.is_alive = True
+                replica.last_heartbeat = time.time()
+            except Exception as e:
+                logging.error(f"Failed to send initial heartbeat to {addr}: {e}")
+                replica.is_alive = False
+
+    def _send_heartbeats(self) -> None:
+        """Send heartbeats to all followers if we're the leader"""
+        while True:
+            if self.role == ServerRole.LEADER:
+                for addr, replica in self.replicas.items():
+                    try:
+                        channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
+                        stub = chat_pb2_grpc.ChatServerStub(channel)
+
+                        heartbeat = chat_pb2.Heartbeat(commit_index=self.commit_index)
+                        request = chat_pb2.ReplicationMessage(
+                            type=chat_pb2.ReplicationType.HEARTBEAT,
+                            term=self.term,
+                            server_id=f"{self.host}:{self.port}",
+                            heartbeat=heartbeat,
+                            timestamp=time.time(),
+                        )
+
+                        response = stub.HandleReplication(request)
+                        replica.is_alive = True
+                        replica.last_heartbeat = time.time()
+                        logging.debug(f"Heartbeat sent to {addr} successfully.")
+                    except Exception as e:
+                        logging.error(f"Failed to send heartbeat to {addr}: {e}")
+                        replica.is_alive = False
+            time.sleep(self.HEARTBEAT_INTERVAL)  # Sleep for heartbeat interval
 
     def replicate_message(self, message_id: int, sender: str, recipient: str, content: str) -> bool:
         """
@@ -220,28 +314,37 @@ class ReplicationManager:
         self, message: chat_pb2.ReplicationMessage
     ) -> chat_pb2.ReplicationMessage:
         """Handle incoming replication messages from other servers"""
-        if message.term < self.term:
-            return chat_pb2.ReplicationMessage(
-                type=chat_pb2.ReplicationType.REPLICATION_ERROR,
-                term=self.term,
-                server_id=f"{self.host}:{self.port}",
-                timestamp=time.time(),
-            )
+        with self.term_lock:
+            if message.term > self.term:
+                self.term = message.term
+                with self.role_lock:
+                    self.role = ServerRole.FOLLOWER
+                with self.vote_lock:
+                    self.voted_for = None
+                self.election_in_progress = False
+                self.last_leader_contact = time.time()
 
-        if message.term > self.term:
-            self.term = message.term
-            self.role = ServerRole.FOLLOWER
-            self.voted_for = None
+            if message.term < self.term:
+                return chat_pb2.ReplicationMessage(
+                    type=chat_pb2.ReplicationType.REPLICATION_ERROR,
+                    term=self.term,
+                    server_id=f"{self.host}:{self.port}",
+                    timestamp=time.time(),
+                )
 
         if message.type == chat_pb2.ReplicationType.REQUEST_VOTE:
-            vote_granted = False
-            if self.voted_for is None or self.voted_for == message.server_id:
-                if message.vote_request.last_log_term > self.last_log_term or (
-                    message.vote_request.last_log_term == self.last_log_term
-                    and message.vote_request.last_log_index >= self.last_log_index
-                ):
-                    vote_granted = True
-                    self.voted_for = message.server_id
+            with self.vote_lock:
+                vote_granted = False
+                if self.voted_for is None or self.voted_for == message.server_id:
+                    candidate_log_ok = message.vote_request.last_log_term > self.last_log_term or (
+                        message.vote_request.last_log_term == self.last_log_term
+                        and message.vote_request.last_log_index >= self.last_log_index
+                    )
+                    if candidate_log_ok:
+                        vote_granted = True
+                        self.voted_for = message.server_id
+                        self.election_timeout.set()
+                        self.last_leader_contact = time.time()
 
             return chat_pb2.ReplicationMessage(
                 type=chat_pb2.ReplicationType.VOTE_RESPONSE,
@@ -252,9 +355,18 @@ class ReplicationManager:
             )
 
         elif message.type == chat_pb2.ReplicationType.HEARTBEAT:
-            self.election_timeout.set()  # Reset election timeout
-            self.leader_host, self.leader_port = message.server_id.split(":")
-            self.leader_port = int(self.leader_port)
+            with self.role_lock:
+                if self.term == message.term and self.role != ServerRole.FOLLOWER:
+                    self.role = ServerRole.FOLLOWER
+                    with self.vote_lock:
+                        self.voted_for = None
+
+            self.election_timeout.set()
+            self.last_leader_contact = time.time()
+
+            with self.leader_lock:
+                self.leader_host, self.leader_port = message.server_id.split(":")
+                self.leader_port = int(self.leader_port)
 
             return chat_pb2.ReplicationMessage(
                 type=chat_pb2.ReplicationType.REPLICATION_SUCCESS,
@@ -264,6 +376,9 @@ class ReplicationManager:
             )
 
         elif message.type == chat_pb2.ReplicationType.REPLICATE_MESSAGE:
+            if message.term == self.term:
+                self.last_leader_contact = time.time()
+
             success = True
             msg_id = message.message_replication.message_id
 
