@@ -9,22 +9,23 @@ Subpackages
 
    src.database
    src.protocols
+   src.replication
 
 Submodules
 ----------
 
-src.client module
------------------
+gRPC Server Module
+----------------------
 
-.. automodule:: src.client
+.. automodule:: src.chat_grpc_server
    :members:
    :undoc-members:
    :show-inheritance:
 
-src.server module
------------------
+gRPC Client Module
+----------------------
 
-.. automodule:: src.server
+.. automodule:: src.chat_grpc_client
    :members:
    :undoc-members:
    :show-inheritance:

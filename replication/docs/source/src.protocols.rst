@@ -1,37 +1,18 @@
 src.protocols package
-=====================
+====================
 
-Submodules
-----------
+Subpackages
+-----------
 
-src.protocols.base module
--------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: src.protocols.base
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-src.protocols.binary\_protocol module
--------------------------------------
-
-.. automodule:: src.protocols.binary_protocol
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-src.protocols.json\_protocol module
------------------------------------
-
-.. automodule:: src.protocols.json_protocol
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   src.protocols.grpc
 
 Module contents
----------------
+--------------
 
 .. automodule:: src.protocols
    :members:
    :undoc-members:
-   :show-inheritance:
+   :show-inheritance: 

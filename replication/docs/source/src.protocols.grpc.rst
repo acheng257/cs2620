@@ -1,8 +1,8 @@
-gRPC Protocol
-============
+src.protocols.grpc package
+========================
 
 Protocol Buffer Definitions
--------------------------
+---------------------------
 
 The gRPC protocol is defined using Protocol Buffers in the ``chat.proto`` file. This defines the message types and service interfaces used for communication.
 
@@ -28,7 +28,7 @@ The protocol defines the following message types:
 - ``MessageType``: Enum defining different types of messages (CREATE_ACCOUNT, LOGIN, etc.)
 
 Service Definition
-----------------
+------------------
 
 The ``ChatServer`` service provides the following RPC methods:
 
