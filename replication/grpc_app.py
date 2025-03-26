@@ -99,13 +99,10 @@ def init_session_state() -> None:
 
 def check_and_reconnect_leader(client: ChatClient) -> bool:
     """
-    Check if the current connection is to the leader by trying all known replicas.
+    Check if the current connection is to the leader.
     Returns True if we're connected to the leader (either already or after reconnecting),
     False otherwise.
     """
-    # Known replica ports (hardcoded for now, could be made configurable)
-    REPLICA_PORTS = [50051, 50052, 50053, 50054, 50055]
-
     # First try current connection
     try:
         leader = client.get_leader()
@@ -126,20 +123,27 @@ def check_and_reconnect_leader(client: ChatClient) -> bool:
     except Exception as e:
         print(f"Current connection failed: {e}")
 
-    # If current connection failed, try all known replicas
-    print("Trying all known replicas to find leader...")
-    for port in REPLICA_PORTS:
-        if port == client.port:  # Skip current port as we know it failed
+    # If current connection failed, try all known cluster nodes
+    print("Trying all known cluster nodes to find leader...")
+    for node_host, node_port in client.cluster_nodes:
+        if (node_host, node_port) == (
+            client.host,
+            client.port,
+        ):  # Skip current node as we know it failed
             continue
         try:
-            print(f"Trying replica at port {port}...")
-            temp_client = ChatClient(username="", host="127.0.0.1", port=port)
+            print(f"Trying node at {node_host}:{node_port}...")
+            temp_client = ChatClient(
+                username="", host=node_host, port=node_port, cluster_nodes=client.cluster_nodes
+            )
             if temp_client.connect(timeout=1):  # Short timeout for discovery
                 leader = temp_client.get_leader()
                 temp_client.close()
                 if leader:
                     leader_host, leader_port = leader
-                    print(f"Found leader through replica {port}: {leader_host}:{leader_port}")
+                    print(
+                        f"Found leader through node {node_host}:{node_port}: {leader_host}:{leader_port}"
+                    )
                     # Update client connection
                     client.host = leader_host
                     client.port = leader_port
@@ -150,10 +154,10 @@ def check_and_reconnect_leader(client: ChatClient) -> bool:
                         client.start_read_thread()
                         return True
         except Exception as e:
-            print(f"Failed to check replica at port {port}: {e}")
+            print(f"Failed to check node at {node_host}:{node_port}: {e}")
             continue
 
-    print("Could not find leader through any known replicas")
+    print("Could not find leader through any known nodes")
     return False
 
 
@@ -205,16 +209,34 @@ def render_login_page() -> None:
                 key="server_port_input",
                 help="Enter the server's port number (default: 50051)",
             )
+            cluster_nodes_str = st.text_input(
+                "Cluster Nodes",
+                value=",".join(f"{h}:{p}" for h, p in st.session_state.cluster_nodes),
+                key="cluster_nodes_input",
+                help="Comma-separated list of host:port pairs for cluster nodes (e.g., 127.0.0.1:50051,127.0.0.1:50052)",
+            )
             if st.button("Connect to Server"):
                 if not server_host:
                     st.warning("Please enter the server's IP address.")
                 else:
+                    # Parse cluster nodes
+                    try:
+                        cluster_nodes = []
+                        for node in cluster_nodes_str.split(","):
+                            host, port = node.strip().split(":")
+                            cluster_nodes.append((host, int(port)))
+                        st.session_state.cluster_nodes = cluster_nodes
+                    except Exception as e:
+                        st.error(f"Invalid cluster nodes format: {e}")
+                        return
+
                     st.session_state.server_host = server_host
                     st.session_state.server_port = int(server_port)
                     temp_client = ChatClient(
                         username="",
                         host=st.session_state.server_host,
                         port=st.session_state.server_port,
+                        cluster_nodes=st.session_state.cluster_nodes,
                     )
                     if temp_client.connect():
                         if check_and_reconnect_leader(temp_client):
@@ -267,8 +289,13 @@ def render_login_page() -> None:
         )
         if temp_client.connect():
             success, error = temp_client.login_sync("dummy_password")
-            if not success and error and (
-                "does not exist" in error.lower() or "will be created automatically" in error.lower()
+            if (
+                not success
+                and error
+                and (
+                    "does not exist" in error.lower()
+                    or "will be created automatically" in error.lower()
+                )
             ):
                 account_exists = False
             else:
@@ -286,6 +313,7 @@ def render_login_page() -> None:
                     username=username,
                     host=st.session_state.server_host,
                     port=st.session_state.server_port,
+                    cluster_nodes=st.session_state.cluster_nodes,
                 )
                 if client.connect():
                     success, error = client.login_sync(password)
@@ -297,8 +325,12 @@ def render_login_page() -> None:
                         st.session_state.global_message_limit = 50
                         st.success("Logged in successfully!")
                         client.start_read_thread()
+                        client.start_leader_check_thread()  # Start leader check thread
                     else:
-                        if error and ("does not exist" in error.lower() or "will be created automatically" in error.lower()):
+                        if error and (
+                            "does not exist" in error.lower()
+                            or "will be created automatically" in error.lower()
+                        ):
                             st.info("Account does not exist. Creating account automatically...")
                             created = client.create_account_sync(password)
                             if created:
@@ -309,6 +341,7 @@ def render_login_page() -> None:
                                 st.session_state.global_message_limit = 50
                                 st.success("Account created and logged in successfully!")
                                 client.start_read_thread()
+                                client.start_leader_check_thread()  # Start leader check thread
                                 st.session_state.pending_username = ""  # Clear pending username
                                 st.rerun()  # Update UI state immediately.
                             else:
@@ -332,6 +365,7 @@ def render_login_page() -> None:
                         username=username,
                         host=st.session_state.server_host,
                         port=st.session_state.server_port,
+                        cluster_nodes=st.session_state.cluster_nodes,
                     )
                     if client.connect():
                         success = client.create_account_sync(password1)
@@ -343,6 +377,7 @@ def render_login_page() -> None:
                             st.session_state.global_message_limit = 50
                             st.success("Account created and logged in successfully!")
                             client.start_read_thread()
+                            client.start_leader_check_thread()  # Start leader check thread
                             st.session_state.pending_username = ""  # Clear pending username
                             st.rerun()  # Immediately re-run to reflect logged-in state.
                         else:
@@ -352,6 +387,7 @@ def render_login_page() -> None:
 
     if st.button("Change Username"):
         st.session_state.pending_username = ""
+
 
 def fetch_accounts(pattern: str = "", page: int = 1) -> None:
     client = get_chat_client()
@@ -817,18 +853,39 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="", help="Server host address")
     parser.add_argument("--port", type=int, default=0, help="Server port number")
+    parser.add_argument(
+        "--cluster-nodes",
+        type=str,
+        help="Comma-separated list of host:port pairs for cluster nodes",
+        default="127.0.0.1:50051",
+    )
     args, unknown = parser.parse_known_args()
+
+    # Parse cluster nodes from command line
+    cluster_nodes = []
+    for node in args.cluster_nodes.split(","):
+        host, port = node.strip().split(":")
+        cluster_nodes.append((host, int(port)))
 
     st.set_page_config(page_title="Secure Chat", layout="wide")
     st_autorefresh(interval=1000, key="auto_refresh_chat")  # Refresh every second
 
     init_session_state()
 
+    # Store cluster configuration in session state
+    if "cluster_nodes" not in st.session_state:
+        st.session_state.cluster_nodes = cluster_nodes
+
     # Automatic connection from command line arguments if provided.
     if not st.session_state.server_connected and args.host and args.port:
         st.session_state.server_host = args.host
         st.session_state.server_port = args.port
-        temp_client = ChatClient(username="", host=args.host, port=args.port)
+        temp_client = ChatClient(
+            username="",
+            host=args.host,
+            port=args.port,
+            cluster_nodes=st.session_state.cluster_nodes,
+        )
         if temp_client.connect():
             if check_and_reconnect_leader(temp_client):
                 st.session_state.server_connected = True

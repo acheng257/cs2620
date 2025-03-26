@@ -16,10 +16,19 @@ class ChatClient:
     A gRPC-based client for the chat system with synchronous wrapper methods.
     """
 
-    def __init__(self, username: str, host: str = "127.0.0.1", port: int = 50051) -> None:
+    def __init__(
+        self,
+        username: str,
+        host: str = "127.0.0.1",
+        port: int = 50051,
+        cluster_nodes: Optional[List[Tuple[str, int]]] = None,
+    ) -> None:
         self.username = username
         self.host = host
         self.port = port
+        self.cluster_nodes = cluster_nodes or [
+            (host, port)
+        ]  # If no cluster nodes provided, use initial connection
         # Initially create a channel; however, if host/port change, we'll recreate it in connect()
         self.channel = grpc.insecure_channel(f"{self.host}:{self.port}")
         self.stub = chat_pb2_grpc.ChatServerStub(self.channel)
@@ -528,19 +537,27 @@ class ChatClient:
                                 print("Failed to connect to new leader, will try other servers...")
                                 raise Exception("Failed to connect to leader")
                 except Exception:
-                    # Current connection failed, try all known ports
+                    # Current connection failed, try all known cluster nodes
                     found_leader = False
-                    for port in range(50051, 50056):  # Try ports 50051-50055
-                        if port != self.port:  # Don't try current port
+                    for node_host, node_port in self.cluster_nodes:
+                        if (node_host, node_port) != (
+                            self.host,
+                            self.port,
+                        ):  # Don't try current node
                             try:
-                                temp_client = ChatClient(username="", host="127.0.0.1", port=port)
+                                temp_client = ChatClient(
+                                    username="",
+                                    host=node_host,
+                                    port=node_port,
+                                    cluster_nodes=self.cluster_nodes,
+                                )
                                 if temp_client.connect(timeout=1):  # Shorter timeout for discovery
                                     leader = temp_client.get_leader()
                                     temp_client.close()
                                     if leader:
                                         leader_host, leader_port = leader
                                         print(
-                                            f"Found leader through port {port}: {leader_host}:{leader_port}"
+                                            f"Found leader through {node_host}:{node_port}: {leader_host}:{leader_port}"
                                         )
                                         self.host = leader_host
                                         self.port = leader_port
@@ -552,11 +569,11 @@ class ChatClient:
                                             found_leader = True
                                             break
                             except Exception as e:
-                                print(f"Failed to check port {port}: {e}")
+                                print(f"Failed to check node {node_host}:{node_port}: {e}")
                                 continue
 
                     if not found_leader:
-                        print("Could not find leader through any known ports, will retry...")
+                        print("Could not find leader through any known nodes, will retry...")
 
             except Exception as e:
                 print(f"Error in leader check: {e}")
