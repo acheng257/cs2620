@@ -175,13 +175,12 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                     payload=ParseDict({"text": content}, Struct()),
                     timestamp=time.time(),
                 )
-                for subscriber in self.active_users[recipient]:
+                for q in self.active_users[recipient]:
                     try:
-                        subscriber.on_message(message)
+                        q.put(message)
                         self.db.mark_message_as_delivered(message_id)
                     except Exception as e:
-                        logging.error("Failed to deliver message to subscriber: %s", e)
-                        continue
+                        logging.error("Failed to deliver message to subscriber queue: %s", e)
 
         return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.SUCCESS,
@@ -318,22 +317,22 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
 
     def ReadMessages(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext):
         username = request.recipient
-        q: queue.Queue[chat_pb2.ChatMessage] = queue.Queue()
+        q = queue.Queue()
         with self.lock:
-            self.active_users[username] = set()
+            # Register the new queue for this user.
+            if username not in self.active_users:
+                self.active_users[username] = []
+            self.active_users[username].append(q)
         try:
+            # First yield any undelivered messages.
             undelivered = self.db.get_undelivered_messages(username)
             for msg in undelivered:
-                timestamp_val = msg.get("timestamp", time.time())
                 try:
-                    timestamp_val = float(timestamp_val)
-                except (ValueError, TypeError):
+                    timestamp_val = float(msg.get("timestamp", time.time()))
+                except Exception:
                     timestamp_val = time.time()
                 response_payload = {"text": msg["content"], "id": msg["id"]}
-                start_ser = time.perf_counter()
                 parsed_payload = ParseDict(response_payload, Struct())
-                end_ser = time.perf_counter()
-                print(f"[ReadMessages] Serialization (undelivered) took {end_ser - start_ser:.6f} seconds")
                 chat_msg = chat_pb2.ChatMessage(
                     type=chat_pb2.MessageType.SEND_MESSAGE,
                     payload=parsed_payload,
@@ -343,6 +342,8 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                 )
                 yield chat_msg
                 self.db.mark_message_as_delivered(msg["id"])
+            
+            # Now wait for new messages.
             while True:
                 try:
                     message = q.get(timeout=60)
@@ -354,8 +355,11 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
                         break
         finally:
             with self.lock:
-                if username in self.active_users:
-                    self.active_users[username].clear()
+                if username in self.active_users and q in self.active_users[username]:
+                    self.active_users[username].remove(q)
+                    if not self.active_users[username]:
+                        del self.active_users[username]
+
 
     def ListAccounts(self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext) -> chat_pb2.ChatMessage:
         start_deser = time.perf_counter()

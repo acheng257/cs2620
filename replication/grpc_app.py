@@ -754,9 +754,7 @@ def main() -> None:
 
     init_session_state()
 
-    # If user specified BOTH host (non-empty) and port (non-zero),
-    # attempt an automatic one-time connection before showing the UI.
-    # Only do this if we're not already connected.
+    # Automatic connection from command line arguments if provided.
     if not st.session_state.server_connected and args.host and args.port:
         st.session_state.server_host = args.host
         st.session_state.server_port = args.port
@@ -767,22 +765,23 @@ def main() -> None:
             if leader:
                 st.session_state.server_host, st.session_state.server_port = leader
                 st.session_state.server_connected = True
-                st.success(
-                    f"Automatically connected to leader at {leader[0]}:{leader[1]}."
-                )
+                st.success(f"Automatically connected to leader at {leader[0]}:{leader[1]}.")
             else:
                 st.error("Failed to determine leader server.")
         else:
-            st.error(
-                f"Failed to connect automatically to {args.host}:{args.port} (from command line)."
-            )
+            st.error(f"Failed to connect automatically to {args.host}:{args.port} (from command line).")
         temp_client.close()
         st.rerun()
 
     if not st.session_state.logged_in:
         render_login_page()
     else:
-        # If we do have a connected client and user is logged in, go to chat UI
+        # Ensure the client's read thread is running on every run.
+        if st.session_state.client is not None:
+            # If the client doesn't have a 'read_thread' attribute or it isn't alive, start it.
+            if not hasattr(st.session_state.client, "read_thread") or not st.session_state.client.read_thread.is_alive():
+                st.session_state.client.start_read_thread()
+
         if st.session_state.client_connected:
             try:
                 process_incoming_realtime_messages()
