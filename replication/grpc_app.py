@@ -107,6 +107,10 @@ def get_chat_client() -> Optional[ChatClient]:
     return None
 
 def render_login_page() -> None:
+    # If the user is already logged in, don't render the login page.
+    if st.session_state.logged_in:
+        return
+
     st.title("Secure Chat - Login / Sign Up")
 
     if st.session_state.error_message:
@@ -137,22 +141,18 @@ def render_login_page() -> None:
                 else:
                     st.session_state.server_host = server_host
                     st.session_state.server_port = int(server_port)
-                    # Create a temporary client to test the connection.
                     temp_client = ChatClient(
                         username="",
                         host=st.session_state.server_host,
                         port=st.session_state.server_port,
                     )
                     if temp_client.connect():
-                        # Query the leader from this server.
                         leader = temp_client.get_leader()
                         if leader:
                             st.session_state.server_host, st.session_state.server_port = leader
                             st.session_state.server_connected = True
                             st.session_state.error_message = ""
-                            st.success(
-                                f"Connected to leader server at {leader[0]}:{leader[1]}"
-                            )
+                            st.success(f"Connected to leader server at {leader[0]}:{leader[1]}")
                         else:
                             st.session_state.error_message = "Could not determine leader server."
                             st.error(st.session_state.error_message)
@@ -235,6 +235,7 @@ def render_login_page() -> None:
                                 st.session_state.global_message_limit = 50
                                 st.success("Account created and logged in successfully!")
                                 client.start_read_thread()
+                                st.session_state.pending_username = ""  # Clear pending username
                                 st.rerun()  # Automatically re-run to update UI state.
                             else:
                                 st.error("Failed to create account.")
@@ -268,6 +269,7 @@ def render_login_page() -> None:
                             st.session_state.global_message_limit = 50
                             st.success("Account created and logged in successfully!")
                             client.start_read_thread()
+                            st.session_state.pending_username = ""  # Clear pending username
                             st.rerun()  # Re-run so the new logged-in state takes effect.
                         else:
                             st.error("Account creation failed. Username may already exist.")
