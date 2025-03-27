@@ -41,9 +41,12 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../modules.html">CS262 Chat Project</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../replication.html">Replication System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../grpc_app.html">gRPC UI Application</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../database.html">Database Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../chat_grpc_server.html">gRPC Server Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../chat_grpc_client.html">gRPC Client Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../app_grpc.html">gRPC Application Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../replication.html">Replication Module</a></li>
 </ul>
 
         </div>
@@ -93,17 +96,6 @@
 <span class="sd">- Automatic leader election on failure</span>
 <span class="sd">- Majority acknowledgment for changes</span>
 <span class="sd">- Automatic client redirection to the leader</span>
-
-<span class="sd">Example:</span>
-<span class="sd">    ```python</span>
-<span class="sd">    # Start a server with replicas</span>
-<span class="sd">    server = ChatServer(</span>
-<span class="sd">        host=&quot;0.0.0.0&quot;,</span>
-<span class="sd">        port=50051,</span>
-<span class="sd">        replica_addresses=[&quot;127.0.0.1:50052&quot;, &quot;127.0.0.1:50053&quot;]</span>
-<span class="sd">    )</span>
-<span class="sd">    server.serve()</span>
-<span class="sd">    ```</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
@@ -127,7 +119,7 @@
 
 <span class="c1"># Create a custom formatter for better readability</span>
 <div class="viewcode-block" id="CustomFormatter">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.CustomFormatter">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.CustomFormatter">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CustomFormatter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Custom formatter that includes server info and colors for different levels&quot;&quot;&quot;</span>
 
@@ -147,7 +139,7 @@
     <span class="p">}</span>
 
 <div class="viewcode-block" id="CustomFormatter.format">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.CustomFormatter.format">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.CustomFormatter.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
         <span class="n">log_fmt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">FORMATS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">levelno</span><span class="p">)</span>
         <span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="n">log_fmt</span><span class="p">,</span> <span class="n">datefmt</span><span class="o">=</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span>
@@ -167,7 +159,7 @@
 
 
 <div class="viewcode-block" id="ChatServer">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ChatServer</span><span class="p">(</span><span class="n">chat_pb2_grpc</span><span class="o">.</span><span class="n">ChatServerServicer</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    gRPC server implementation for the replicated chat service.</span>
@@ -229,7 +221,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">alive_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
 <div class="viewcode-block" id="ChatServer.CreateAccount">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.CreateAccount">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.CreateAccount">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">CreateAccount</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -314,7 +306,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.Login">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.Login">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.Login">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">Login</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -360,7 +352,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.SendMessage">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.SendMessage">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.SendMessage">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">SendMessage</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -492,7 +484,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.Subscribe">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.Subscribe">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.Subscribe">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">Subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Handle client subscription requests for real-time messages.</span>
@@ -526,7 +518,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.HandleReplication">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.HandleReplication">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.HandleReplication">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">HandleReplication</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ReplicationMessage</span><span class="p">,</span> <span class="n">context</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ReplicationMessage</span><span class="p">:</span>
@@ -566,7 +558,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.GetMessages">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.GetMessages">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.GetMessages">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">GetMessages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
         <span class="n">username</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">sender</span>
         <span class="n">messages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">get_messages</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
@@ -592,7 +584,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.RequestVote">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.RequestVote">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.RequestVote">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">RequestVote</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -611,7 +603,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.Heartbeat">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.Heartbeat">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.Heartbeat">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">Heartbeat</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -629,7 +621,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.ReplicateMessage">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.ReplicateMessage">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.ReplicateMessage">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">ReplicateMessage</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -672,7 +664,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.ReadMessages">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.ReadMessages">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.ReadMessages">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">ReadMessages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span><span class="p">):</span>
         <span class="n">username</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">recipient</span>
         <span class="n">q</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
@@ -720,7 +712,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.ListAccounts">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.ListAccounts">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.ListAccounts">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">ListAccounts</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -752,7 +744,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.DeleteMessages">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.DeleteMessages">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.DeleteMessages">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">DeleteMessages</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -803,7 +795,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.DeleteAccount">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.DeleteAccount">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.DeleteAccount">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">DeleteAccount</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -841,7 +833,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.ListChatPartners">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.ListChatPartners">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.ListChatPartners">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">ListChatPartners</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -866,7 +858,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.ReadConversation">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.ReadConversation">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.ReadConversation">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">ReadConversation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
         <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
@@ -897,7 +889,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.GetLeader">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.GetLeader">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.GetLeader">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">GetLeader</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -918,7 +910,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.MarkRead">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.MarkRead">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.MarkRead">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">MarkRead</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">grpc</span><span class="o">.</span><span class="n">ServicerContext</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -983,7 +975,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.heartbeat_from_node">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.heartbeat_from_node">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.heartbeat_from_node">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">heartbeat_from_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Called when a node sends a heartbeat, marking it alive.</span>
@@ -992,7 +984,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.mark_node_dead">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.mark_node_dead">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.mark_node_dead">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">mark_node_dead</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Called if we haven&#39;t heard from a node in a while.</span>
@@ -1002,7 +994,7 @@
 
 
 <div class="viewcode-block" id="ChatServer.GetClusterNodes">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.ChatServer.GetClusterNodes">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.ChatServer.GetClusterNodes">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">GetClusterNodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return the current cluster membership as a list of &quot;host:port&quot; strings,</span>
@@ -1028,7 +1020,7 @@
 
 
 <div class="viewcode-block" id="serve">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_server.serve">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_server.html#src.chat_grpc_server.serve">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">serve</span><span class="p">(</span><span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">server_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Starting gRPC server on </span><span class="si">%s</span><span class="s2">:</span><span class="si">%s</span><span class="s2">...&quot;</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
     <span class="n">server</span> <span class="o">=</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span><span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>

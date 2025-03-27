@@ -41,9 +41,12 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">CS262 Chat Project</a></li>
-<li class="toctree-l1"><a class="reference internal" href="replication.html">Replication System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="grpc_app.html">gRPC UI Application</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="database.html">Database Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat_grpc_server.html">gRPC Server Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat_grpc_client.html">gRPC Client Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="app_grpc.html">gRPC Application Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="replication.html">Replication Module</a></li>
 </ul>
 
         </div>
@@ -95,13 +98,7 @@
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.AccountReplication">AccountReplication (class in src.protocols.grpc.chat_pb2)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.active_users">active_users (src.chat_grpc_server.ChatServer attribute)</a>
-</li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.add_ChatServerServicer_to_server">add_ChatServerServicer_to_server() (in module src.protocols.grpc.chat_pb2_grpc)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.active_users">active_users (src.chat_grpc_server.ChatServer attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -109,10 +106,10 @@
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_server.CustomFormatter.bold_red">bold_red (src.chat_grpc_server.CustomFormatter attribute)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter.bold_red">bold_red (src.chat_grpc_server.CustomFormatter attribute)</a>
 
       <ul>
-        <li><a href="src.replication.html#src.replication.replication_manager.CustomFormatter.bold_red">(src.replication.replication_manager.CustomFormatter attribute)</a>
+        <li><a href="replication.html#src.replication.replication_manager.CustomFormatter.bold_red">(src.replication.replication_manager.CustomFormatter attribute)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -121,56 +118,40 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.replication.html#src.replication.replication_manager.ServerRole.CANDIDATE">CANDIDATE (src.replication.replication_manager.ServerRole attribute)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ServerRole.CANDIDATE">CANDIDATE (src.replication.replication_manager.ServerRole attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.channel">channel (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.channel">channel (src.chat_grpc_client.ChatClient attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient">ChatClient (class in src.chat_grpc_client)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient">ChatClient (class in src.chat_grpc_client)</a>
 </li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage">ChatMessage (class in src.protocols.grpc.chat_pb2)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer">ChatServer (class in src.chat_grpc_server)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer">ChatServer (class in src.chat_grpc_server)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer">(class in src.protocols.grpc.chat_pb2_grpc)</a>
+      <li><a href="app_grpc.html#grpc_app.check_and_reconnect_leader">check_and_reconnect_leader() (in module grpc_app)</a>
 </li>
-      </ul></li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer">ChatServerServicer (class in src.protocols.grpc.chat_pb2_grpc)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.close">close() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerStub">ChatServerStub (class in src.protocols.grpc.chat_pb2_grpc)</a>
-</li>
-      <li><a href="grpc_app.html#grpc_app.check_and_reconnect_leader">check_and_reconnect_leader() (in module grpc_app)</a>
-</li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.close">close() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.cluster_nodes">cluster_nodes (src.chat_grpc_client.ChatClient attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.cluster_nodes">cluster_nodes (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.connect">connect() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.connect">connect() (src.chat_grpc_client.ChatClient method)</a>
-</li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.create_account">create_account() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.create_account">create_account() (src.chat_grpc_client.ChatClient method)</a>
 
       <ul>
-        <li><a href="src.database.html#src.database.db_manager.DatabaseManager.create_account">(src.database.db_manager.DatabaseManager method)</a>
+        <li><a href="database.html#src.database.db_manager.DatabaseManager.create_account">(src.database.db_manager.DatabaseManager method)</a>
 </li>
       </ul></li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.create_account_sync">create_account_sync() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.create_account_sync">create_account_sync() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.create_user">create_user() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.create_user">create_user() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.CreateAccount">CreateAccount() (src.chat_grpc_server.ChatServer method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.CreateAccount">CreateAccount() (src.chat_grpc_server.ChatServer method)</a>
+</li>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter">CustomFormatter (class in src.chat_grpc_server)</a>
 
       <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.CreateAccount">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.CreateAccount">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
-</li>
-      </ul></li>
-      <li><a href="src.html#src.chat_grpc_server.CustomFormatter">CustomFormatter (class in src.chat_grpc_server)</a>
-
-      <ul>
-        <li><a href="src.replication.html#src.replication.replication_manager.CustomFormatter">(class in src.replication.replication_manager)</a>
+        <li><a href="replication.html#src.replication.replication_manager.CustomFormatter">(class in src.replication.replication_manager)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -179,100 +160,66 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager">DatabaseManager (class in src.database.db_manager)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager">DatabaseManager (class in src.database.db_manager)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.db">db (src.chat_grpc_server.ChatServer attribute)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.db">db (src.chat_grpc_server.ChatServer attribute)</a>
 </li>
-      <li><a href="grpc_app.html#grpc_app.deduplicate_messages">deduplicate_messages() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.deduplicate_messages">deduplicate_messages() (in module grpc_app)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.delete_account">delete_account() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.delete_account">delete_account() (src.chat_grpc_client.ChatClient method)</a>
 
       <ul>
-        <li><a href="src.database.html#src.database.db_manager.DatabaseManager.delete_account">(src.database.db_manager.DatabaseManager method)</a>
+        <li><a href="database.html#src.database.db_manager.DatabaseManager.delete_account">(src.database.db_manager.DatabaseManager method)</a>
 </li>
       </ul></li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.delete_account_sync">delete_account_sync() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.delete_account_sync">delete_account_sync() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.delete_message">delete_message() (src.database.db_manager.DatabaseManager method)</a>
-</li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.delete_messages">delete_messages() (src.chat_grpc_client.ChatClient method)</a>
-
-      <ul>
-        <li><a href="src.database.html#src.database.db_manager.DatabaseManager.delete_messages">(src.database.db_manager.DatabaseManager method)</a>
-</li>
-      </ul></li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.delete_messages_sync">delete_messages_sync() (src.chat_grpc_client.ChatClient method)</a>
-</li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.DeleteAccount">DeleteAccount() (src.chat_grpc_server.ChatServer method)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.DeleteAccount">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.DeleteAccount">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.DeleteMessages">DeleteMessages() (src.chat_grpc_server.ChatServer method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.delete_message">delete_message() (src.database.db_manager.DatabaseManager method)</a>
+</li>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.delete_messages">delete_messages() (src.chat_grpc_client.ChatClient method)</a>
 
       <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.DeleteMessages">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.DeleteMessages">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
+        <li><a href="database.html#src.database.db_manager.DatabaseManager.delete_messages">(src.database.db_manager.DatabaseManager method)</a>
 </li>
       </ul></li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.DeletionPayload">DeletionPayload (class in src.protocols.grpc.chat_pb2)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.delete_messages_sync">delete_messages_sync() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.AccountReplication.DESCRIPTOR">DESCRIPTOR (src.protocols.grpc.chat_pb2.AccountReplication attribute)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage.DESCRIPTOR">(src.protocols.grpc.chat_pb2.ChatMessage attribute)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.DeleteAccount">DeleteAccount() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.DeletionPayload.DESCRIPTOR">(src.protocols.grpc.chat_pb2.DeletionPayload attribute)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.DeleteMessages">DeleteMessages() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.Heartbeat.DESCRIPTOR">(src.protocols.grpc.chat_pb2.Heartbeat attribute)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.MessageReplication.DESCRIPTOR">(src.protocols.grpc.chat_pb2.MessageReplication attribute)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationMessage.DESCRIPTOR">(src.protocols.grpc.chat_pb2.ReplicationMessage attribute)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationResponse.DESCRIPTOR">(src.protocols.grpc.chat_pb2.ReplicationResponse attribute)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.VoteRequest.DESCRIPTOR">(src.protocols.grpc.chat_pb2.VoteRequest attribute)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.VoteResponse.DESCRIPTOR">(src.protocols.grpc.chat_pb2.VoteResponse attribute)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="grpc_app.html#grpc_app.fetch_accounts">fetch_accounts() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.fetch_accounts">fetch_accounts() (in module grpc_app)</a>
 </li>
-      <li><a href="grpc_app.html#grpc_app.fetch_chat_partners">fetch_chat_partners() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.fetch_chat_partners">fetch_chat_partners() (in module grpc_app)</a>
 </li>
-      <li><a href="src.replication.html#src.replication.replication_manager.ServerRole.FOLLOWER">FOLLOWER (src.replication.replication_manager.ServerRole attribute)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ServerRole.FOLLOWER">FOLLOWER (src.replication.replication_manager.ServerRole attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.CustomFormatter.format">format() (src.chat_grpc_server.CustomFormatter method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter.format">format() (src.chat_grpc_server.CustomFormatter method)</a>
 
       <ul>
-        <li><a href="src.replication.html#src.replication.replication_manager.CustomFormatter.format">(src.replication.replication_manager.CustomFormatter method)</a>
+        <li><a href="replication.html#src.replication.replication_manager.CustomFormatter.format">(src.replication.replication_manager.CustomFormatter method)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_server.CustomFormatter.format_str">format_str (src.chat_grpc_server.CustomFormatter attribute)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter.format_str">format_str (src.chat_grpc_server.CustomFormatter attribute)</a>
 
       <ul>
-        <li><a href="src.replication.html#src.replication.replication_manager.CustomFormatter.format_str">(src.replication.replication_manager.CustomFormatter attribute)</a>
+        <li><a href="replication.html#src.replication.replication_manager.CustomFormatter.format_str">(src.replication.replication_manager.CustomFormatter attribute)</a>
 </li>
       </ul></li>
-      <li><a href="src.html#src.chat_grpc_server.CustomFormatter.FORMATS">FORMATS (src.chat_grpc_server.CustomFormatter attribute)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter.FORMATS">FORMATS (src.chat_grpc_server.CustomFormatter attribute)</a>
 
       <ul>
-        <li><a href="src.replication.html#src.replication.replication_manager.CustomFormatter.FORMATS">(src.replication.replication_manager.CustomFormatter attribute)</a>
+        <li><a href="replication.html#src.replication.replication_manager.CustomFormatter.FORMATS">(src.replication.replication_manager.CustomFormatter attribute)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -281,69 +228,57 @@
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="grpc_app.html#grpc_app.get_chat_client">get_chat_client() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.get_chat_client">get_chat_client() (in module grpc_app)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.get_chat_message_limit">get_chat_message_limit() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.get_chat_message_limit">get_chat_message_limit() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.get_chat_partners">get_chat_partners() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.get_chat_partners">get_chat_partners() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="grpc_app.html#grpc_app.get_cluster_nodes">get_cluster_nodes() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.get_cluster_nodes">get_cluster_nodes() (in module grpc_app)</a>
 
       <ul>
-        <li><a href="src.html#src.chat_grpc_client.ChatClient.get_cluster_nodes">(src.chat_grpc_client.ChatClient method)</a>
+        <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.get_cluster_nodes">(src.chat_grpc_client.ChatClient method)</a>
 </li>
       </ul></li>
-      <li><a href="grpc_app.html#grpc_app.get_leader">get_leader() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.get_leader">get_leader() (in module grpc_app)</a>
 
       <ul>
-        <li><a href="src.html#src.chat_grpc_client.ChatClient.get_leader">(src.chat_grpc_client.ChatClient method)</a>
+        <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.get_leader">(src.chat_grpc_client.ChatClient method)</a>
 </li>
       </ul></li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.get_message_limit">get_message_limit() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.get_message_limit">get_message_limit() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.get_messages">get_messages() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.get_messages">get_messages() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.get_messages_between_users">get_messages_between_users() (src.database.db_manager.DatabaseManager method)</a>
-</li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.get_messages_for_user">get_messages_for_user() (src.database.db_manager.DatabaseManager method)</a>
-</li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.get_undelivered_messages">get_undelivered_messages() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.get_messages_between_users">get_messages_between_users() (src.database.db_manager.DatabaseManager method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.get_unread_between_users">get_unread_between_users() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.get_messages_for_user">get_messages_for_user() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.get_unread_message_count">get_unread_message_count() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.get_undelivered_messages">get_undelivered_messages() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.GetClusterNodes">GetClusterNodes() (src.chat_grpc_server.ChatServer method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.get_unread_between_users">get_unread_between_users() (src.database.db_manager.DatabaseManager method)</a>
+</li>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.get_unread_message_count">get_unread_message_count() (src.database.db_manager.DatabaseManager method)</a>
+</li>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.GetClusterNodes">GetClusterNodes() (src.chat_grpc_server.ChatServer method)</a>
+</li>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.GetLeader">GetLeader() (src.chat_grpc_server.ChatServer method)</a>
+</li>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.GetMessages">GetMessages() (src.chat_grpc_server.ChatServer method)</a>
+</li>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter.grey">grey (src.chat_grpc_server.CustomFormatter attribute)</a>
 
       <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.GetClusterNodes">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.GetClusterNodes">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
-</li>
-      </ul></li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.GetLeader">GetLeader() (src.chat_grpc_server.ChatServer method)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.GetLeader">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.GetLeader">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
-</li>
-      </ul></li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.GetMessages">GetMessages() (src.chat_grpc_server.ChatServer method)</a>
-</li>
-      <li><a href="src.html#src.chat_grpc_server.CustomFormatter.grey">grey (src.chat_grpc_server.CustomFormatter attribute)</a>
-
-      <ul>
-        <li><a href="src.replication.html#src.replication.replication_manager.CustomFormatter.grey">(src.replication.replication_manager.CustomFormatter attribute)</a>
+        <li><a href="replication.html#src.replication.replication_manager.CustomFormatter.grey">(src.replication.replication_manager.CustomFormatter attribute)</a>
 </li>
       </ul></li>
       <li>
     grpc_app
 
       <ul>
-        <li><a href="grpc_app.html#module-grpc_app">module</a>
+        <li><a href="app_grpc.html#module-grpc_app">module</a>
 </li>
       </ul></li>
   </ul></td>
@@ -352,30 +287,22 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.replication.html#src.replication.replication_manager.ReplicationManager.handle_replication_message">handle_replication_message() (src.replication.replication_manager.ReplicationManager method)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ReplicationManager.handle_replication_message">handle_replication_message() (src.replication.replication_manager.ReplicationManager method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.HandleReplication">HandleReplication() (src.chat_grpc_server.ChatServer method)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.HandleReplication">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.HandleReplication">HandleReplication() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.HandleReplication">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
-</li>
-      </ul></li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.Heartbeat">Heartbeat (class in src.protocols.grpc.chat_pb2)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.Heartbeat">Heartbeat() (src.chat_grpc_server.ChatServer method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.Heartbeat">Heartbeat() (src.chat_grpc_server.ChatServer method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.heartbeat_from_node">heartbeat_from_node() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.heartbeat_from_node">heartbeat_from_node() (src.chat_grpc_server.ChatServer method)</a>
-</li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.host">host (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.host">host (src.chat_grpc_client.ChatClient attribute)</a>
 
       <ul>
-        <li><a href="src.html#src.chat_grpc_server.ChatServer.host">(src.chat_grpc_server.ChatServer attribute)</a>
+        <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.host">(src.chat_grpc_server.ChatServer attribute)</a>
 </li>
-        <li><a href="src.replication.html#src.replication.replication_manager.ReplicaInfo.host">(src.replication.replication_manager.ReplicaInfo attribute)</a>
+        <li><a href="replication.html#src.replication.replication_manager.ReplicaInfo.host">(src.replication.replication_manager.ReplicaInfo attribute)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -384,13 +311,13 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.incoming_messages_queue">incoming_messages_queue (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.incoming_messages_queue">incoming_messages_queue (src.chat_grpc_client.ChatClient attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="grpc_app.html#grpc_app.init_session_state">init_session_state() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.init_session_state">init_session_state() (in module grpc_app)</a>
 </li>
-      <li><a href="src.replication.html#src.replication.replication_manager.ReplicaInfo.is_alive">is_alive (src.replication.replication_manager.ReplicaInfo attribute)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ReplicaInfo.is_alive">is_alive (src.replication.replication_manager.ReplicaInfo attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -398,59 +325,41 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.replication.html#src.replication.replication_manager.ReplicaInfo.last_heartbeat">last_heartbeat (src.replication.replication_manager.ReplicaInfo attribute)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ReplicaInfo.last_heartbeat">last_heartbeat (src.replication.replication_manager.ReplicaInfo attribute)</a>
 </li>
-      <li><a href="src.replication.html#src.replication.replication_manager.ServerRole.LEADER">LEADER (src.replication.replication_manager.ServerRole attribute)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ServerRole.LEADER">LEADER (src.replication.replication_manager.ServerRole attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.leader_check_thread">leader_check_thread (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.leader_check_thread">leader_check_thread (src.chat_grpc_client.ChatClient attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.list_accounts">list_accounts() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.list_accounts">list_accounts() (src.chat_grpc_client.ChatClient method)</a>
 
       <ul>
-        <li><a href="src.database.html#src.database.db_manager.DatabaseManager.list_accounts">(src.database.db_manager.DatabaseManager method)</a>
+        <li><a href="database.html#src.database.db_manager.DatabaseManager.list_accounts">(src.database.db_manager.DatabaseManager method)</a>
 </li>
       </ul></li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.list_accounts_sync">list_accounts_sync() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.list_accounts_sync">list_accounts_sync() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.list_chat_partners">list_chat_partners() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.list_chat_partners">list_chat_partners() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.list_chat_partners_sync">list_chat_partners_sync() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.list_chat_partners_sync">list_chat_partners_sync() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.ListAccounts">ListAccounts() (src.chat_grpc_server.ChatServer method)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.ListAccounts">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.ListAccounts">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.ListChatPartners">ListChatPartners() (src.chat_grpc_server.ChatServer method)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.ListChatPartners">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.ListAccounts">ListAccounts() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.ListChatPartners">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.ListChatPartners">ListChatPartners() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-      </ul></li>
-      <li><a href="grpc_app.html#grpc_app.load_conversation">load_conversation() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.load_conversation">load_conversation() (in module grpc_app)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.lock">lock (src.chat_grpc_server.ChatServer attribute)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.lock">lock (src.chat_grpc_server.ChatServer attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.logged_in">logged_in (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.logged_in">logged_in (src.chat_grpc_client.ChatClient attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.login">login() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.login">login() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.Login">Login() (src.chat_grpc_server.ChatServer method)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.Login">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.Login">Login() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.Login">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
-</li>
-      </ul></li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.login_sync">login_sync() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.login_sync">login_sync() (src.chat_grpc_client.ChatClient method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -458,49 +367,31 @@
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="grpc_app.html#grpc_app.main">main() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.main">main() (in module grpc_app)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.mark_message_as_delivered">mark_message_as_delivered() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.mark_message_as_delivered">mark_message_as_delivered() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.mark_messages_as_read">mark_messages_as_read() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.mark_messages_as_read">mark_messages_as_read() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.mark_node_dead">mark_node_dead() (src.chat_grpc_server.ChatServer method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.mark_node_dead">mark_node_dead() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.MarkRead">MarkRead() (src.chat_grpc_server.ChatServer method)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.MarkRead">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.MarkRead">MarkRead() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.MarkRead">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
-</li>
-      </ul></li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.MessageReplication">MessageReplication (class in src.protocols.grpc.chat_pb2)</a>
-</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     module
 
       <ul>
-        <li><a href="grpc_app.html#module-grpc_app">grpc_app</a>
+        <li><a href="app_grpc.html#module-grpc_app">grpc_app</a>
 </li>
-        <li><a href="src.html#module-src">src</a>
+        <li><a href="chat_grpc_client.html#module-src.chat_grpc_client">src.chat_grpc_client</a>
 </li>
-        <li><a href="src.html#module-src.chat_grpc_client">src.chat_grpc_client</a>
+        <li><a href="chat_grpc_server.html#module-src.chat_grpc_server">src.chat_grpc_server</a>
 </li>
-        <li><a href="src.html#module-src.chat_grpc_server">src.chat_grpc_server</a>
+        <li><a href="database.html#module-src.database.db_manager">src.database.db_manager</a>
 </li>
-        <li><a href="src.database.html#module-src.database">src.database</a>
-</li>
-        <li><a href="src.database.html#module-src.database.db_manager">src.database.db_manager</a>
-</li>
-        <li><a href="src.protocols.html#module-src.protocols">src.protocols</a>
-</li>
-        <li><a href="src.protocols.grpc.html#module-src.protocols.grpc.chat_pb2">src.protocols.grpc.chat_pb2</a>
-</li>
-        <li><a href="src.protocols.grpc.html#module-src.protocols.grpc.chat_pb2_grpc">src.protocols.grpc.chat_pb2_grpc</a>
-</li>
-        <li><a href="src.replication.html#module-src.replication">src.replication</a>
-</li>
-        <li><a href="src.replication.html#module-src.replication.replication_manager">src.replication.replication_manager</a>
+        <li><a href="replication.html#module-src.replication.replication_manager">src.replication.replication_manager</a>
 </li>
       </ul></li>
   </ul></td>
@@ -509,7 +400,7 @@
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="grpc_app.html#grpc_app.on_message_send">on_message_send() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.on_message_send">on_message_send() (in module grpc_app)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -517,17 +408,17 @@
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.port">port (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.port">port (src.chat_grpc_client.ChatClient attribute)</a>
 
       <ul>
-        <li><a href="src.html#src.chat_grpc_server.ChatServer.port">(src.chat_grpc_server.ChatServer attribute)</a>
+        <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.port">(src.chat_grpc_server.ChatServer attribute)</a>
 </li>
-        <li><a href="src.replication.html#src.replication.replication_manager.ReplicaInfo.port">(src.replication.replication_manager.ReplicaInfo attribute)</a>
+        <li><a href="replication.html#src.replication.replication_manager.ReplicaInfo.port">(src.replication.replication_manager.ReplicaInfo attribute)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="grpc_app.html#grpc_app.process_incoming_realtime_messages">process_incoming_realtime_messages() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.process_incoming_realtime_messages">process_incoming_realtime_messages() (in module grpc_app)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -535,71 +426,55 @@
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.read_conversation">read_conversation() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.read_conversation">read_conversation() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.read_conversation_sync">read_conversation_sync() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.read_conversation_sync">read_conversation_sync() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.read_messages">read_messages() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.read_messages">read_messages() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.read_thread">read_thread (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.read_thread">read_thread (src.chat_grpc_client.ChatClient attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.ReadConversation">ReadConversation() (src.chat_grpc_server.ChatServer method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.ReadConversation">ReadConversation() (src.chat_grpc_server.ChatServer method)</a>
+</li>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.ReadMessages">ReadMessages() (src.chat_grpc_server.ChatServer method)</a>
+</li>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter.red">red (src.chat_grpc_server.CustomFormatter attribute)</a>
 
       <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.ReadConversation">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
-</li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.ReadConversation">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
+        <li><a href="replication.html#src.replication.replication_manager.CustomFormatter.red">(src.replication.replication_manager.CustomFormatter attribute)</a>
 </li>
       </ul></li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.ReadMessages">ReadMessages() (src.chat_grpc_server.ChatServer method)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.ReadMessages">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
+      <li><a href="app_grpc.html#grpc_app.render_chat_page_with_deletion">render_chat_page_with_deletion() (in module grpc_app)</a>
 </li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.ReadMessages">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
+      <li><a href="app_grpc.html#grpc_app.render_login_page">render_login_page() (in module grpc_app)</a>
 </li>
-      </ul></li>
-      <li><a href="src.html#src.chat_grpc_server.CustomFormatter.red">red (src.chat_grpc_server.CustomFormatter attribute)</a>
-
-      <ul>
-        <li><a href="src.replication.html#src.replication.replication_manager.CustomFormatter.red">(src.replication.replication_manager.CustomFormatter attribute)</a>
-</li>
-      </ul></li>
-      <li><a href="grpc_app.html#grpc_app.render_chat_page_with_deletion">render_chat_page_with_deletion() (in module grpc_app)</a>
-</li>
-      <li><a href="grpc_app.html#grpc_app.render_login_page">render_login_page() (in module grpc_app)</a>
+      <li><a href="app_grpc.html#grpc_app.render_sidebar">render_sidebar() (in module grpc_app)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="grpc_app.html#grpc_app.render_sidebar">render_sidebar() (in module grpc_app)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ReplicaInfo">ReplicaInfo (class in src.replication.replication_manager)</a>
 </li>
-      <li><a href="src.replication.html#src.replication.replication_manager.ReplicaInfo">ReplicaInfo (class in src.replication.replication_manager)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ReplicationManager.replicate_account">replicate_account() (src.replication.replication_manager.ReplicationManager method)</a>
 </li>
-      <li><a href="src.replication.html#src.replication.replication_manager.ReplicationManager.replicate_account">replicate_account() (src.replication.replication_manager.ReplicationManager method)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ReplicationManager.replicate_message">replicate_message() (src.replication.replication_manager.ReplicationManager method)</a>
 </li>
-      <li><a href="src.replication.html#src.replication.replication_manager.ReplicationManager.replicate_message">replicate_message() (src.replication.replication_manager.ReplicationManager method)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ReplicationManager.replicate_operation">replicate_operation() (src.replication.replication_manager.ReplicationManager method)</a>
 </li>
-      <li><a href="src.replication.html#src.replication.replication_manager.ReplicationManager.replicate_operation">replicate_operation() (src.replication.replication_manager.ReplicationManager method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.ReplicateMessage">ReplicateMessage() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.ReplicateMessage">ReplicateMessage() (src.chat_grpc_server.ChatServer method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.replication_manager">replication_manager (src.chat_grpc_server.ChatServer attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.replication_manager">replication_manager (src.chat_grpc_server.ChatServer attribute)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ReplicationManager">ReplicationManager (class in src.replication.replication_manager)</a>
 </li>
-      <li><a href="src.replication.html#src.replication.replication_manager.ReplicationManager">ReplicationManager (class in src.replication.replication_manager)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.RequestVote">RequestVote() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationMessage">ReplicationMessage (class in src.protocols.grpc.chat_pb2)</a>
-</li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationResponse">ReplicationResponse (class in src.protocols.grpc.chat_pb2)</a>
-</li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.RequestVote">RequestVote() (src.chat_grpc_server.ChatServer method)</a>
-</li>
-      <li><a href="src.html#src.chat_grpc_server.CustomFormatter.reset">reset (src.chat_grpc_server.CustomFormatter attribute)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter.reset">reset (src.chat_grpc_server.CustomFormatter attribute)</a>
 
       <ul>
-        <li><a href="src.replication.html#src.replication.replication_manager.CustomFormatter.reset">(src.replication.replication_manager.CustomFormatter attribute)</a>
+        <li><a href="replication.html#src.replication.replication_manager.CustomFormatter.reset">(src.replication.replication_manager.CustomFormatter attribute)</a>
 </li>
       </ul></li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.running">running (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.running">running (src.chat_grpc_client.ChatClient attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -607,103 +482,55 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.send_message">send_message() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.send_message">send_message() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.send_message_sync">send_message_sync() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.send_message_sync">send_message_sync() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.SendMessage">SendMessage() (src.chat_grpc_server.ChatServer method)</a>
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServer.SendMessage">(src.protocols.grpc.chat_pb2_grpc.ChatServer static method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.SendMessage">SendMessage() (src.chat_grpc_server.ChatServer method)</a>
 </li>
-        <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer.SendMessage">(src.protocols.grpc.chat_pb2_grpc.ChatServerServicer method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.serve">serve() (in module src.chat_grpc_server)</a>
 </li>
-      </ul></li>
-      <li><a href="src.html#src.chat_grpc_server.serve">serve() (in module src.chat_grpc_server)</a>
+      <li><a href="replication.html#src.replication.replication_manager.ServerRole">ServerRole (class in src.replication.replication_manager)</a>
 </li>
-      <li><a href="src.replication.html#src.replication.replication_manager.ServerRole">ServerRole (class in src.replication.replication_manager)</a>
-</li>
-      <li>
-    src
-
-      <ul>
-        <li><a href="src.html#module-src">module</a>
-</li>
-      </ul></li>
       <li>
     src.chat_grpc_client
 
       <ul>
-        <li><a href="src.html#module-src.chat_grpc_client">module</a>
+        <li><a href="chat_grpc_client.html#module-src.chat_grpc_client">module</a>
 </li>
       </ul></li>
       <li>
     src.chat_grpc_server
 
       <ul>
-        <li><a href="src.html#module-src.chat_grpc_server">module</a>
-</li>
-      </ul></li>
-      <li>
-    src.database
-
-      <ul>
-        <li><a href="src.database.html#module-src.database">module</a>
-</li>
-      </ul></li>
-      <li>
-    src.database.db_manager
-
-      <ul>
-        <li><a href="src.database.html#module-src.database.db_manager">module</a>
+        <li><a href="chat_grpc_server.html#module-src.chat_grpc_server">module</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li>
-    src.protocols
+    src.database.db_manager
 
       <ul>
-        <li><a href="src.protocols.html#module-src.protocols">module</a>
-</li>
-      </ul></li>
-      <li>
-    src.protocols.grpc.chat_pb2
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#module-src.protocols.grpc.chat_pb2">module</a>
-</li>
-      </ul></li>
-      <li>
-    src.protocols.grpc.chat_pb2_grpc
-
-      <ul>
-        <li><a href="src.protocols.grpc.html#module-src.protocols.grpc.chat_pb2_grpc">module</a>
-</li>
-      </ul></li>
-      <li>
-    src.replication
-
-      <ul>
-        <li><a href="src.replication.html#module-src.replication">module</a>
+        <li><a href="database.html#module-src.database.db_manager">module</a>
 </li>
       </ul></li>
       <li>
     src.replication.replication_manager
 
       <ul>
-        <li><a href="src.replication.html#module-src.replication.replication_manager">module</a>
+        <li><a href="replication.html#module-src.replication.replication_manager">module</a>
 </li>
       </ul></li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.start_leader_check_thread">start_leader_check_thread() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.start_leader_check_thread">start_leader_check_thread() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.start_read_thread">start_read_thread() (src.chat_grpc_client.ChatClient method)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.start_read_thread">start_read_thread() (src.chat_grpc_client.ChatClient method)</a>
 </li>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.store_message">store_message() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.store_message">store_message() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.stub">stub (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.stub">stub (src.chat_grpc_client.ChatClient attribute)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_server.ChatServer.Subscribe">Subscribe() (src.chat_grpc_server.ChatServer method)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.ChatServer.Subscribe">Subscribe() (src.chat_grpc_server.ChatServer method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -711,13 +538,13 @@
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.update_chat_message_limit">update_chat_message_limit() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.update_chat_message_limit">update_chat_message_limit() (src.database.db_manager.DatabaseManager method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.user_exists">user_exists() (src.database.db_manager.DatabaseManager method)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.user_exists">user_exists() (src.database.db_manager.DatabaseManager method)</a>
 </li>
-      <li><a href="src.html#src.chat_grpc_client.ChatClient.username">username (src.chat_grpc_client.ChatClient attribute)</a>
+      <li><a href="chat_grpc_client.html#src.chat_grpc_client.ChatClient.username">username (src.chat_grpc_client.ChatClient attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -725,13 +552,7 @@
 <h2 id="V">V</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.database.html#src.database.db_manager.DatabaseManager.verify_login">verify_login() (src.database.db_manager.DatabaseManager method)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.VoteRequest">VoteRequest (class in src.protocols.grpc.chat_pb2)</a>
-</li>
-      <li><a href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.VoteResponse">VoteResponse (class in src.protocols.grpc.chat_pb2)</a>
+      <li><a href="database.html#src.database.db_manager.DatabaseManager.verify_login">verify_login() (src.database.db_manager.DatabaseManager method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -739,10 +560,10 @@
 <h2 id="Y">Y</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="src.html#src.chat_grpc_server.CustomFormatter.yellow">yellow (src.chat_grpc_server.CustomFormatter attribute)</a>
+      <li><a href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter.yellow">yellow (src.chat_grpc_server.CustomFormatter attribute)</a>
 
       <ul>
-        <li><a href="src.replication.html#src.replication.replication_manager.CustomFormatter.yellow">(src.replication.replication_manager.CustomFormatter attribute)</a>
+        <li><a href="replication.html#src.replication.replication_manager.CustomFormatter.yellow">(src.replication.replication_manager.CustomFormatter attribute)</a>
 </li>
       </ul></li>
   </ul></td>

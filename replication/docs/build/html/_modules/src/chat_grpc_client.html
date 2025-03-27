@@ -41,9 +41,12 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../modules.html">CS262 Chat Project</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../replication.html">Replication System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../grpc_app.html">gRPC UI Application</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../database.html">Database Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../chat_grpc_server.html">gRPC Server Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../chat_grpc_client.html">gRPC Client Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../app_grpc.html">gRPC Application Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../replication.html">Replication Module</a></li>
 </ul>
 
         </div>
@@ -84,26 +87,6 @@
 <span class="sd">The client maintains a connection to the leader server and automatically handles leader changes</span>
 <span class="sd">by discovering and reconnecting to the new leader when needed. It uses a cluster configuration</span>
 <span class="sd">to maintain a list of all possible servers and implements retry logic for robustness.</span>
-
-<span class="sd">Example:</span>
-<span class="sd">    ```python</span>
-<span class="sd">    # Create a client with cluster configuration</span>
-<span class="sd">    client = ChatClient(</span>
-<span class="sd">        username=&quot;alice&quot;,</span>
-<span class="sd">        host=&quot;127.0.0.1&quot;,</span>
-<span class="sd">        port=50051,</span>
-<span class="sd">        cluster_nodes=[(&quot;127.0.0.1&quot;, 50051), (&quot;127.0.0.1&quot;, 50052)]</span>
-<span class="sd">    )</span>
-
-<span class="sd">    # Connect and start background threads</span>
-<span class="sd">    if client.connect():</span>
-<span class="sd">        client.start_read_thread()  # Also starts leader check thread</span>
-
-<span class="sd">        # Use the client</span>
-<span class="sd">        success, error = client.login_sync(&quot;password&quot;)</span>
-<span class="sd">        if success:</span>
-<span class="sd">            client.send_message(&quot;bob&quot;, &quot;Hello!&quot;)</span>
-<span class="sd">    ```</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
@@ -120,7 +103,7 @@
 
 
 <div class="viewcode-block" id="ChatClient">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ChatClient</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A gRPC-based client for the chat system with leader-follower replication support.</span>
@@ -170,7 +153,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">incoming_messages_queue</span><span class="p">:</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
 
 <div class="viewcode-block" id="ChatClient.connect">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.connect">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.connect">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Establish a connection to the server and verify it&#39;s responding.</span>
@@ -223,7 +206,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.create_account">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.create_account">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.create_account">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_account</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new user account.</span>
@@ -261,7 +244,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.create_account_sync">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.create_account_sync">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.create_account_sync">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_account_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new user account (synchronous version).</span>
@@ -294,7 +277,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.login">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.login">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.login">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Log in to an existing account.</span>
@@ -339,7 +322,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.login_sync">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.login_sync">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.login_sync">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">login_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Log in to an existing account (synchronous version).</span>
@@ -381,7 +364,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.send_message">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.send_message">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.send_message">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">send_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipient</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Send a message to another user.</span>
@@ -448,7 +431,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.send_message_sync">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.send_message_sync">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.send_message_sync">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">send_message_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipient</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">text</span><span class="p">}</span>
         <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
@@ -472,7 +455,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.read_messages">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.read_messages">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.read_messages">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">read_messages</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Listen for incoming messages in a background thread.</span>
@@ -501,7 +484,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.start_read_thread">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.start_read_thread">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.start_read_thread">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">start_read_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Start background threads for reading messages and checking leader status.</span>
@@ -519,7 +502,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.list_accounts">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.list_accounts">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.list_accounts">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">list_accounts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pattern&quot;</span><span class="p">:</span> <span class="n">pattern</span><span class="p">,</span> <span class="s2">&quot;page&quot;</span><span class="p">:</span> <span class="n">page</span><span class="p">}</span>
         <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
@@ -543,7 +526,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.list_accounts_sync">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.list_accounts_sync">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.list_accounts_sync">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">list_accounts_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pattern&quot;</span><span class="p">:</span> <span class="n">pattern</span><span class="p">,</span> <span class="s2">&quot;page&quot;</span><span class="p">:</span> <span class="n">page</span><span class="p">}</span>
         <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
@@ -567,7 +550,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.delete_messages">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.delete_messages">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.delete_messages">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete_messages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;message_ids&quot;</span><span class="p">:</span> <span class="n">message_ids</span><span class="p">}</span>
         <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
@@ -594,7 +577,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.delete_messages_sync">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.delete_messages_sync">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.delete_messages_sync">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete_messages_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;message_ids&quot;</span><span class="p">:</span> <span class="n">message_ids</span><span class="p">}</span>
         <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
@@ -618,7 +601,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.delete_account">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.delete_account">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.delete_account">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete_account</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
             <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">DELETE_ACCOUNT</span><span class="p">,</span>
@@ -639,7 +622,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.delete_account_sync">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.delete_account_sync">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.delete_account_sync">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete_account_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
         <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
             <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">DELETE_ACCOUNT</span><span class="p">,</span>
@@ -657,7 +640,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.list_chat_partners">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.list_chat_partners">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.list_chat_partners">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">list_chat_partners</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
             <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">LIST_CHAT_PARTNERS</span><span class="p">,</span>
@@ -685,7 +668,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.list_chat_partners_sync">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.list_chat_partners_sync">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.list_chat_partners_sync">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">list_chat_partners_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
         <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
             <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">LIST_CHAT_PARTNERS</span><span class="p">,</span>
@@ -705,7 +688,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.read_conversation">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.read_conversation">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.read_conversation">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">read_conversation</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">partner</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
@@ -739,7 +722,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.read_conversation_sync">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.read_conversation_sync">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.read_conversation_sync">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">read_conversation_sync</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">partner</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
@@ -767,7 +750,7 @@
 
 
 <div class="viewcode-block" id="ChatClient.close">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.close">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.close">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Clean up resources and stop background threads.</span>
@@ -860,7 +843,7 @@
             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.2</span><span class="p">)</span>  <span class="c1"># Check every 200ms</span>
 
 <div class="viewcode-block" id="ChatClient.start_leader_check_thread">
-<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.start_leader_check_thread">[docs]</a>
+<a class="viewcode-back" href="../../chat_grpc_client.html#src.chat_grpc_client.ChatClient.start_leader_check_thread">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">start_leader_check_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Start the background thread that monitors leader status.</span>

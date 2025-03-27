@@ -19,7 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="CS262 Chat Project" href="modules.html" /> 
+    <link rel="next" title="Overview" href="overview.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -43,9 +43,12 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">CS262 Chat Project</a></li>
-<li class="toctree-l1"><a class="reference internal" href="replication.html">Replication System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="grpc_app.html">gRPC UI Application</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="database.html">Database Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat_grpc_server.html">gRPC Server Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat_grpc_client.html">gRPC Client Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="app_grpc.html">gRPC Application Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="replication.html">Replication Module</a></li>
 </ul>
 
         </div>
@@ -78,27 +81,44 @@
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">CS262 Chat Project</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="src.html">src package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="database.html">Database Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="database.html#src.database.db_manager.DatabaseManager"><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="replication.html">Replication System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="grpc_app.html">gRPC UI Application</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.get_leader"><code class="docutils literal notranslate"><span class="pre">get_leader()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.get_cluster_nodes"><code class="docutils literal notranslate"><span class="pre">get_cluster_nodes()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.init_session_state"><code class="docutils literal notranslate"><span class="pre">init_session_state()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.check_and_reconnect_leader"><code class="docutils literal notranslate"><span class="pre">check_and_reconnect_leader()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.get_chat_client"><code class="docutils literal notranslate"><span class="pre">get_chat_client()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.render_login_page"><code class="docutils literal notranslate"><span class="pre">render_login_page()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.fetch_accounts"><code class="docutils literal notranslate"><span class="pre">fetch_accounts()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.fetch_chat_partners"><code class="docutils literal notranslate"><span class="pre">fetch_chat_partners()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.load_conversation"><code class="docutils literal notranslate"><span class="pre">load_conversation()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.process_incoming_realtime_messages"><code class="docutils literal notranslate"><span class="pre">process_incoming_realtime_messages()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.on_message_send"><code class="docutils literal notranslate"><span class="pre">on_message_send()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.render_sidebar"><code class="docutils literal notranslate"><span class="pre">render_sidebar()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.deduplicate_messages"><code class="docutils literal notranslate"><span class="pre">deduplicate_messages()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.render_chat_page_with_deletion"><code class="docutils literal notranslate"><span class="pre">render_chat_page_with_deletion()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="grpc_app.html#grpc_app.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat_grpc_server.html">gRPC Server Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="chat_grpc_server.html#src.chat_grpc_server.CustomFormatter"><code class="docutils literal notranslate"><span class="pre">CustomFormatter</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chat_grpc_server.html#src.chat_grpc_server.ChatServer"><code class="docutils literal notranslate"><span class="pre">ChatServer</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chat_grpc_server.html#src.chat_grpc_server.serve"><code class="docutils literal notranslate"><span class="pre">serve()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="chat_grpc_client.html">gRPC Client Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="chat_grpc_client.html#src.chat_grpc_client.ChatClient"><code class="docutils literal notranslate"><span class="pre">ChatClient</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="app_grpc.html">gRPC Application Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.get_leader"><code class="docutils literal notranslate"><span class="pre">get_leader()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.get_cluster_nodes"><code class="docutils literal notranslate"><span class="pre">get_cluster_nodes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.init_session_state"><code class="docutils literal notranslate"><span class="pre">init_session_state()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.check_and_reconnect_leader"><code class="docutils literal notranslate"><span class="pre">check_and_reconnect_leader()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.get_chat_client"><code class="docutils literal notranslate"><span class="pre">get_chat_client()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.render_login_page"><code class="docutils literal notranslate"><span class="pre">render_login_page()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.fetch_accounts"><code class="docutils literal notranslate"><span class="pre">fetch_accounts()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.fetch_chat_partners"><code class="docutils literal notranslate"><span class="pre">fetch_chat_partners()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.load_conversation"><code class="docutils literal notranslate"><span class="pre">load_conversation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.process_incoming_realtime_messages"><code class="docutils literal notranslate"><span class="pre">process_incoming_realtime_messages()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.on_message_send"><code class="docutils literal notranslate"><span class="pre">on_message_send()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.render_sidebar"><code class="docutils literal notranslate"><span class="pre">render_sidebar()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.deduplicate_messages"><code class="docutils literal notranslate"><span class="pre">deduplicate_messages()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.render_chat_page_with_deletion"><code class="docutils literal notranslate"><span class="pre">render_chat_page_with_deletion()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app_grpc.html#grpc_app.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="replication.html">Replication Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="replication.html#src.replication.replication_manager.CustomFormatter"><code class="docutils literal notranslate"><span class="pre">CustomFormatter</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="replication.html#src.replication.replication_manager.ServerRole"><code class="docutils literal notranslate"><span class="pre">ServerRole</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="replication.html#src.replication.replication_manager.ReplicaInfo"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="replication.html#src.replication.replication_manager.ReplicationManager"><code class="docutils literal notranslate"><span class="pre">ReplicationManager</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -117,7 +137,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="modules.html" class="btn btn-neutral float-right" title="CS262 Chat Project" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="overview.html" class="btn btn-neutral float-right" title="Overview" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

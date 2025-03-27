@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Replication System &mdash; CS262 Chat Project 1.0 documentation</title>
+  <title>Replication Module &mdash; CS262 Chat Project 1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
@@ -19,8 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="gRPC UI Application" href="grpc_app.html" />
-    <link rel="prev" title="src.replication package" href="src.replication.html" /> 
+    <link rel="prev" title="gRPC Application Module" href="app_grpc.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -44,9 +43,45 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="modules.html">CS262 Chat Project</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Replication System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="grpc_app.html">gRPC UI Application</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="database.html">Database Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat_grpc_server.html">gRPC Server Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat_grpc_client.html">gRPC Client Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="app_grpc.html">gRPC Application Module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Replication Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#src.replication.replication_manager.CustomFormatter"><code class="docutils literal notranslate"><span class="pre">CustomFormatter</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.CustomFormatter.grey"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.grey</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.CustomFormatter.yellow"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.yellow</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.CustomFormatter.red"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.red</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.CustomFormatter.bold_red"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.bold_red</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.CustomFormatter.reset"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.reset</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.CustomFormatter.format_str"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.format_str</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.CustomFormatter.FORMATS"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.FORMATS</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.CustomFormatter.format"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.format()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#src.replication.replication_manager.ServerRole"><code class="docutils literal notranslate"><span class="pre">ServerRole</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ServerRole.LEADER"><code class="docutils literal notranslate"><span class="pre">ServerRole.LEADER</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ServerRole.FOLLOWER"><code class="docutils literal notranslate"><span class="pre">ServerRole.FOLLOWER</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ServerRole.CANDIDATE"><code class="docutils literal notranslate"><span class="pre">ServerRole.CANDIDATE</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#src.replication.replication_manager.ReplicaInfo"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ReplicaInfo.host"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo.host</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ReplicaInfo.port"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo.port</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ReplicaInfo.is_alive"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo.is_alive</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ReplicaInfo.last_heartbeat"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo.last_heartbeat</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#src.replication.replication_manager.ReplicationManager"><code class="docutils literal notranslate"><span class="pre">ReplicationManager</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ReplicationManager.replicate_message"><code class="docutils literal notranslate"><span class="pre">ReplicationManager.replicate_message()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ReplicationManager.replicate_account"><code class="docutils literal notranslate"><span class="pre">ReplicationManager.replicate_account()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ReplicationManager.replicate_operation"><code class="docutils literal notranslate"><span class="pre">ReplicationManager.replicate_operation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#src.replication.replication_manager.ReplicationManager.handle_replication_message"><code class="docutils literal notranslate"><span class="pre">ReplicationManager.handle_replication_message()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 
         </div>
@@ -63,7 +98,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Replication System</li>
+      <li class="breadcrumb-item active">Replication Module</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/replication.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -73,52 +108,51 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="replication-system">
-<h1>Replication System<a class="headerlink" href="#replication-system" title="Link to this heading"></a></h1>
-<p>This module handles the replication logic for the distributed chat system.</p>
-<dl class="py class">
-<dt class="sig sig-object py">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.replication.replication_manager.</span></span><span class="sig-name descname"><span class="pre">CustomFormatter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datefmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'%'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">defaults</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#CustomFormatter"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+  <section id="replication-module">
+<h1>Replication Module<a class="headerlink" href="#replication-module" title="Link to this heading"></a></h1>
+<dl class="py class" id="module-src.replication.replication_manager">
+<dt class="sig sig-object py" id="src.replication.replication_manager.CustomFormatter">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.replication.replication_manager.</span></span><span class="sig-name descname"><span class="pre">CustomFormatter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datefmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'%'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">defaults</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#CustomFormatter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.replication.replication_manager.CustomFormatter" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Formatter</span></code></p>
 <p>Custom formatter that includes server info and colors for different levels</p>
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">grey</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[38;20m'</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.CustomFormatter.grey">
+<span class="sig-name descname"><span class="pre">grey</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[38;20m'</span></em><a class="headerlink" href="#src.replication.replication_manager.CustomFormatter.grey" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">yellow</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[33;20m'</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.CustomFormatter.yellow">
+<span class="sig-name descname"><span class="pre">yellow</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[33;20m'</span></em><a class="headerlink" href="#src.replication.replication_manager.CustomFormatter.yellow" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">red</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[31;20m'</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.CustomFormatter.red">
+<span class="sig-name descname"><span class="pre">red</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[31;20m'</span></em><a class="headerlink" href="#src.replication.replication_manager.CustomFormatter.red" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">bold_red</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[31;1m'</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.CustomFormatter.bold_red">
+<span class="sig-name descname"><span class="pre">bold_red</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[31;1m'</span></em><a class="headerlink" href="#src.replication.replication_manager.CustomFormatter.bold_red" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">reset</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[0m'</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.CustomFormatter.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[0m'</span></em><a class="headerlink" href="#src.replication.replication_manager.CustomFormatter.reset" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">format_str</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s'</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.CustomFormatter.format_str">
+<span class="sig-name descname"><span class="pre">format_str</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s'</span></em><a class="headerlink" href="#src.replication.replication_manager.CustomFormatter.format_str" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">FORMATS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{10:</span> <span class="pre">'\x1b[38;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">20:</span> <span class="pre">'\x1b[38;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">30:</span> <span class="pre">'\x1b[33;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">40:</span> <span class="pre">'\x1b[31;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">50:</span> <span class="pre">'\x1b[31;1m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m'}</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.CustomFormatter.FORMATS">
+<span class="sig-name descname"><span class="pre">FORMATS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{10:</span> <span class="pre">'\x1b[38;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">20:</span> <span class="pre">'\x1b[38;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">30:</span> <span class="pre">'\x1b[33;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">40:</span> <span class="pre">'\x1b[31;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">50:</span> <span class="pre">'\x1b[31;1m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m'}</span></em><a class="headerlink" href="#src.replication.replication_manager.CustomFormatter.FORMATS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#CustomFormatter.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.CustomFormatter.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#CustomFormatter.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.replication.replication_manager.CustomFormatter.format" title="Link to this definition"></a></dt>
 <dd><p>Format the specified record as text.</p>
 <p>The record’s attribute dictionary is used as the operand to a
 string formatting operation which yields the returned string.
@@ -133,97 +167,113 @@ it is formatted using formatException() and appended to the message.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.replication.replication_manager.</span></span><span class="sig-name descname"><span class="pre">ServerRole</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ServerRole"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ServerRole">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.replication.replication_manager.</span></span><span class="sig-name descname"><span class="pre">ServerRole</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ServerRole"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.replication.replication_manager.ServerRole" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">LEADER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'leader'</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ServerRole.LEADER">
+<span class="sig-name descname"><span class="pre">LEADER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'leader'</span></em><a class="headerlink" href="#src.replication.replication_manager.ServerRole.LEADER" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">FOLLOWER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'follower'</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ServerRole.FOLLOWER">
+<span class="sig-name descname"><span class="pre">FOLLOWER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'follower'</span></em><a class="headerlink" href="#src.replication.replication_manager.ServerRole.FOLLOWER" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">CANDIDATE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'candidate'</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ServerRole.CANDIDATE">
+<span class="sig-name descname"><span class="pre">CANDIDATE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'candidate'</span></em><a class="headerlink" href="#src.replication.replication_manager.ServerRole.CANDIDATE" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.replication.replication_manager.</span></span><span class="sig-name descname"><span class="pre">ReplicaInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_alive</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_heartbeat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1743046753.61233</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicaInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicaInfo">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.replication.replication_manager.</span></span><span class="sig-name descname"><span class="pre">ReplicaInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_alive</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_heartbeat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1743049292.537761</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicaInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.replication.replication_manager.ReplicaInfo" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Information about a replica in the system.</p>
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">host</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicaInfo.host">
+<span class="sig-name descname"><span class="pre">host</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#src.replication.replication_manager.ReplicaInfo.host" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">port</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicaInfo.port">
+<span class="sig-name descname"><span class="pre">port</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#src.replication.replication_manager.ReplicaInfo.port" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">is_alive</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicaInfo.is_alive">
+<span class="sig-name descname"><span class="pre">is_alive</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em><a class="headerlink" href="#src.replication.replication_manager.ReplicaInfo.is_alive" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">last_heartbeat</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1743046753.61233</span></em></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicaInfo.last_heartbeat">
+<span class="sig-name descname"><span class="pre">last_heartbeat</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1743049292.537761</span></em><a class="headerlink" href="#src.replication.replication_manager.ReplicaInfo.last_heartbeat" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.replication.replication_manager.</span></span><span class="sig-name descname"><span class="pre">ReplicationManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replica_addresses</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicationManager">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.replication.replication_manager.</span></span><span class="sig-name descname"><span class="pre">ReplicationManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replica_addresses</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.replication.replication_manager.ReplicationManager" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Manages replication between leader and follower servers.
 Implements a basic leader-follower protocol with majority acknowledgment,
 but now the ‘majority’ is computed from the <em>currently active</em> servers.</p>
 <dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">replicate_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sender</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recipient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager.replicate_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicationManager.replicate_message">
+<span class="sig-name descname"><span class="pre">replicate_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sender</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recipient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager.replicate_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.replication.replication_manager.ReplicationManager.replicate_message" title="Link to this definition"></a></dt>
 <dd><p>Attempt to replicate a chat message to the other alive followers.
 Requires a majority of <em>active</em> nodes to acknowledge.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">replicate_account</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager.replicate_account"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicationManager.replicate_account">
+<span class="sig-name descname"><span class="pre">replicate_account</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager.replicate_account"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.replication.replication_manager.ReplicationManager.replicate_account" title="Link to this definition"></a></dt>
 <dd><p>Replicate account creation to other alive followers.
 Requires a majority of <em>active</em> nodes to acknowledge.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">replicate_operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">replication_request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationMessage" title="src.protocols.grpc.chat_pb2.ReplicationMessage"><span class="pre">ReplicationMessage</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager.replicate_operation"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicationManager.replicate_operation">
+<span class="sig-name descname"><span class="pre">replicate_operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">replication_request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ReplicationMessage</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager.replicate_operation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.replication.replication_manager.ReplicationManager.replicate_operation" title="Link to this definition"></a></dt>
 <dd><p>Generic replication for delete operations or mark-read.
 Requires majority of <em>active</em> nodes.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">handle_replication_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationMessage" title="src.protocols.grpc.chat_pb2.ReplicationMessage"><span class="pre">ReplicationMessage</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationMessage" title="src.protocols.grpc.chat_pb2.ReplicationMessage"><span class="pre">ReplicationMessage</span></a></span></span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager.handle_replication_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="src.replication.replication_manager.ReplicationManager.handle_replication_message">
+<span class="sig-name descname"><span class="pre">handle_replication_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ReplicationMessage</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ReplicationMessage</span></span></span><a class="reference internal" href="_modules/src/replication/replication_manager.html#ReplicationManager.handle_replication_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.replication.replication_manager.ReplicationManager.handle_replication_message" title="Link to this definition"></a></dt>
 <dd><p>Handle incoming replication messages from other servers (vote requests, heartbeats, etc.).</p>
 </dd></dl>
 
 </dd></dl>
 
+<p>This module implements the replication protocol for the distributed chat system. Features include:</p>
+<ul class="simple">
+<li><p>Leader election using Raft consensus</p></li>
+<li><p>State replication between servers</p></li>
+<li><p>Automatic failover handling</p></li>
+<li><p>Cluster membership management</p></li>
+<li><p>Heartbeat monitoring</p></li>
+<li><p>Log consistency checking</p></li>
+<li><p>Conflict resolution</p></li>
+</ul>
+<p>The replication protocol ensures:</p>
+<ol class="arabic simple">
+<li><p>Strong consistency for all operations</p></li>
+<li><p>Automatic leader election on failure</p></li>
+<li><p>Majority acknowledgment for changes</p></li>
+<li><p>Automatic client redirection to leader</p></li>
+</ol>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="src.replication.html" class="btn btn-neutral float-left" title="src.replication package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="grpc_app.html" class="btn btn-neutral float-right" title="gRPC UI Application" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="app_grpc.html" class="btn btn-neutral float-left" title="gRPC Application Module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

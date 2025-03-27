@@ -41,9 +41,12 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../modules.html">CS262 Chat Project</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../replication.html">Replication System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grpc_app.html">gRPC UI Application</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../database.html">Database Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../chat_grpc_server.html">gRPC Server Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../chat_grpc_client.html">gRPC Client Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../app_grpc.html">gRPC Application Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../replication.html">Replication Module</a></li>
 </ul>
 
         </div>
@@ -90,15 +93,6 @@
 <span class="sd">- Server connection details</span>
 <span class="sd">- Chat history and preferences</span>
 <span class="sd">- UI state (selected chat partner, scroll position, etc.)</span>
-
-<span class="sd">Example:</span>
-<span class="sd">    ```bash</span>
-<span class="sd">    # Run with default settings (connects to localhost:50051)</span>
-<span class="sd">    streamlit run grpc_app.py</span>
-
-<span class="sd">    # Run with specific cluster configuration</span>
-<span class="sd">    streamlit run grpc_app.py -- --cluster-nodes &quot;127.0.0.1:50051,127.0.0.1:50052&quot;</span>
-<span class="sd">    ```</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
@@ -117,7 +111,7 @@
 
 
 <div class="viewcode-block" id="get_leader">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.get_leader">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.get_leader">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_leader</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Queries the server for the current leader and returns a tuple (host, port).</span>
@@ -144,7 +138,7 @@
 
 
 <div class="viewcode-block" id="get_cluster_nodes">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.get_cluster_nodes">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.get_cluster_nodes">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_cluster_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
     <span class="n">active_nodes</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">try</span><span class="p">:</span>
@@ -180,7 +174,7 @@
 
 
 <div class="viewcode-block" id="init_session_state">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.init_session_state">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.init_session_state">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">init_session_state</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Initialize all necessary session state variables.</span>
@@ -252,7 +246,7 @@
 
 
 <div class="viewcode-block" id="check_and_reconnect_leader">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.check_and_reconnect_leader">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.check_and_reconnect_leader">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">check_and_reconnect_leader</span><span class="p">(</span><span class="n">client</span><span class="p">:</span> <span class="n">ChatClient</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Check if the current connection is to the leader.</span>
@@ -405,7 +399,7 @@
 
 
 <div class="viewcode-block" id="get_chat_client">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.get_chat_client">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.get_chat_client">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_chat_client</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ChatClient</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the chat client from the session state, ensuring it&#39;s connected.</span>
@@ -434,7 +428,7 @@
 
 
 <div class="viewcode-block" id="render_login_page">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.render_login_page">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.render_login_page">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">render_login_page</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Render the login/signup page with server connection settings.</span>
@@ -660,7 +654,7 @@
 
 
 <div class="viewcode-block" id="fetch_accounts">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.fetch_accounts">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.fetch_accounts">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">fetch_accounts</span><span class="p">(</span><span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">client</span> <span class="o">=</span> <span class="n">get_chat_client</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">client</span><span class="p">:</span>
@@ -676,7 +670,7 @@
 
 
 <div class="viewcode-block" id="fetch_chat_partners">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.fetch_chat_partners">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.fetch_chat_partners">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">fetch_chat_partners</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
     <span class="n">client</span> <span class="o">=</span> <span class="n">get_chat_client</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">client</span><span class="p">:</span>
@@ -692,7 +686,7 @@
 
 
 <div class="viewcode-block" id="load_conversation">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.load_conversation">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.load_conversation">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_conversation</span><span class="p">(</span><span class="n">partner</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Load messages from a conversation with a chat partner.</span>
@@ -794,7 +788,7 @@
 
 
 <div class="viewcode-block" id="process_incoming_realtime_messages">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.process_incoming_realtime_messages">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.process_incoming_realtime_messages">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">process_incoming_realtime_messages</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Process new messages from the incoming messages queue.</span>
@@ -867,7 +861,7 @@
 
 
 <div class="viewcode-block" id="on_message_send">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.on_message_send">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.on_message_send">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">on_message_send</span><span class="p">(</span><span class="n">partner</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">conv</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Handle message sending and update UI state.</span>
@@ -902,7 +896,7 @@
 
 
 <div class="viewcode-block" id="render_sidebar">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.render_sidebar">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.render_sidebar">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">render_sidebar</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Render the application sidebar with user controls and chat partner list.</span>
@@ -1012,7 +1006,7 @@
 
 
 <div class="viewcode-block" id="deduplicate_messages">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.deduplicate_messages">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.deduplicate_messages">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">deduplicate_messages</span><span class="p">(</span><span class="n">messages</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return a new list of messages with duplicates removed.</span>
@@ -1039,7 +1033,7 @@
 
 
 <div class="viewcode-block" id="render_chat_page_with_deletion">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.render_chat_page_with_deletion">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.render_chat_page_with_deletion">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">render_chat_page_with_deletion</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Render the main chat interface with message deletion capability.</span>
@@ -1259,7 +1253,7 @@
 
 
 <div class="viewcode-block" id="main">
-<a class="viewcode-back" href="../grpc_app.html#grpc_app.main">[docs]</a>
+<a class="viewcode-back" href="../app_grpc.html#grpc_app.main">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Main entry point for the Streamlit application.</span>

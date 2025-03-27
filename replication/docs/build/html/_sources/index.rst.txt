@@ -7,9 +7,12 @@ Welcome to CS262 Chat with Replication Project's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   modules
+   overview
+   database
+   chat_grpc_server
+   chat_grpc_client
+   app_grpc
    replication
-   grpc_app
    
 Indices and tables
 ==================
