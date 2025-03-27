@@ -4,7 +4,7 @@ package chat;
 
 import "google/protobuf/struct.proto";
 
-// Enum to represent the type of message.
+// Message types for client-server communication
 enum MessageType {
   CREATE_ACCOUNT = 0;
   LOGIN = 1;
@@ -16,9 +16,12 @@ enum MessageType {
   ERROR = 7;
   SUCCESS = 8;
   LIST_CHAT_PARTNERS = 9;
+  GET_LEADER = 10;   // New message type for leader query
+  MARK_READ = 11;    // New message type for marking messages as read
+  GET_CLUSTER_NODES = 12;
 }
 
-// Message definition corresponding to our Message class.
+// Main message structure used for client-server communication
 message ChatMessage {
   MessageType type = 1;
   google.protobuf.Struct payload = 2;
@@ -27,20 +30,90 @@ message ChatMessage {
   double timestamp = 5; // Unix timestamp
 }
 
-// gRPC service definition for chat operations.
+// Message types for server-server replication protocol
+enum ReplicationType {
+  HEARTBEAT = 0;
+  REQUEST_VOTE = 1;
+  REPLICATE_MESSAGE = 2;
+  VOTE_RESPONSE = 3;
+  REPLICATION_RESPONSE = 4;
+  REPLICATION_SUCCESS = 5;
+  REPLICATION_ERROR = 6;
+  REPLICATE_ACCOUNT = 7;
+  REPLICATE_DELETE_MESSAGES = 8;
+  REPLICATE_DELETE_ACCOUNT = 9;
+  REPLICATE_MARK_READ = 10;
+}
+
+// Message structure for server-server replication
+message ReplicationMessage {
+  ReplicationType type = 1;
+  int32 term = 2;  // Current term number
+  string server_id = 3;  // Server identifier (host:port)
+  oneof content {
+    VoteRequest vote_request = 4;
+    VoteResponse vote_response = 5;
+    MessageReplication message_replication = 6;
+    ReplicationResponse replication_response = 7;
+    Heartbeat heartbeat = 8;
+    AccountReplication account_replication = 10;  // New field for account replication
+  }
+  double timestamp = 9;
+  DeletionPayload deletion = 11;
+}
+
+message VoteRequest {
+  int32 last_log_term = 1;
+  int32 last_log_index = 2;
+}
+
+message VoteResponse {
+  bool vote_granted = 1;
+}
+
+message MessageReplication {
+  int32 message_id = 1;
+  string sender = 2;
+  string recipient = 3;
+  string content = 4;
+}
+
+message ReplicationResponse {
+  bool success = 1;
+  int32 message_id = 2;
+}
+
+message Heartbeat {
+  int32 commit_index = 1;
+}
+
+// New message for replicating account creation
+message AccountReplication {
+  string username = 1;
+}
+
+// Deletion struct for messages and accounts
+message DeletionPayload {
+  repeated int32 message_ids = 1;
+  string username = 2;
+}
+
+// The chat service definition
 service ChatServer {
-  // RPC for sending a message.
-  rpc SendMessage(ChatMessage) returns (ChatMessage);
+  // Client-facing RPCs
+  rpc CreateAccount(ChatMessage) returns (ChatMessage) {}
+  rpc Login(ChatMessage) returns (ChatMessage) {}
+  rpc SendMessage(ChatMessage) returns (ChatMessage) {}
+  rpc ReadMessages(ChatMessage) returns (stream ChatMessage) {}
+  rpc DeleteMessages(ChatMessage) returns (ChatMessage) {}
+  rpc DeleteAccount(ChatMessage) returns (ChatMessage) {}
+  rpc ListAccounts(ChatMessage) returns (ChatMessage) {}
+  rpc ListChatPartners(ChatMessage) returns (ChatMessage) {}
+  rpc ReadConversation(ChatMessage) returns (ChatMessage) {}
+  rpc GetLeader(ChatMessage) returns (ChatMessage) {}   // New RPC for leader query
+  rpc MarkRead(ChatMessage) returns (ChatMessage) {}    // New RPC for marking messages as read
 
-  // RPC for reading messages (could be a streaming response).
-  rpc ReadMessages(ChatMessage) returns (stream ChatMessage);
-
-  // Additional RPC methods for other operations can be defined as needed.
-  rpc CreateAccount(ChatMessage) returns (ChatMessage);
-  rpc Login(ChatMessage) returns (ChatMessage);
-  rpc ListAccounts(ChatMessage) returns (ChatMessage);
-  rpc DeleteMessages(ChatMessage) returns (ChatMessage);
-  rpc DeleteAccount(ChatMessage) returns (ChatMessage);
-  rpc ListChatPartners(ChatMessage) returns (ChatMessage);
-  rpc ReadConversation(ChatMessage) returns (ChatMessage);
+  // Server-server replication RPCs
+  rpc HandleReplication(ReplicationMessage) returns (ReplicationMessage) {}
+  rpc GetClusterNodes(ChatMessage) returns (ChatMessage);
 }

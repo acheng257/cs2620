@@ -1,0 +1,61 @@
+[SystemTime=1741201728.784] [Machine=5] [LogicalClock=0] [Event=INIT] Clock rate initialized as 1
+[SystemTime=1741201729.799] [Machine=5] [LogicalClock=1] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 1
+[SystemTime=1741201730.800] [Machine=5] [LogicalClock=3] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 1
+[SystemTime=1741201731.805] [Machine=5] [LogicalClock=9] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 1
+[SystemTime=1741201732.809] [Machine=5] [LogicalClock=10] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 1
+[SystemTime=1741201733.814] [Machine=5] [LogicalClock=15] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 0
+[SystemTime=1741201734.820] [Machine=5] [LogicalClock=26] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 0
+[SystemTime=1741201735.826] [Machine=5] [LogicalClock=29] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741201736.832] [Machine=5] [LogicalClock=29] [Event=SEND] Sending message to [('localhost', 8001)]: 5|29|Hello from M5.
+[SystemTime=1741201737.836] [Machine=5] [LogicalClock=31] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741201738.841] [Machine=5] [LogicalClock=43] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 1
+[SystemTime=1741201739.846] [Machine=5] [LogicalClock=44] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 1
+[SystemTime=1741201740.852] [Machine=5] [LogicalClock=50] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 1
+[SystemTime=1741201741.857] [Machine=5] [LogicalClock=57] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 3
+[SystemTime=1741201742.862] [Machine=5] [LogicalClock=59] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 3
+[SystemTime=1741201743.865] [Machine=5] [LogicalClock=60] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 2
+[SystemTime=1741201744.867] [Machine=5] [LogicalClock=62] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 2
+[SystemTime=1741201745.872] [Machine=5] [LogicalClock=66] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 2
+[SystemTime=1741201746.877] [Machine=5] [LogicalClock=74] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 3
+[SystemTime=1741201747.880] [Machine=5] [LogicalClock=83] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 3
+[SystemTime=1741201748.883] [Machine=5] [LogicalClock=86] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 3
+[SystemTime=1741201749.889] [Machine=5] [LogicalClock=88] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 3
+[SystemTime=1741201750.894] [Machine=5] [LogicalClock=89] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 3
+[SystemTime=1741201751.899] [Machine=5] [LogicalClock=95] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 3
+[SystemTime=1741201752.902] [Machine=5] [LogicalClock=101] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 3
+[SystemTime=1741201753.903] [Machine=5] [LogicalClock=104] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 3
+[SystemTime=1741201754.908] [Machine=5] [LogicalClock=109] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 2
+[SystemTime=1741201755.912] [Machine=5] [LogicalClock=114] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 1
+[SystemTime=1741201756.916] [Machine=5] [LogicalClock=116] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 1
+[SystemTime=1741201757.921] [Machine=5] [LogicalClock=136] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 1
+[SystemTime=1741201758.926] [Machine=5] [LogicalClock=140] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 0
+[SystemTime=1741201759.929] [Machine=5] [LogicalClock=150] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 0
+[SystemTime=1741201760.938] [Machine=5] [LogicalClock=150] [Event=SEND] Sending message to [('localhost', 8000), ('localhost', 8001), ('localhost', 8002), ('localhost', 8003)]: 5|150|Hello from M5.
+[SystemTime=1741201761.943] [Machine=5] [LogicalClock=158] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 0
+[SystemTime=1741201762.948] [Machine=5] [LogicalClock=162] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 0
+[SystemTime=1741201763.952] [Machine=5] [LogicalClock=166] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 0
+[SystemTime=1741201764.957] [Machine=5] [LogicalClock=170] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 0
+[SystemTime=1741201765.962] [Machine=5] [LogicalClock=175] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 0
+[SystemTime=1741201766.967] [Machine=5] [LogicalClock=176] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741201767.971] [Machine=5] [LogicalClock=180] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 0
+[SystemTime=1741201768.977] [Machine=5] [LogicalClock=181] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741201769.983] [Machine=5] [LogicalClock=181] [Event=SEND] Sending message to [('localhost', 8001)]: 5|181|Hello from M5.
+[SystemTime=1741201770.985] [Machine=5] [LogicalClock=183] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741201771.991] [Machine=5] [LogicalClock=184] [Event=INTERNAL] Doing internal work.
+[SystemTime=1741201772.995] [Machine=5] [LogicalClock=211] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 1
+[SystemTime=1741201774.000] [Machine=5] [LogicalClock=212] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 2
+[SystemTime=1741201775.005] [Machine=5] [LogicalClock=217] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 2
+[SystemTime=1741201776.013] [Machine=5] [LogicalClock=220] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 1
+[SystemTime=1741201777.016] [Machine=5] [LogicalClock=222] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 1
+[SystemTime=1741201778.021] [Machine=5] [LogicalClock=230] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 1
+[SystemTime=1741201779.023] [Machine=5] [LogicalClock=233] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 1
+[SystemTime=1741201780.026] [Machine=5] [LogicalClock=243] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 1
+[SystemTime=1741201781.031] [Machine=5] [LogicalClock=250] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 2
+[SystemTime=1741201782.037] [Machine=5] [LogicalClock=251] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 2
+[SystemTime=1741201783.042] [Machine=5] [LogicalClock=252] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 4
+[SystemTime=1741201784.048] [Machine=5] [LogicalClock=253] [Event=RECEIVE] Received from M2: Hello from M2, Queue length now: 3
+[SystemTime=1741201785.051] [Machine=5] [LogicalClock=262] [Event=RECEIVE] Received from M4: Hello from M4, Queue length now: 3
+[SystemTime=1741201786.059] [Machine=5] [LogicalClock=263] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 5
+[SystemTime=1741201787.065] [Machine=5] [LogicalClock=264] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 5
+[SystemTime=1741201788.068] [Machine=5] [LogicalClock=268] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 5
+[SystemTime=1741201789.073] [Machine=5] [LogicalClock=273] [Event=RECEIVE] Received from M3: Hello from M3, Queue length now: 4

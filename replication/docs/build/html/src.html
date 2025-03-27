@@ -1,0 +1,1016 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src package &mdash; CS262 Chat Project 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="src.database package" href="src.database.html" />
+    <link rel="prev" title="CS262 Chat Project" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CS262 Chat Project
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">CS262 Chat Project</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">src package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html">src.database package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.protocols.html">src.protocols package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html">src.replication package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-src.chat_grpc_server">gRPC Server Module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#src.chat_grpc_server.CustomFormatter"><code class="docutils literal notranslate"><span class="pre">CustomFormatter</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.chat_grpc_server.ChatServer"><code class="docutils literal notranslate"><span class="pre">ChatServer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#src.chat_grpc_server.serve"><code class="docutils literal notranslate"><span class="pre">serve()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-src.chat_grpc_client">gRPC Client Module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#src.chat_grpc_client.ChatClient"><code class="docutils literal notranslate"><span class="pre">ChatClient</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="replication.html">Replication System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="grpc_app.html">gRPC UI Application</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CS262 Chat Project</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">CS262 Chat Project</a></li>
+      <li class="breadcrumb-item active">src package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/src.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="src-package">
+<h1>src package<a class="headerlink" href="#src-package" title="Link to this heading"></a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="src.database.html">src.database package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.database.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.database.html#module-src.database.db_manager">src.database.db_manager module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager"><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.create_account"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_account()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.verify_login"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.verify_login()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.get_unread_message_count"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_unread_message_count()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.delete_account"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.delete_account()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.user_exists"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.user_exists()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.store_message"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.store_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.mark_messages_as_read"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.mark_messages_as_read()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.list_accounts"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.list_accounts()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.get_messages_for_user"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_messages_for_user()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.delete_messages"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.delete_messages()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.get_chat_partners"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_chat_partners()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.get_messages_between_users"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_messages_between_users()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.get_unread_between_users"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_unread_between_users()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.mark_message_as_delivered"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.mark_message_as_delivered()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.get_message_limit"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_message_limit()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.get_chat_message_limit"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_chat_message_limit()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.update_chat_message_limit"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.update_chat_message_limit()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.create_user"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_user()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.get_messages"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_messages()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.delete_message"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.delete_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager.get_undelivered_messages"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_undelivered_messages()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="src.database.html#module-src.database">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.protocols.html">src.protocols package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.protocols.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.protocols.grpc.html">src.protocols.grpc package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.protocols.grpc.html#protocol-buffer-definitions">Protocol Buffer Definitions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.protocols.grpc.html#generated-code">Generated Code</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.protocols.grpc.html#message-types">Message Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.protocols.grpc.html#service-definition">Service Definition</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="src.protocols.html#module-contents">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.replication.html">src.replication package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.replication.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.replication.html#module-src.replication.replication_manager">src.replication.replication_manager module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.CustomFormatter"><code class="docutils literal notranslate"><span class="pre">CustomFormatter</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.CustomFormatter.grey"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.grey</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.CustomFormatter.yellow"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.yellow</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.CustomFormatter.red"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.red</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.CustomFormatter.bold_red"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.bold_red</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.CustomFormatter.reset"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.reset</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.CustomFormatter.format_str"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.format_str</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.CustomFormatter.FORMATS"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.FORMATS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.CustomFormatter.format"><code class="docutils literal notranslate"><span class="pre">CustomFormatter.format()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ServerRole"><code class="docutils literal notranslate"><span class="pre">ServerRole</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ServerRole.LEADER"><code class="docutils literal notranslate"><span class="pre">ServerRole.LEADER</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ServerRole.FOLLOWER"><code class="docutils literal notranslate"><span class="pre">ServerRole.FOLLOWER</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ServerRole.CANDIDATE"><code class="docutils literal notranslate"><span class="pre">ServerRole.CANDIDATE</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicaInfo"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicaInfo.host"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo.host</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicaInfo.port"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo.port</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicaInfo.is_alive"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo.is_alive</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicaInfo.last_heartbeat"><code class="docutils literal notranslate"><span class="pre">ReplicaInfo.last_heartbeat</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicationManager"><code class="docutils literal notranslate"><span class="pre">ReplicationManager</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicationManager.replicate_message"><code class="docutils literal notranslate"><span class="pre">ReplicationManager.replicate_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicationManager.replicate_account"><code class="docutils literal notranslate"><span class="pre">ReplicationManager.replicate_account()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicationManager.replicate_operation"><code class="docutils literal notranslate"><span class="pre">ReplicationManager.replicate_operation()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicationManager.handle_replication_message"><code class="docutils literal notranslate"><span class="pre">ReplicationManager.handle_replication_message()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="src.replication.html#module-src.replication">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-src.chat_grpc_server">
+<span id="grpc-server-module"></span><h2>gRPC Server Module<a class="headerlink" href="#module-src.chat_grpc_server" title="Link to this heading"></a></h2>
+<p>A gRPC server implementation for the replicated chat system.</p>
+<p>This module provides the ChatServer class which implements a leader-follower
+replication protocol for a distributed chat system. The server can operate in
+three roles:
+1. Leader: Handles all client requests and replicates changes to followers
+2. Follower: Forwards client requests to the leader and maintains a replica
+3. Candidate: Temporarily assumed during leader election</p>
+<p>The server provides the following features:
+- Account management (creation, login, deletion)
+- Message handling (sending, receiving, delivery status)
+- Chat history and conversation management
+- Leader election and failover
+- State replication between servers</p>
+<p>The replication protocol ensures:
+- Strong consistency for all operations
+- Automatic leader election on failure
+- Majority acknowledgment for changes
+- Automatic client redirection to the leader</p>
+<p class="rubric">Example</p>
+<p><a href="#id1"><span class="problematic" id="id2">``</span></a><a href="#id3"><span class="problematic" id="id4">`</span></a>python
+# Start a server with replicas
+server = ChatServer(</p>
+<blockquote>
+<div><p>host=”0.0.0.0”,
+port=50051,
+replica_addresses=[“127.0.0.1:50052”, “127.0.0.1:50053”]</p>
+</div></blockquote>
+<p>)
+server.serve()
+<a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">`</span></a></p>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.chat_grpc_server.CustomFormatter">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.chat_grpc_server.</span></span><span class="sig-name descname"><span class="pre">CustomFormatter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datefmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'%'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">defaults</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_server.html#CustomFormatter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.CustomFormatter" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Formatter</span></code></p>
+<p>Custom formatter that includes server info and colors for different levels</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.CustomFormatter.grey">
+<span class="sig-name descname"><span class="pre">grey</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[38;20m'</span></em><a class="headerlink" href="#src.chat_grpc_server.CustomFormatter.grey" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.CustomFormatter.yellow">
+<span class="sig-name descname"><span class="pre">yellow</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[33;20m'</span></em><a class="headerlink" href="#src.chat_grpc_server.CustomFormatter.yellow" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.CustomFormatter.red">
+<span class="sig-name descname"><span class="pre">red</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[31;20m'</span></em><a class="headerlink" href="#src.chat_grpc_server.CustomFormatter.red" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.CustomFormatter.bold_red">
+<span class="sig-name descname"><span class="pre">bold_red</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[31;1m'</span></em><a class="headerlink" href="#src.chat_grpc_server.CustomFormatter.bold_red" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.CustomFormatter.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'\x1b[0m'</span></em><a class="headerlink" href="#src.chat_grpc_server.CustomFormatter.reset" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.CustomFormatter.format_str">
+<span class="sig-name descname"><span class="pre">format_str</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s'</span></em><a class="headerlink" href="#src.chat_grpc_server.CustomFormatter.format_str" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.CustomFormatter.FORMATS">
+<span class="sig-name descname"><span class="pre">FORMATS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{10:</span> <span class="pre">'\x1b[38;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">20:</span> <span class="pre">'\x1b[38;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">30:</span> <span class="pre">'\x1b[33;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">40:</span> <span class="pre">'\x1b[31;20m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m',</span> <span class="pre">50:</span> <span class="pre">'\x1b[31;1m%(asctime)s</span> <span class="pre">-</span> <span class="pre">%(levelname)s</span> <span class="pre">-</span> <span class="pre">[%(server_info)s]</span> <span class="pre">%(message)s\x1b[0m'}</span></em><a class="headerlink" href="#src.chat_grpc_server.CustomFormatter.FORMATS" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.CustomFormatter.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_server.html#CustomFormatter.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.CustomFormatter.format" title="Link to this definition"></a></dt>
+<dd><p>Format the specified record as text.</p>
+<p>The record’s attribute dictionary is used as the operand to a
+string formatting operation which yields the returned string.
+Before formatting the dictionary, a couple of preparatory steps
+are carried out. The message attribute of the record is computed
+using LogRecord.getMessage(). If the formatting string uses the
+time (as determined by a call to usesTime(), formatTime() is
+called to format the event time. If there is exception information,
+it is formatted using formatException() and appended to the message.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.chat_grpc_server.</span></span><span class="sig-name descname"><span class="pre">ChatServer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'0.0.0.0'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50051</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replica_addresses</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster_nodes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerServicer" title="src.protocols.grpc.chat_pb2_grpc.ChatServerServicer"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChatServerServicer</span></code></a></p>
+<p>gRPC server implementation for the replicated chat service.</p>
+<p>This class implements the chat service defined in chat.proto, handling all
+client requests and managing replication between servers. It integrates with
+ReplicationManager for leader-follower coordination and DatabaseManager for
+persistent storage.</p>
+<p>The server maintains:
+- Active user connections and their message queues
+- Message delivery and read status
+- Account state and authentication
+- Leader-follower replication state</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.host">
+<span class="sig-name descname"><span class="pre">host</span></span><a class="headerlink" href="#src.chat_grpc_server.ChatServer.host" title="Link to this definition"></a></dt>
+<dd><p>Server’s bind address</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.port">
+<span class="sig-name descname"><span class="pre">port</span></span><a class="headerlink" href="#src.chat_grpc_server.ChatServer.port" title="Link to this definition"></a></dt>
+<dd><p>Server’s bind port</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.db">
+<span class="sig-name descname"><span class="pre">db</span></span><a class="headerlink" href="#src.chat_grpc_server.ChatServer.db" title="Link to this definition"></a></dt>
+<dd><p>Database connection manager</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="src.database.html#src.database.db_manager.DatabaseManager" title="src.database.db_manager.DatabaseManager">DatabaseManager</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.active_users">
+<span class="sig-name descname"><span class="pre">active_users</span></span><a class="headerlink" href="#src.chat_grpc_server.ChatServer.active_users" title="Link to this definition"></a></dt>
+<dd><p>Map of usernames to their active connections</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict[str, Set[chat_pb2_grpc.ChatServer_SubscribeStub]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.lock">
+<span class="sig-name descname"><span class="pre">lock</span></span><a class="headerlink" href="#src.chat_grpc_server.ChatServer.lock" title="Link to this definition"></a></dt>
+<dd><p>Lock for thread-safe operations</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>threading.Lock</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.replication_manager">
+<span class="sig-name descname"><span class="pre">replication_manager</span></span><a class="headerlink" href="#src.chat_grpc_server.ChatServer.replication_manager" title="Link to this definition"></a></dt>
+<dd><p>Manages leader-follower protocol</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="src.replication.html#src.replication.replication_manager.ReplicationManager" title="src.replication.replication_manager.ReplicationManager">ReplicationManager</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>host</strong> (<em>str</em><em>, </em><em>optional</em>) – Address to bind the server on. Defaults to “0.0.0.0”</p></li>
+<li><p><strong>port</strong> (<em>int</em><em>, </em><em>optional</em>) – Port to bind the server on. Defaults to 50051</p></li>
+<li><p><strong>db_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to the SQLite database file.
+Defaults to None (uses port-specific path)</p></li>
+<li><p><strong>replica_addresses</strong> (<em>List</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – List of other servers in the cluster.
+Defaults to None</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.CreateAccount">
+<span class="sig-name descname"><span class="pre">CreateAccount</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.CreateAccount"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.CreateAccount" title="Link to this definition"></a></dt>
+<dd><p>Handle account creation requests.</p>
+<p>If this server is not the leader, forwards the request to the leader.
+Otherwise, creates the account locally and replicates to followers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><em>chat_pb2.ChatMessage</em></a>) – The account creation request</p></li>
+<li><p><strong>context</strong> (<em>grpc.ServicerContext</em>) – gRPC request context</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Response indicating success or failure</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage">chat_pb2.ChatMessage</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.Login">
+<span class="sig-name descname"><span class="pre">Login</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.Login"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.Login" title="Link to this definition"></a></dt>
+<dd><p>Handle login requests.</p>
+<p>Verifies user credentials and manages login state. If the account
+doesn’t exist, returns an error suggesting account creation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><em>chat_pb2.ChatMessage</em></a>) – The login request</p></li>
+<li><p><strong>context</strong> (<em>grpc.ServicerContext</em>) – gRPC request context</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Response indicating success or failure</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage">chat_pb2.ChatMessage</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.SendMessage">
+<span class="sig-name descname"><span class="pre">SendMessage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.SendMessage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.SendMessage" title="Link to this definition"></a></dt>
+<dd><p>Handle message sending requests.</p>
+<p>If this server is not the leader, forwards the request to the leader.
+Otherwise, stores the message locally, replicates to followers, and
+delivers to active recipients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><em>chat_pb2.ChatMessage</em></a>) – The message send request</p></li>
+<li><p><strong>context</strong> (<em>grpc.ServicerContext</em>) – gRPC request context</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Response indicating success or failure</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage">chat_pb2.ChatMessage</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.Subscribe">
+<span class="sig-name descname"><span class="pre">Subscribe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.Subscribe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.Subscribe" title="Link to this definition"></a></dt>
+<dd><p>Handle client subscription requests for real-time messages.</p>
+<p>Maintains a queue of messages for each active user and delivers
+messages as they arrive. The connection is maintained until the
+client disconnects or the context is cancelled.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><em>chat_pb2.ChatMessage</em></a>) – The subscription request</p></li>
+<li><p><strong>context</strong> – gRPC request context</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.HandleReplication">
+<span class="sig-name descname"><span class="pre">HandleReplication</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationMessage" title="src.protocols.grpc.chat_pb2.ReplicationMessage"><span class="pre">ReplicationMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationMessage" title="src.protocols.grpc.chat_pb2.ReplicationMessage"><span class="pre">ReplicationMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.HandleReplication"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.HandleReplication" title="Link to this definition"></a></dt>
+<dd><p>Handle replication-related messages between servers.</p>
+<p>Processes various types of replication messages:
+- Account replication
+- Message replication
+- Vote requests
+- Heartbeats</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationMessage" title="src.protocols.grpc.chat_pb2.ReplicationMessage"><em>chat_pb2.ReplicationMessage</em></a>) – The replication request</p></li>
+<li><p><strong>context</strong> – gRPC request context</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Response to the replication request</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ReplicationMessage" title="src.protocols.grpc.chat_pb2.ReplicationMessage">chat_pb2.ReplicationMessage</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.GetMessages">
+<span class="sig-name descname"><span class="pre">GetMessages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.GetMessages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.GetMessages" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.RequestVote">
+<span class="sig-name descname"><span class="pre">RequestVote</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.RequestVote"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.RequestVote" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.Heartbeat">
+<span class="sig-name descname"><span class="pre">Heartbeat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.Heartbeat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.Heartbeat" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.ReplicateMessage">
+<span class="sig-name descname"><span class="pre">ReplicateMessage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.ReplicateMessage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.ReplicateMessage" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.ReadMessages">
+<span class="sig-name descname"><span class="pre">ReadMessages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.ReadMessages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.ReadMessages" title="Link to this definition"></a></dt>
+<dd><p>Missing associated documentation comment in .proto file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.ListAccounts">
+<span class="sig-name descname"><span class="pre">ListAccounts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.ListAccounts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.ListAccounts" title="Link to this definition"></a></dt>
+<dd><p>Missing associated documentation comment in .proto file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.DeleteMessages">
+<span class="sig-name descname"><span class="pre">DeleteMessages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.DeleteMessages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.DeleteMessages" title="Link to this definition"></a></dt>
+<dd><p>Missing associated documentation comment in .proto file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.DeleteAccount">
+<span class="sig-name descname"><span class="pre">DeleteAccount</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.DeleteAccount"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.DeleteAccount" title="Link to this definition"></a></dt>
+<dd><p>Missing associated documentation comment in .proto file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.ListChatPartners">
+<span class="sig-name descname"><span class="pre">ListChatPartners</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.ListChatPartners"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.ListChatPartners" title="Link to this definition"></a></dt>
+<dd><p>Missing associated documentation comment in .proto file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.ReadConversation">
+<span class="sig-name descname"><span class="pre">ReadConversation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.ReadConversation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.ReadConversation" title="Link to this definition"></a></dt>
+<dd><p>Missing associated documentation comment in .proto file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.GetLeader">
+<span class="sig-name descname"><span class="pre">GetLeader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.GetLeader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.GetLeader" title="Link to this definition"></a></dt>
+<dd><p>Missing associated documentation comment in .proto file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.MarkRead">
+<span class="sig-name descname"><span class="pre">MarkRead</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ServicerContext</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.MarkRead"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.MarkRead" title="Link to this definition"></a></dt>
+<dd><p>Missing associated documentation comment in .proto file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.heartbeat_from_node">
+<span class="sig-name descname"><span class="pre">heartbeat_from_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.heartbeat_from_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.heartbeat_from_node" title="Link to this definition"></a></dt>
+<dd><p>Called when a node sends a heartbeat, marking it alive.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.mark_node_dead">
+<span class="sig-name descname"><span class="pre">mark_node_dead</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.mark_node_dead"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.mark_node_dead" title="Link to this definition"></a></dt>
+<dd><p>Called if we haven’t heard from a node in a while.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_server.ChatServer.GetClusterNodes">
+<span class="sig-name descname"><span class="pre">GetClusterNodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_server.html#ChatServer.GetClusterNodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.ChatServer.GetClusterNodes" title="Link to this definition"></a></dt>
+<dd><p>Return the current cluster membership as a list of “host:port” strings,
+but only include nodes that are known to be alive.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.chat_grpc_server.serve">
+<span class="sig-prename descclassname"><span class="pre">src.chat_grpc_server.</span></span><span class="sig-name descname"><span class="pre">serve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_server.html#serve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_server.serve" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-src.chat_grpc_client">
+<span id="grpc-client-module"></span><h2>gRPC Client Module<a class="headerlink" href="#module-src.chat_grpc_client" title="Link to this heading"></a></h2>
+<p>A gRPC-based client for the chat system with leader-follower replication support.</p>
+<p>This module provides the ChatClient class which handles:
+1. Connection to the chat server cluster
+2. Leader discovery and automatic reconnection
+3. Message sending and receiving
+4. Account management
+5. Chat history and conversation management</p>
+<p>The client maintains a connection to the leader server and automatically handles leader changes
+by discovering and reconnecting to the new leader when needed. It uses a cluster configuration
+to maintain a list of all possible servers and implements retry logic for robustness.</p>
+<p class="rubric">Example</p>
+<p><a href="#id9"><span class="problematic" id="id10">``</span></a><a href="#id11"><span class="problematic" id="id12">`</span></a>python
+# Create a client with cluster configuration
+client = ChatClient(</p>
+<blockquote>
+<div><p>username=”alice”,
+host=”127.0.0.1”,
+port=50051,
+cluster_nodes=[(“127.0.0.1”, 50051), (“127.0.0.1”, 50052)]</p>
+</div></blockquote>
+<p>)</p>
+<p># Connect and start background threads
+if client.connect():</p>
+<blockquote>
+<div><p>client.start_read_thread()  # Also starts leader check thread</p>
+<p># Use the client
+success, error = client.login_sync(“password”)
+if success:</p>
+<blockquote>
+<div><p>client.send_message(“bob”, “Hello!”)</p>
+</div></blockquote>
+</div></blockquote>
+<p><a href="#id13"><span class="problematic" id="id14">``</span></a><a href="#id15"><span class="problematic" id="id16">`</span></a></p>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.chat_grpc_client.</span></span><span class="sig-name descname"><span class="pre">ChatClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'127.0.0.1'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50051</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster_nodes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A gRPC-based client for the chat system with leader-follower replication support.</p>
+<p>This class provides a high-level interface to interact with the chat server cluster,
+handling leader discovery, automatic reconnection, and all chat operations. It maintains
+background threads for reading messages and checking leader status.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.username">
+<span class="sig-name descname"><span class="pre">username</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.username" title="Link to this definition"></a></dt>
+<dd><p>The user’s username for authentication</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.host">
+<span class="sig-name descname"><span class="pre">host</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.host" title="Link to this definition"></a></dt>
+<dd><p>Current server host address</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.port">
+<span class="sig-name descname"><span class="pre">port</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.port" title="Link to this definition"></a></dt>
+<dd><p>Current server port number</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.cluster_nodes">
+<span class="sig-name descname"><span class="pre">cluster_nodes</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.cluster_nodes" title="Link to this definition"></a></dt>
+<dd><p>List of all known server addresses</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[Tuple[str, int]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.channel">
+<span class="sig-name descname"><span class="pre">channel</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.channel" title="Link to this definition"></a></dt>
+<dd><p>gRPC channel for server communication</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>grpc.Channel</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.stub">
+<span class="sig-name descname"><span class="pre">stub</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.stub" title="Link to this definition"></a></dt>
+<dd><p>gRPC stub for making RPC calls</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2_grpc.ChatServerStub" title="src.protocols.grpc.chat_pb2_grpc.ChatServerStub">chat_pb2_grpc.ChatServerStub</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.logged_in">
+<span class="sig-name descname"><span class="pre">logged_in</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.logged_in" title="Link to this definition"></a></dt>
+<dd><p>Whether the user is currently logged in</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.read_thread">
+<span class="sig-name descname"><span class="pre">read_thread</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.read_thread" title="Link to this definition"></a></dt>
+<dd><p>Thread for reading incoming messages</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[threading.Thread]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.leader_check_thread">
+<span class="sig-name descname"><span class="pre">leader_check_thread</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.leader_check_thread" title="Link to this definition"></a></dt>
+<dd><p>Thread for monitoring leader status</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[threading.Thread]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.running">
+<span class="sig-name descname"><span class="pre">running</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.running" title="Link to this definition"></a></dt>
+<dd><p>Flag to control background threads</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.incoming_messages_queue">
+<span class="sig-name descname"><span class="pre">incoming_messages_queue</span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.incoming_messages_queue" title="Link to this definition"></a></dt>
+<dd><p>Queue for incoming messages</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>queue.Queue</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>username</strong> (<em>str</em>) – The user’s username</p></li>
+<li><p><strong>host</strong> (<em>str</em><em>, </em><em>optional</em>) – Initial server host. Defaults to “127.0.0.1”</p></li>
+<li><p><strong>port</strong> (<em>int</em><em>, </em><em>optional</em>) – Initial server port. Defaults to 50051</p></li>
+<li><p><strong>cluster_nodes</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>Tuple</em><em>[</em><em>str</em><em>, </em><em>int</em><em>]</em><em>]</em><em>]</em><em>, </em><em>optional</em>) – List of server addresses.
+If None, uses [(host, port)]. Defaults to None.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.connect">
+<span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.connect" title="Link to this definition"></a></dt>
+<dd><p>Establish a connection to the server and verify it’s responding.</p>
+<p>Creates a new gRPC channel using the current host and port, then performs
+a health-check RPC call to verify the connection. The health-check uses
+a lightweight ListAccounts call with empty parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timeout</strong> (<em>int</em><em>, </em><em>optional</em>) – Connection timeout in seconds. Defaults to 5.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if connection and health-check succeed, False otherwise.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.create_account">
+<span class="sig-name descname"><span class="pre">create_account</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.create_account"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.create_account" title="Link to this definition"></a></dt>
+<dd><p>Create a new user account.</p>
+<p>This is the asynchronous version of create_account_sync. It prints success/failure
+messages instead of returning a status.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>password</strong> (<em>str</em>) – The password for the new account</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.create_account_sync">
+<span class="sig-name descname"><span class="pre">create_account_sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.create_account_sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.create_account_sync" title="Link to this definition"></a></dt>
+<dd><p>Create a new user account (synchronous version).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>password</strong> (<em>str</em>) – The password for the new account</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if account creation succeeded, False otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.login">
+<span class="sig-name descname"><span class="pre">login</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.login"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.login" title="Link to this definition"></a></dt>
+<dd><p>Log in to an existing account.</p>
+<p>This is the asynchronous version of login_sync. It updates the logged_in
+state and prints success/failure messages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>password</strong> (<em>str</em>) – The account password</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if login succeeded, False otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.login_sync">
+<span class="sig-name descname"><span class="pre">login_sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.login_sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.login_sync" title="Link to this definition"></a></dt>
+<dd><p>Log in to an existing account (synchronous version).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>password</strong> (<em>str</em>) – The account password</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A tuple containing:</dt><dd><ul class="simple">
+<li><p>bool: True if login succeeded, False otherwise</p></li>
+<li><p>Optional[str]: Error message if login failed, None if successful</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple[bool, Optional[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.send_message">
+<span class="sig-name descname"><span class="pre">send_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">recipient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.send_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.send_message" title="Link to this definition"></a></dt>
+<dd><p>Send a message to another user.</p>
+<p>This method implements retry logic for leader changes, attempting to send
+the message multiple times if the leader changes during the operation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>recipient</strong> (<em>str</em>) – Username of the message recipient</p></li>
+<li><p><strong>text</strong> (<em>str</em>) – Content of the message</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if message was sent successfully, False otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.send_message_sync">
+<span class="sig-name descname"><span class="pre">send_message_sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">recipient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.send_message_sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.send_message_sync" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.read_messages">
+<span class="sig-name descname"><span class="pre">read_messages</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.read_messages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.read_messages" title="Link to this definition"></a></dt>
+<dd><p>Listen for incoming messages in a background thread.</p>
+<p>This method establishes a streaming RPC connection to receive messages
+in real-time. Received messages are placed in the incoming_messages_queue.
+The method runs continuously while self.running is True.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.start_read_thread">
+<span class="sig-name descname"><span class="pre">start_read_thread</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.start_read_thread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.start_read_thread" title="Link to this definition"></a></dt>
+<dd><p>Start background threads for reading messages and checking leader status.</p>
+<p>This method starts two daemon threads:
+1. A thread for reading incoming messages (read_messages)
+2. A thread for monitoring leader status (leader_check_thread)</p>
+<p>The threads will automatically terminate when the program exits.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.list_accounts">
+<span class="sig-name descname"><span class="pre">list_accounts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.list_accounts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.list_accounts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.list_accounts_sync">
+<span class="sig-name descname"><span class="pre">list_accounts_sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.list_accounts_sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.list_accounts_sync" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.delete_messages">
+<span class="sig-name descname"><span class="pre">delete_messages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.delete_messages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.delete_messages" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.delete_messages_sync">
+<span class="sig-name descname"><span class="pre">delete_messages_sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.delete_messages_sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.delete_messages_sync" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.delete_account">
+<span class="sig-name descname"><span class="pre">delete_account</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.delete_account"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.delete_account" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.delete_account_sync">
+<span class="sig-name descname"><span class="pre">delete_account_sync</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.delete_account_sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.delete_account_sync" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.list_chat_partners">
+<span class="sig-name descname"><span class="pre">list_chat_partners</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.list_chat_partners"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.list_chat_partners" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.list_chat_partners_sync">
+<span class="sig-name descname"><span class="pre">list_chat_partners_sync</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.list_chat_partners_sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.list_chat_partners_sync" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.read_conversation">
+<span class="sig-name descname"><span class="pre">read_conversation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partner</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.read_conversation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.read_conversation" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.read_conversation_sync">
+<span class="sig-name descname"><span class="pre">read_conversation_sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partner</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.protocols.grpc.html#src.protocols.grpc.chat_pb2.ChatMessage" title="src.protocols.grpc.chat_pb2.ChatMessage"><span class="pre">ChatMessage</span></a></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.read_conversation_sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.read_conversation_sync" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.close"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.close" title="Link to this definition"></a></dt>
+<dd><p>Clean up resources and stop background threads.</p>
+<p>This method:
+1. Sets running to False to stop background threads
+2. Closes the gRPC channel
+Should be called when the client is no longer needed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.start_leader_check_thread">
+<span class="sig-name descname"><span class="pre">start_leader_check_thread</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/src/chat_grpc_client.html#ChatClient.start_leader_check_thread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.chat_grpc_client.ChatClient.start_leader_check_thread" title="Link to this definition"></a></dt>
+<dd><p>Start the background thread that monitors leader status.</p>
+<p>This method starts a daemon thread that runs the _check_leader method.
+The thread will automatically terminate when the program exits.
+The thread is only started if it’s not already running.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.get_cluster_nodes">
+<span class="sig-name descname"><span class="pre">get_cluster_nodes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.get_cluster_nodes" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.chat_grpc_client.ChatClient.get_leader">
+<span class="sig-name descname"><span class="pre">get_leader</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#src.chat_grpc_client.ChatClient.get_leader" title="Link to this definition"></a></dt>
+<dd><p>Queries the server for the current leader and returns a tuple (host, port).
+Assumes the server implements a GetLeader RPC that returns a ChatMessage with payload { “leader”: “host:port” }.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-src">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-src" title="Link to this heading"></a></h2>
+<p>Package initialization for src module.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="modules.html" class="btn btn-neutral float-left" title="CS262 Chat Project" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="src.database.html" class="btn btn-neutral float-right" title="src.database package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Itamar and Alice.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

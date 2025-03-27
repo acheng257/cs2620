@@ -1,0 +1,12 @@
+README.md
+setup.py
+scale_model.egg-info/PKG-INFO
+scale_model.egg-info/SOURCES.txt
+scale_model.egg-info/dependency_links.txt
+scale_model.egg-info/top_level.txt
+src/__init__.py
+src/machine.py
+src/network.py
+tests/__init__.py
+tests/test_machine.py
+tests/test_network.py
