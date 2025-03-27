@@ -1,0 +1,326 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gRPC UI Application &mdash; CS262 Chat Project 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Replication System" href="replication.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CS262 Chat Project
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="modules.html">CS262 Chat Project</a></li>
+<li class="toctree-l1"><a class="reference internal" href="replication.html">Replication System</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">gRPC UI Application</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.get_leader"><code class="docutils literal notranslate"><span class="pre">get_leader()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.get_cluster_nodes"><code class="docutils literal notranslate"><span class="pre">get_cluster_nodes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.init_session_state"><code class="docutils literal notranslate"><span class="pre">init_session_state()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.check_and_reconnect_leader"><code class="docutils literal notranslate"><span class="pre">check_and_reconnect_leader()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.get_chat_client"><code class="docutils literal notranslate"><span class="pre">get_chat_client()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.render_login_page"><code class="docutils literal notranslate"><span class="pre">render_login_page()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.fetch_accounts"><code class="docutils literal notranslate"><span class="pre">fetch_accounts()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.fetch_chat_partners"><code class="docutils literal notranslate"><span class="pre">fetch_chat_partners()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.load_conversation"><code class="docutils literal notranslate"><span class="pre">load_conversation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.process_incoming_realtime_messages"><code class="docutils literal notranslate"><span class="pre">process_incoming_realtime_messages()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.on_message_send"><code class="docutils literal notranslate"><span class="pre">on_message_send()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.render_sidebar"><code class="docutils literal notranslate"><span class="pre">render_sidebar()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.deduplicate_messages"><code class="docutils literal notranslate"><span class="pre">deduplicate_messages()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.render_chat_page_with_deletion"><code class="docutils literal notranslate"><span class="pre">render_chat_page_with_deletion()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grpc_app.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CS262 Chat Project</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">gRPC UI Application</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/grpc_app.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-grpc_app">
+<span id="grpc-ui-application"></span><h1>gRPC UI Application<a class="headerlink" href="#module-grpc_app" title="Link to this heading"></a></h1>
+<p>A Streamlit-based web interface for the replicated chat system.</p>
+<p>This module provides a web interface for users to:
+1. Connect to the chat server cluster
+2. Create and manage accounts
+3. Send and receive messages
+4. View and manage chat history
+5. Delete messages and accounts</p>
+<p>The application uses the ChatClient class to handle all communication with the
+server cluster, including automatic leader discovery and reconnection. The UI
+is built using Streamlit and provides real-time updates for new messages.</p>
+<p>The application maintains session state to track:
+- User login status
+- Server connection details
+- Chat history and preferences
+- UI state (selected chat partner, scroll position, etc.)</p>
+<p class="rubric">Example</p>
+<p><a href="#id1"><span class="problematic" id="id2">``</span></a><a href="#id3"><span class="problematic" id="id4">`</span></a>bash
+# Run with default settings (connects to localhost:50051)
+streamlit run grpc_app.py</p>
+<p># Run with specific cluster configuration
+streamlit run grpc_app.py – –cluster-nodes “127.0.0.1:50051,127.0.0.1:50052”
+<a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">`</span></a></p>
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.get_leader">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">get_leader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#get_leader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.get_leader" title="Link to this definition"></a></dt>
+<dd><p>Queries the server for the current leader and returns a tuple (host, port).
+Assumes the server implements a GetLeader RPC that returns a ChatMessage with payload { “leader”: “host:port” }.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.get_cluster_nodes">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">get_cluster_nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/grpc_app.html#get_cluster_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.get_cluster_nodes" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.init_session_state">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">init_session_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#init_session_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.init_session_state" title="Link to this definition"></a></dt>
+<dd><p>Initialize all necessary session state variables.</p>
+<p>This function ensures all required session state variables exist with proper
+default values. It handles:
+- User authentication state (logged_in, username)
+- Server connection details (host, port, cluster_nodes)
+- Chat state (selected partner, messages, etc.)
+- UI state (error messages, pending actions, etc.)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.check_and_reconnect_leader">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">check_and_reconnect_leader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="src.html#src.chat_grpc_client.ChatClient" title="src.chat_grpc_client.ChatClient"><span class="pre">ChatClient</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/grpc_app.html#check_and_reconnect_leader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.check_and_reconnect_leader" title="Link to this definition"></a></dt>
+<dd><p>Check if the current connection is to the leader.
+Returns True if we’re connected to the leader (either already or after reconnecting),
+False otherwise.</p>
+<p>If we detect a new leader (host/port differs from what we were using),
+we clear local chat state so we can reload messages from scratch.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.get_chat_client">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">get_chat_client</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="src.html#src.chat_grpc_client.ChatClient" title="src.chat_grpc_client.ChatClient"><span class="pre">ChatClient</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#get_chat_client"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.get_chat_client" title="Link to this definition"></a></dt>
+<dd><p>Get the chat client from the session state, ensuring it’s connected.</p>
+<p>The client’s built-in leader check thread handles reconnection automatically,
+so this function only needs to verify the client exists and is logged in.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>The connected chat client if available and logged in,</dt><dd><p>None otherwise.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Optional[<a class="reference internal" href="src.html#src.chat_grpc_client.ChatClient" title="src.chat_grpc_client.ChatClient">ChatClient</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.render_login_page">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">render_login_page</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#render_login_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.render_login_page" title="Link to this definition"></a></dt>
+<dd><p>Render the login/signup page with server connection settings.</p>
+<p>This function:
+1. Displays server connection settings (host, port, cluster nodes)
+2. Handles server connection attempts
+3. Manages username input
+4. Handles account creation and login
+5. Starts necessary background threads upon successful login</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.fetch_accounts">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">fetch_accounts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#fetch_accounts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.fetch_accounts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.fetch_chat_partners">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">fetch_chat_partners</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/grpc_app.html#fetch_chat_partners"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.fetch_chat_partners" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.load_conversation">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">load_conversation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partner</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#load_conversation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.load_conversation" title="Link to this definition"></a></dt>
+<dd><p>Load messages from a conversation with a chat partner.</p>
+<p>This function:
+1. Retrieves messages from the server
+2. Updates the session state with the loaded messages
+3. Marks unread messages as read
+4. Updates the UI scroll position</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>partner</strong> (<em>str</em>) – Username of the chat partner</p></li>
+<li><p><strong>offset</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of messages to skip. Defaults to 0</p></li>
+<li><p><strong>limit</strong> (<em>int</em><em>, </em><em>optional</em>) – Maximum number of messages to load. Defaults to 50</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.process_incoming_realtime_messages">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">process_incoming_realtime_messages</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#process_incoming_realtime_messages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.process_incoming_realtime_messages" title="Link to this definition"></a></dt>
+<dd><p>Process new messages from the incoming messages queue.</p>
+<p>This function runs periodically to:
+1. Check for new messages in the client’s incoming queue
+2. Update the UI with new messages
+3. Handle message delivery status
+4. Update unread message counts</p>
+<p>The function only triggers a UI rerun if there are actual changes
+(new messages or new chat partners).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.on_message_send">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">on_message_send</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partner</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_msg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conv</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#on_message_send"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.on_message_send" title="Link to this definition"></a></dt>
+<dd><p>Handle message sending and update UI state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>partner</strong> – The recipient of the message</p></li>
+<li><p><strong>new_msg</strong> – The message text</p></li>
+<li><p><strong>conv</strong> – The current conversation state</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.render_sidebar">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">render_sidebar</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#render_sidebar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.render_sidebar" title="Link to this definition"></a></dt>
+<dd><p>Render the application sidebar with user controls and chat partner list.</p>
+<p>The sidebar includes:
+1. User account information and logout button
+2. Account deletion option
+3. List of chat partners with unread message counts
+4. Search functionality for finding users</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.deduplicate_messages">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">deduplicate_messages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">messages</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/grpc_app.html#deduplicate_messages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.deduplicate_messages" title="Link to this definition"></a></dt>
+<dd><p>Return a new list of messages with duplicates removed.
+A ‘duplicate’ is defined by having the same (sender, text, timestamp).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.render_chat_page_with_deletion">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">render_chat_page_with_deletion</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#render_chat_page_with_deletion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.render_chat_page_with_deletion" title="Link to this definition"></a></dt>
+<dd><p>Render the main chat interface with message deletion capability.</p>
+<p>This page shows:
+1. The current chat conversation
+2. Message input and send controls
+3. Message deletion checkboxes and confirmation
+4. Load more messages button
+5. Conversation settings (message limit)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="grpc_app.main">
+<span class="sig-prename descclassname"><span class="pre">grpc_app.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/grpc_app.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#grpc_app.main" title="Link to this definition"></a></dt>
+<dd><p>Main entry point for the Streamlit application.</p>
+<p>This function:
+1. Parses command line arguments for server configuration
+2. Sets up the Streamlit page configuration
+3. Initializes session state
+4. Handles automatic server connection from command line args
+5. Renders either the login page or chat interface based on login state
+6. Manages background message processing</p>
+</dd></dl>
+
+<p>This module provides a Streamlit-based user interface for the gRPC chat application. It allows users to:</p>
+<ul class="simple">
+<li><p>Create accounts</p></li>
+<li><p>Log in</p></li>
+<li><p>Send messages</p></li>
+<li><p>Read messages</p></li>
+<li><p>List chat partners</p></li>
+<li><p>View conversation history</p></li>
+<li><p>Delete messages</p></li>
+<li><p>Delete accounts</p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="replication.html" class="btn btn-neutral float-left" title="Replication System" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Itamar and Alice.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

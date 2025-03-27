@@ -1,0 +1,933 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src.chat_grpc_client &mdash; CS262 Chat Project 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            CS262 Chat Project
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">CS262 Chat Project</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../replication.html">Replication System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../grpc_app.html">gRPC UI Application</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">CS262 Chat Project</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">src.chat_grpc_client</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for src.chat_grpc_client</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A gRPC-based client for the chat system with leader-follower replication support.</span>
+
+<span class="sd">This module provides the ChatClient class which handles:</span>
+<span class="sd">1. Connection to the chat server cluster</span>
+<span class="sd">2. Leader discovery and automatic reconnection</span>
+<span class="sd">3. Message sending and receiving</span>
+<span class="sd">4. Account management</span>
+<span class="sd">5. Chat history and conversation management</span>
+
+<span class="sd">The client maintains a connection to the leader server and automatically handles leader changes</span>
+<span class="sd">by discovering and reconnecting to the new leader when needed. It uses a cluster configuration</span>
+<span class="sd">to maintain a list of all possible servers and implements retry logic for robustness.</span>
+
+<span class="sd">Example:</span>
+<span class="sd">    ```python</span>
+<span class="sd">    # Create a client with cluster configuration</span>
+<span class="sd">    client = ChatClient(</span>
+<span class="sd">        username=&quot;alice&quot;,</span>
+<span class="sd">        host=&quot;127.0.0.1&quot;,</span>
+<span class="sd">        port=50051,</span>
+<span class="sd">        cluster_nodes=[(&quot;127.0.0.1&quot;, 50051), (&quot;127.0.0.1&quot;, 50052)]</span>
+<span class="sd">    )</span>
+
+<span class="sd">    # Connect and start background threads</span>
+<span class="sd">    if client.connect():</span>
+<span class="sd">        client.start_read_thread()  # Also starts leader check thread</span>
+
+<span class="sd">        # Use the client</span>
+<span class="sd">        success, error = client.login_sync(&quot;password&quot;)</span>
+<span class="sd">        if success:</span>
+<span class="sd">            client.send_message(&quot;bob&quot;, &quot;Hello!&quot;)</span>
+<span class="sd">    ```</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">queue</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">google.protobuf.json_format</span><span class="w"> </span><span class="kn">import</span> <span class="n">MessageToDict</span><span class="p">,</span> <span class="n">ParseDict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">google.protobuf.struct_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="n">Struct</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">src.protocols.grpc</span><span class="w"> </span><span class="kn">import</span> <span class="n">chat_pb2</span><span class="p">,</span> <span class="n">chat_pb2_grpc</span>
+
+
+<div class="viewcode-block" id="ChatClient">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ChatClient</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A gRPC-based client for the chat system with leader-follower replication support.</span>
+
+<span class="sd">    This class provides a high-level interface to interact with the chat server cluster,</span>
+<span class="sd">    handling leader discovery, automatic reconnection, and all chat operations. It maintains</span>
+<span class="sd">    background threads for reading messages and checking leader status.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        username (str): The user&#39;s username for authentication</span>
+<span class="sd">        host (str): Current server host address</span>
+<span class="sd">        port (int): Current server port number</span>
+<span class="sd">        cluster_nodes (List[Tuple[str, int]]): List of all known server addresses</span>
+<span class="sd">        channel (grpc.Channel): gRPC channel for server communication</span>
+<span class="sd">        stub (chat_pb2_grpc.ChatServerStub): gRPC stub for making RPC calls</span>
+<span class="sd">        logged_in (bool): Whether the user is currently logged in</span>
+<span class="sd">        read_thread (Optional[threading.Thread]): Thread for reading incoming messages</span>
+<span class="sd">        leader_check_thread (Optional[threading.Thread]): Thread for monitoring leader status</span>
+<span class="sd">        running (bool): Flag to control background threads</span>
+<span class="sd">        incoming_messages_queue (queue.Queue): Queue for incoming messages</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        username (str): The user&#39;s username</span>
+<span class="sd">        host (str, optional): Initial server host. Defaults to &quot;127.0.0.1&quot;</span>
+<span class="sd">        port (int, optional): Initial server port. Defaults to 50051</span>
+<span class="sd">        cluster_nodes (Optional[List[Tuple[str, int]]], optional): List of server addresses.</span>
+<span class="sd">            If None, uses [(host, port)]. Defaults to None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">username</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
+        <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50051</span><span class="p">,</span>
+        <span class="n">cluster_nodes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">username</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cluster_nodes</span> <span class="o">=</span> <span class="n">cluster_nodes</span> <span class="ow">or</span> <span class="p">[(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel</span> <span class="o">=</span> <span class="n">grpc</span><span class="o">.</span><span class="n">insecure_channel</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stub</span> <span class="o">=</span> <span class="n">chat_pb2_grpc</span><span class="o">.</span><span class="n">ChatServerStub</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logged_in</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_thread</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">leader_check_thread</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">running</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">incoming_messages_queue</span><span class="p">:</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ChatClient.connect">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.connect">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Establish a connection to the server and verify it&#39;s responding.</span>
+
+<span class="sd">        Creates a new gRPC channel using the current host and port, then performs</span>
+<span class="sd">        a health-check RPC call to verify the connection. The health-check uses</span>
+<span class="sd">        a lightweight ListAccounts call with empty parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            timeout (int, optional): Connection timeout in seconds. Defaults to 5.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if connection and health-check succeed, False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Recreate the channel and stub using the current host and port values.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel</span> <span class="o">=</span> <span class="n">grpc</span><span class="o">.</span><span class="n">insecure_channel</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stub</span> <span class="o">=</span> <span class="n">chat_pb2_grpc</span><span class="o">.</span><span class="n">ChatServerStub</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">grpc</span><span class="o">.</span><span class="n">channel_ready_future</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">)</span><span class="o">.</span><span class="n">result</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">FutureTimeoutError</span><span class="p">:</span>
+            <span class="n">error_message</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed to connect to server at </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2"> within </span><span class="si">{</span><span class="n">timeout</span><span class="si">}</span><span class="s2"> seconds.&quot;</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">error_message</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">dummy_payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pattern&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;page&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+        <span class="c1"># Time serialization for dummy_payload.</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_dummy</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">dummy_payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[connect] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">dummy_request</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">LIST_ACCOUNTS</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_dummy</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>  <span class="c1"># sender is irrelevant for a health-check</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">ListAccounts</span><span class="p">(</span><span class="n">dummy_request</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Connected to server at </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">error_message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Health-check RPC failed: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">details</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">error_message</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.create_account">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.create_account">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_account</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new user account.</span>
+
+<span class="sd">        This is the asynchronous version of create_account_sync. It prints success/failure</span>
+<span class="sd">        messages instead of returning a status.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            password (str): The password for the new account</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">password</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[create_account] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">CREATE_ACCOUNT</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">CreateAccount</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="c1"># In this method we don&#39;t explicitly call MessageToDict on the response,</span>
+        <span class="c1"># so only the stub&#39;s work is measured externally.</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[create_account] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Account created successfully.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Account creation failed.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.create_account_sync">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.create_account_sync">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_account_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new user account (synchronous version).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            password (str): The password for the new account</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if account creation succeeded, False otherwise</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">password</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[create_account_sync] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">CREATE_ACCOUNT</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">CreateAccount</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[create_account_sync] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SUCCESS</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.login">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.login">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Log in to an existing account.</span>
+
+<span class="sd">        This is the asynchronous version of login_sync. It updates the logged_in</span>
+<span class="sd">        state and prints success/failure messages.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            password (str): The account password</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if login succeeded, False otherwise</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">password</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[login] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">LOGIN</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">Login</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">deser</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[login] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logged_in</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">details</span> <span class="o">=</span> <span class="n">deser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Login successful. </span><span class="si">{</span><span class="n">details</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logged_in</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">error_text</span> <span class="o">=</span> <span class="n">deser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;Login failed.&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Login failed: </span><span class="si">{</span><span class="n">error_text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">logged_in</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.login_sync">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.login_sync">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">login_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Log in to an existing account (synchronous version).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            password (str): The account password</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[bool, Optional[str]]: A tuple containing:</span>
+<span class="sd">                - bool: True if login succeeded, False otherwise</span>
+<span class="sd">                - Optional[str]: Error message if login failed, None if successful</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">password</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[login_sync] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">LOGIN</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">Login</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">deser</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[login_sync] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logged_in</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logged_in</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">error_text</span> <span class="o">=</span> <span class="n">deser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;Login failed.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">error_text</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.send_message">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.send_message">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipient</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Send a message to another user.</span>
+
+<span class="sd">        This method implements retry logic for leader changes, attempting to send</span>
+<span class="sd">        the message multiple times if the leader changes during the operation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            recipient (str): Username of the message recipient</span>
+<span class="sd">            text (str): Content of the message</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if message was sent successfully, False otherwise</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">max_retries</span> <span class="o">=</span> <span class="mi">20</span>
+        <span class="n">retry_delay</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># seconds</span>
+
+        <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_retries</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">text</span><span class="p">}</span>
+                <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+
+                <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+                    <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SEND_MESSAGE</span><span class="p">,</span>
+                    <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+                    <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+                    <span class="n">recipient</span><span class="o">=</span><span class="n">recipient</span><span class="p">,</span>
+                    <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+                <span class="p">)</span>
+
+                <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">SendMessage</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Message sent successfully.&quot;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="n">response</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">ERROR</span><span class="p">:</span>
+                    <span class="n">error_message</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown error.&quot;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error sending message: </span><span class="si">{</span><span class="n">error_message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                    <span class="c1"># If error indicates leader issues, wait for leader election</span>
+                    <span class="k">if</span> <span class="s2">&quot;leader&quot;</span> <span class="ow">in</span> <span class="n">error_message</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="n">max_retries</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Don&#39;t sleep on last attempt</span>
+                            <span class="nb">print</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;Waiting for leader election (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">max_retries</span><span class="si">}</span><span class="s2">)...&quot;</span>
+                            <span class="p">)</span>
+                            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">retry_delay</span><span class="p">)</span>
+                            <span class="k">continue</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Unexpected response from server.&quot;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+
+            <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;RPC error while sending message: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">details</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="n">max_retries</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Don&#39;t sleep on last attempt</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Retrying in </span><span class="si">{</span><span class="n">retry_delay</span><span class="si">}</span><span class="s2"> seconds (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">max_retries</span><span class="si">}</span><span class="s2">)...&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">retry_delay</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.send_message_sync">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.send_message_sync">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_message_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipient</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">text</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[send_message_sync] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SEND_MESSAGE</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="n">recipient</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">SendMessage</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[send_message_sync] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.read_messages">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.read_messages">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">read_messages</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Listen for incoming messages in a background thread.</span>
+
+<span class="sd">        This method establishes a streaming RPC connection to receive messages</span>
+<span class="sd">        in real-time. Received messages are placed in the incoming_messages_queue.</span>
+<span class="sd">        The method runs continuously while self.running is True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">READ_MESSAGES</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">Struct</span><span class="p">(),</span>  <span class="c1"># empty payload</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">ReadMessages</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+                <span class="c1"># Optionally, you could measure deserialization for each streamed message.</span>
+                <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+                <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+                <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[read_messages] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">incoming_messages_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Message stream closed:&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.start_read_thread">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.start_read_thread">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">start_read_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start background threads for reading messages and checking leader status.</span>
+
+<span class="sd">        This method starts two daemon threads:</span>
+<span class="sd">        1. A thread for reading incoming messages (read_messages)</span>
+<span class="sd">        2. A thread for monitoring leader status (leader_check_thread)</span>
+
+<span class="sd">        The threads will automatically terminate when the program exits.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_thread</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">read_messages</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">start_leader_check_thread</span><span class="p">()</span>  <span class="c1"># Start leader check when starting read thread</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.list_accounts">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.list_accounts">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_accounts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pattern&quot;</span><span class="p">:</span> <span class="n">pattern</span><span class="p">,</span> <span class="s2">&quot;page&quot;</span><span class="p">:</span> <span class="n">page</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[list_accounts] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">LIST_ACCOUNTS</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">ListAccounts</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[list_accounts] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Accounts list:&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.list_accounts_sync">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.list_accounts_sync">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_accounts_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pattern&quot;</span><span class="p">:</span> <span class="n">pattern</span><span class="p">,</span> <span class="s2">&quot;page&quot;</span><span class="p">:</span> <span class="n">page</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[list_accounts_sync] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">LIST_ACCOUNTS</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">ListAccounts</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[list_accounts_sync] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.delete_messages">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.delete_messages">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete_messages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;message_ids&quot;</span><span class="p">:</span> <span class="n">message_ids</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[delete_messages] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">DELETE_MESSAGES</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">DeleteMessages</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[delete_messages] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Messages deleted successfully.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed to delete messages.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.delete_messages_sync">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.delete_messages_sync">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete_messages_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;message_ids&quot;</span><span class="p">:</span> <span class="n">message_ids</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[delete_messages_sync] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">DELETE_MESSAGES</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">DeleteMessages</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[delete_messages_sync] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.delete_account">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.delete_account">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete_account</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">DELETE_ACCOUNT</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">Struct</span><span class="p">(),</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">DeleteAccount</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[delete_account] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Account deleted successfully.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed to delete account.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.delete_account_sync">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.delete_account_sync">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete_account_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">DELETE_ACCOUNT</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">Struct</span><span class="p">(),</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">DeleteAccount</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[delete_account_sync] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.list_chat_partners">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.list_chat_partners">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_chat_partners</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">LIST_CHAT_PARTNERS</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">Struct</span><span class="p">(),</span>  <span class="c1"># no additional data needed</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">ListChatPartners</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+            <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+            <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;[list_chat_partners] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">response</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No response received from ListChatPartners RPC.&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Chat partners:&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;RPC error in list_chat_partners: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">details</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.list_chat_partners_sync">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.list_chat_partners_sync">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_chat_partners_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">LIST_CHAT_PARTNERS</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">Struct</span><span class="p">(),</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">ListChatPartners</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;[list_chat_partners_sync] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.read_conversation">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.read_conversation">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">read_conversation</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">partner</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;partner&quot;</span><span class="p">:</span> <span class="n">partner</span><span class="p">,</span> <span class="s2">&quot;offset&quot;</span><span class="p">:</span> <span class="n">offset</span><span class="p">,</span> <span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="n">limit</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[read_conversation] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">READ_MESSAGES</span><span class="p">,</span>  <span class="c1"># or use READ_CONVERSATION if defined</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">ReadConversation</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+            <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+            <span class="n">deser</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+            <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[read_conversation] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">response</span> <span class="ow">and</span> <span class="n">response</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">deser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;messages&quot;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed to read conversation.&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;RPC error in read_conversation: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">details</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.read_conversation_sync">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.read_conversation_sync">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">read_conversation_sync</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">partner</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">:</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;partner&quot;</span><span class="p">:</span> <span class="n">partner</span><span class="p">,</span> <span class="s2">&quot;offset&quot;</span><span class="p">:</span> <span class="n">offset</span><span class="p">,</span> <span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="n">limit</span><span class="p">}</span>
+        <span class="n">start_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">parsed_payload</span> <span class="o">=</span> <span class="n">ParseDict</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">Struct</span><span class="p">())</span>
+        <span class="n">end_ser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[read_conversation_sync] Serialization took </span><span class="si">{</span><span class="n">end_ser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_ser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">chat_pb2</span><span class="o">.</span><span class="n">ChatMessage</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">chat_pb2</span><span class="o">.</span><span class="n">MessageType</span><span class="o">.</span><span class="n">READ_MESSAGES</span><span class="p">,</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">parsed_payload</span><span class="p">,</span>
+            <span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">recipient</span><span class="o">=</span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stub</span><span class="o">.</span><span class="n">ReadConversation</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">start_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">MessageToDict</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">end_deser</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;[read_conversation_sync] Deserialization took </span><span class="si">{</span><span class="n">end_deser</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_deser</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> seconds&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span></div>
+
+
+<div class="viewcode-block" id="ChatClient.close">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.close">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clean up resources and stop background threads.</span>
+
+<span class="sd">        This method:</span>
+<span class="sd">        1. Sets running to False to stop background threads</span>
+<span class="sd">        2. Closes the gRPC channel</span>
+<span class="sd">        Should be called when the client is no longer needed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">running</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_leader</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Periodically check if we&#39;re still connected to the leader server.</span>
+
+<span class="sd">        This method runs in a background thread and:</span>
+<span class="sd">        1. Checks if the current connection is to the leader</span>
+<span class="sd">        2. If not, attempts to get leader information from current server</span>
+<span class="sd">        3. If that fails, tries all known cluster nodes to find the leader</span>
+<span class="sd">        4. When a new leader is found, updates the connection</span>
+<span class="sd">        5. Restarts the read thread with the new connection</span>
+
+<span class="sd">        The check runs every 200ms while self.running is True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Try current connection first</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">leader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_leader</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">leader</span><span class="p">:</span>
+                        <span class="n">leader_host</span><span class="p">,</span> <span class="n">leader_port</span> <span class="o">=</span> <span class="n">leader</span>
+                        <span class="k">if</span> <span class="n">leader_host</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="ow">or</span> <span class="n">leader_port</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Leader changed to </span><span class="si">{</span><span class="n">leader_host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">leader_port</span><span class="si">}</span><span class="s2">, reconnecting...&quot;</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">leader_host</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">leader_port</span>
+                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">():</span>
+                                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Successfully reconnected to new leader&quot;</span><span class="p">)</span>
+                                <span class="c1"># Restart read thread with new connection</span>
+                                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_thread</span><span class="p">:</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">read_thread</span> <span class="o">=</span> <span class="kc">None</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">start_read_thread</span><span class="p">()</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed to connect to new leader, will try other servers...&quot;</span><span class="p">)</span>
+                                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Failed to connect to leader&quot;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="c1"># Current connection failed, try all known cluster nodes</span>
+                    <span class="n">found_leader</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">for</span> <span class="n">node_host</span><span class="p">,</span> <span class="n">node_port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_nodes</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="n">node_host</span><span class="p">,</span> <span class="n">node_port</span><span class="p">)</span> <span class="o">!=</span> <span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+                        <span class="p">):</span>  <span class="c1"># Don&#39;t try current node</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">temp_client</span> <span class="o">=</span> <span class="n">ChatClient</span><span class="p">(</span>
+                                    <span class="n">username</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                                    <span class="n">host</span><span class="o">=</span><span class="n">node_host</span><span class="p">,</span>
+                                    <span class="n">port</span><span class="o">=</span><span class="n">node_port</span><span class="p">,</span>
+                                    <span class="n">cluster_nodes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cluster_nodes</span><span class="p">,</span>
+                                <span class="p">)</span>
+                                <span class="k">if</span> <span class="n">temp_client</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>  <span class="c1"># Shorter timeout for discovery</span>
+                                    <span class="n">leader</span> <span class="o">=</span> <span class="n">temp_client</span><span class="o">.</span><span class="n">get_leader</span><span class="p">()</span>
+                                    <span class="n">temp_client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                                    <span class="k">if</span> <span class="n">leader</span><span class="p">:</span>
+                                        <span class="n">leader_host</span><span class="p">,</span> <span class="n">leader_port</span> <span class="o">=</span> <span class="n">leader</span>
+                                        <span class="nb">print</span><span class="p">(</span>
+                                            <span class="sa">f</span><span class="s2">&quot;Found leader through </span><span class="si">{</span><span class="n">node_host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">node_port</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">leader_host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">leader_port</span><span class="si">}</span><span class="s2">&quot;</span>
+                                        <span class="p">)</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">leader_host</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">leader_port</span>
+                                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">():</span>
+                                            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Successfully reconnected to leader&quot;</span><span class="p">)</span>
+                                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_thread</span><span class="p">:</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">read_thread</span> <span class="o">=</span> <span class="kc">None</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">start_read_thread</span><span class="p">()</span>
+                                            <span class="n">found_leader</span> <span class="o">=</span> <span class="kc">True</span>
+                                            <span class="k">break</span>
+                            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to check node </span><span class="si">{</span><span class="n">node_host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">node_port</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                                <span class="k">continue</span>
+
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">found_leader</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Could not find leader through any known nodes, will retry...&quot;</span><span class="p">)</span>
+
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in leader check: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.2</span><span class="p">)</span>  <span class="c1"># Check every 200ms</span>
+
+<div class="viewcode-block" id="ChatClient.start_leader_check_thread">
+<a class="viewcode-back" href="../../src.html#src.chat_grpc_client.ChatClient.start_leader_check_thread">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">start_leader_check_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start the background thread that monitors leader status.</span>
+
+<span class="sd">        This method starts a daemon thread that runs the _check_leader method.</span>
+<span class="sd">        The thread will automatically terminate when the program exits.</span>
+<span class="sd">        The thread is only started if it&#39;s not already running.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">leader_check_thread</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">leader_check_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_check_leader</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">leader_check_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+</div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;gRPC Chat Client&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;username&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Your chat username&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--host&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Server host to connect to (default: 127.0.0.1)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--port&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">50051</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Server port to connect to (default: 50051)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">client</span> <span class="o">=</span> <span class="n">ChatClient</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">username</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">client</span><span class="o">.</span><span class="n">connect</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Client connected successfully.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Client failed to connect. Please check the host and port.&quot;</span><span class="p">)</span>
+        <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">start_read_thread</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Client connected. Implement interactive commands as needed.&quot;</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Itamar and Alice.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
