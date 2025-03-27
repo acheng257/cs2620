@@ -163,68 +163,6 @@ def init_session_state() -> None:
         st.session_state.conversations = {}
 
 
-# def check_and_reconnect_leader(client: ChatClient) -> bool:
-#     """
-#     Check if the current connection is to the leader.
-#     Returns True if we're connected to the leader (either already or after reconnecting),
-#     False otherwise.
-#     """
-#     # First try current connection
-#     try:
-#         leader = client.get_leader()
-#         if leader:
-#             leader_host, leader_port = leader
-#             if leader_host != client.host or leader_port != client.port:
-#                 print(f"Detected leader change to {leader_host}:{leader_port}, reconnecting...")
-#                 client.host = leader_host
-#                 client.port = leader_port
-#                 if client.connect():
-#                     print("Successfully reconnected to new leader")
-#                     if client.read_thread:
-#                         client.read_thread = None
-#                     client.start_read_thread()
-#                     return True
-#             else:
-#                 return True  # Already connected to leader
-#     except Exception as e:
-#         print(f"Current connection failed: {e}")
-
-#     # If current connection failed, try all known cluster nodes
-#     print("Trying all known cluster nodes to find leader...")
-#     for node_host, node_port in client.cluster_nodes:
-#         if (node_host, node_port) == (
-#             client.host,
-#             client.port,
-#         ):  # Skip current node as we know it failed
-#             continue
-#         try:
-#             print(f"Trying node at {node_host}:{node_port}...")
-#             temp_client = ChatClient(
-#                 username="", host=node_host, port=node_port, cluster_nodes=client.cluster_nodes
-#             )
-#             if temp_client.connect(timeout=1):  # Short timeout for discovery
-#                 leader = temp_client.get_leader()
-#                 temp_client.close()
-#                 if leader:
-#                     leader_host, leader_port = leader
-#                     print(
-#                         f"Found leader through node {node_host}:{node_port}: {leader_host}:{leader_port}"
-#                     )
-#                     # Update client connection
-#                     client.host = leader_host
-#                     client.port = leader_port
-#                     if client.connect():
-#                         print("Successfully connected to leader")
-#                         if client.read_thread:
-#                             client.read_thread = None
-#                         client.start_read_thread()
-#                         return True
-#         except Exception as e:
-#             print(f"Failed to check node at {node_host}:{node_port}: {e}")
-#             continue
-
-#     print("Could not find leader through any known nodes")
-#     return False
 def check_and_reconnect_leader(client: ChatClient) -> bool:
     """
     Check if the current connection is to the leader.
