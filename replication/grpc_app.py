@@ -161,6 +161,10 @@ def init_session_state() -> None:
         st.session_state.global_message_limit = 50
     if "conversations" not in st.session_state:
         st.session_state.conversations = {}
+    if "input_key" not in st.session_state:
+        st.session_state.input_key = "input_text_0"
+    if "show_message_sent" not in st.session_state:
+        st.session_state.show_message_sent = False
 
 
 # def check_and_reconnect_leader(client: ChatClient) -> bool:
@@ -785,13 +789,13 @@ def process_incoming_realtime_messages() -> None:
                         # Only update messages if we're in the chat with the sender
                         st.session_state.messages.append(new_message)
                         st.session_state.messages = deduplicate_messages(st.session_state.messages)
-                        changes_detected = True
                         if (
                             "conversations" in st.session_state
                             and st.session_state.current_chat in st.session_state.conversations
                         ):
                             conv = st.session_state.conversations[st.session_state.current_chat]
                             conv["displayed_messages"].append(new_message)
+                            # TODO: shouldn't need that
                             conv["displayed_messages"] = deduplicate_messages(
                                 conv["displayed_messages"]
                             )
@@ -799,6 +803,8 @@ def process_incoming_realtime_messages() -> None:
                                 conv["displayed_messages"] = conv["displayed_messages"][
                                     -conv["limit"] :
                                 ]
+                        changes_detected = True
+                        st.session_state.scroll_to_bottom = True
                     else:
                         # Update unread count and chat partners list
                         st.session_state.unread_map[sender] = (
@@ -816,6 +822,38 @@ def process_incoming_realtime_messages() -> None:
         # Only rerun if we detected changes that affect the UI
         if changes_detected:
             st.rerun()
+
+
+def on_message_send(partner: str, new_msg: str, conv) -> None:
+    """
+    Handle message sending and update UI state.
+
+    Args:
+        partner: The recipient of the message
+        new_msg: The message text
+        conv: The current conversation state
+    """
+    client = get_chat_client()
+    if client:
+        try:
+            response = client.send_message_sync(partner, new_msg)
+            if "success" in MessageToDict(response.payload).get("text", "").lower():
+                # Set flag to show success message after rerun
+                st.session_state.show_message_sent = True
+                # Generate a new key for the text input to clear it
+                st.session_state.input_key = f"input_text_{int(time.time())}"
+                # Load the conversation to update the display
+                load_conversation(partner, 0, conv["limit"])
+                conv["offset"] = 0
+                conv["displayed_messages"] = st.session_state.displayed_messages.copy()
+                conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
+                st.rerun()
+            else:
+                st.error("Failed to send message.")
+        except Exception as e:
+            st.error(f"An error occurred while sending the message: {e}")
+    else:
+        st.error("Client is not connected.")
 
 
 def render_sidebar() -> None:
@@ -959,18 +997,16 @@ def render_chat_page_with_deletion() -> None:
     3. Message deletion checkboxes and confirmation
     4. Load more messages button
     5. Conversation settings (message limit)
-
-    The page handles:
-    - Sending new messages
-    - Deleting selected messages
-    - Loading more messages
-    - Updating message display limits
     """
     st.title("Secure Chat")
 
     if st.session_state.current_chat:
         partner = st.session_state.current_chat
         st.subheader(f"Chat with {partner}")
+
+        # Add auto-refresh for messages section only
+        refresh_interval = 1  # refresh every 2 seconds
+        st_autorefresh(interval=refresh_interval * 1000, key="message_refresh")
 
         if "conversations" not in st.session_state:
             st.session_state.conversations = {}
@@ -984,6 +1020,9 @@ def render_chat_page_with_deletion() -> None:
                 "limit": conv_limit,
             }
         conv = st.session_state.conversations[partner]
+
+        # Process any new messages before displaying
+        process_incoming_realtime_messages()
 
         if not conv["displayed_messages"]:
             load_conversation(partner, conv["offset"], conv["limit"])
@@ -1015,6 +1054,7 @@ def render_chat_page_with_deletion() -> None:
             with st.form("select_messages_form"):
                 selected_message_ids = []
                 for msg in messages:
+                    print(msg)
                     sender = msg.get("sender")
                     text = msg.get("text")
                     ts = msg.get("timestamp")
@@ -1140,36 +1180,25 @@ def render_chat_page_with_deletion() -> None:
             st.session_state.scroll_to_top = True
             st.session_state.scroll_to_bottom = False
 
-        if st.session_state.get("clear_message_area", False):
-            st.session_state["input_text"] = ""
-            st.session_state["clear_message_area"] = False
+        # Message input area with dynamic key
+        new_msg = st.text_area(
+            "Type your message",
+            key=st.session_state.input_key,
+            height=100,
+        )
+        print("new_msg", new_msg)
 
-        new_msg = st.text_area("Type your message", key="input_text", height=100)
-        if st.button("Send"):
+        # Send button with Enter key handling
+        if st.button("Send") or (new_msg and new_msg.strip() and "\n" in new_msg):
+            print("new_msg 2", new_msg)
             if new_msg.strip() == "":
                 st.warning("Cannot send an empty message.")
             else:
-                client = get_chat_client()
-                if client:
-                    try:
-                        response = client.send_message_sync(partner, new_msg)
-                        if "success" in MessageToDict(response.payload).get("text", "").lower():
-                            st.success("Message sent.")
-                            st.session_state["clear_message_area"] = True
-                            # Remove the call to load_conversation(...) here
-                            # Let process_incoming_realtime_messages handle it
-                            load_conversation(partner, 0, conv["limit"])
-                            conv["offset"] = 0
-                            conv["displayed_messages"] = st.session_state.displayed_messages.copy()
-                            conv["displayed_messages"] = deduplicate_messages(
-                                conv["displayed_messages"]
-                            )
-                        else:
-                            st.error("Failed to send message.")
-                    except Exception as e:
-                        st.error(f"An error occurred while sending the message: {e}")
-                else:
-                    st.error("Client is not connected.")
+                on_message_send(partner, new_msg.strip(), conv)
+                # Show success message if flag is set
+        if st.session_state.get("show_message_sent", False):
+            st.success("Message sent.")
+            st.session_state.show_message_sent = False  # Reset the flag
 
     else:
         st.info("Select a user from the sidebar or search to begin chat.")
