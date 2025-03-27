@@ -63,34 +63,35 @@ def get_leader(self) -> Optional[Tuple[str, int]]:
             host, port_str = leader_str.split(":")
             return host, int(port_str)
     except Exception as e:
-        print(f"Error retrieving leader: {e}")
+        return None
     return None
 
-
 def get_cluster_nodes(self) -> List[Tuple[str, int]]:
-    """
-    Queries the server (presumably the leader) for its known cluster membership.
-    Returns a list of (host, port) tuples.
-    """
+    active_nodes = []
     try:
         empty_payload = ParseDict({}, Struct())
         request = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.GET_CLUSTER_NODES,
             payload=empty_payload,
-            sender="",      # not needed
+            sender="",
             recipient="SERVER",
             timestamp=time.time(),
         )
         response = self.stub.GetClusterNodes(request)
         node_list_str = MessageToDict(response.payload).get("nodes", [])
-        node_list = []
+        all_nodes = []
         for node_str in node_list_str:
             host, port_str = node_str.split(":")
-            node_list.append((host, int(port_str)))
-        return node_list
+            all_nodes.append((host, int(port_str)))
+        # Test connectivity for each node
+        for (host, port) in all_nodes:
+            temp_client = ChatClient(username="", host=host, port=port, cluster_nodes=[])
+            if temp_client.connect(timeout=1):
+                active_nodes.append((host, port))
+            temp_client.close()
     except Exception as e:
         print(f"Error retrieving cluster nodes: {e}")
-    return []
+    return active_nodes
 
 
 # Attach this new method to ChatClient (monkey-patching for simplicity)

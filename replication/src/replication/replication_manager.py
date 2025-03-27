@@ -139,18 +139,17 @@ class ReplicationManager:
 
         with self.vote_lock:
             self.voted_for = f"{self.host}:{self.port}"
-            votes = 1  # We vote for ourselves
+            votes = 1  # Vote for self
 
         logging.debug(f"Starting election for term {current_term}.")
 
         # Identify which replicas are currently alive
         with self.replica_lock:
-            # We only consider "alive" replicas in the vote tally
             alive_replicas = []
             for addr, info in self.replicas.items():
                 if info.is_alive:
                     alive_replicas.append((addr, info))
-            alive_count = 1 + len(alive_replicas)  # plus this server
+            alive_count = 1 + len(alive_replicas)  # include self
             needed_votes = (alive_count // 2) + 1
             logging.debug(
                 f"Among active servers, total alive={alive_count}. Need {needed_votes} votes."
@@ -195,17 +194,13 @@ class ReplicationManager:
                         current_role = self.role
                     with self.term_lock:
                         if current_role == ServerRole.CANDIDATE and self.term == current_term:
-                            # Check if vote granted
-                            if (
-                                response.type == chat_pb2.ReplicationType.VOTE_RESPONSE
-                                and response.vote_response.vote_granted
-                            ):
+                            if (response.type == chat_pb2.ReplicationType.VOTE_RESPONSE
+                                    and response.vote_response.vote_granted):
                                 votes += 1
                                 logging.debug(
                                     f"Vote granted from {addr}, total votes={votes}/{needed_votes}"
                                 )
                                 if votes >= needed_votes:
-                                    # Become leader
                                     with self.role_lock:
                                         if self.role == ServerRole.CANDIDATE:
                                             self.role = ServerRole.LEADER
@@ -225,14 +220,25 @@ class ReplicationManager:
                 logging.error(f"Failed to request vote from {addr}: {e}")
                 replica.is_alive = False
 
-        # If don't become leader
+        # After trying all replicas, check if we got enough votes
         with self.role_lock:
             if self.role == ServerRole.CANDIDATE:
-                self.role = ServerRole.FOLLOWER
-                logging.info(
-                    f"Election failed. Returning to follower. Got {votes}/{alive_count} active votes."
-                )
+                if votes >= needed_votes:
+                    self.role = ServerRole.LEADER
+                    with self.leader_lock:
+                        self.leader_host = self.host
+                        self.leader_port = self.port
+                    logging.info(
+                        f"Elected leader (term={current_term}) with {votes}/{alive_count} active votes."
+                    )
+                    self._send_initial_heartbeat()
+                else:
+                    self.role = ServerRole.FOLLOWER
+                    logging.info(
+                        f"Election failed. Returning to follower. Got {votes}/{alive_count} active votes."
+                    )
         self.election_in_progress = False
+
 
     def _send_initial_heartbeat(self) -> None:
         """Send an immediate heartbeat after becoming leader."""
