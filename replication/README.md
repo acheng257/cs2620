@@ -112,6 +112,44 @@ The system uses a leader-follower protocol where:
    streamlit run grpc_app.py -- --cluster-nodes "127.0.0.1:50051,127.0.0.1:50052,127.0.0.1:50053"
    ```
 
+### Logging Configuration
+
+The system provides detailed logging with different verbosity levels for different components:
+
+1. **Server Logging**
+   - Controls general server operations logging
+   - Set level with `--log-level` argument
+   - Available levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+   - Default level: INFO
+   ```bash
+   # Example: Run server with debug logging
+   python chat_grpc_server.py --host 0.0.0.0 --port 50051 --log-level DEBUG
+   ```
+
+2. **Heartbeat Logging**
+   - Controls leader-follower heartbeat logging
+   - Set level with `--heartbeat-log-level` argument
+   - Available levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+   - Default level: WARNING (to reduce noise)
+   ```bash
+   # Example: Enable detailed heartbeat logging
+   python chat_grpc_server.py --host 0.0.0.0 --port 50051 --heartbeat-log-level DEBUG
+   ```
+
+3. **Log Format**
+   - Timestamp: When the event occurred
+   - Level: Severity level (DEBUG/INFO/WARNING/ERROR/CRITICAL)
+   - Server Info: Host:Port of the server
+   - Message: Detailed event description
+   ```
+   2024-03-20 10:15:30 - INFO - [127.0.0.1:50051] Server started with 2 replicas
+   ```
+
+4. **Color Coding**
+   - DEBUG/INFO: Grey (normal operations)
+   - WARNING: Yellow (potential issues)
+   - ERROR/CRITICAL: Red (serious problems)
+
 ### Testing Fault Tolerance
 
 1. **Server Failure Simulation**

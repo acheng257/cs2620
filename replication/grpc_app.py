@@ -77,7 +77,7 @@ def get_cluster_nodes(self) -> List[Tuple[str, int]]:
         request = chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.GET_CLUSTER_NODES,
             payload=empty_payload,
-            sender="",      # not needed
+            sender="",  # not needed
             recipient="SERVER",
             timestamp=time.time(),
         )
@@ -223,6 +223,7 @@ def init_session_state() -> None:
 #             print(f"Failed to check node at {node_host}:{node_port}: {e}")
 #             continue
 
+
 #     print("Could not find leader through any known nodes")
 #     return False
 def check_and_reconnect_leader(client: ChatClient) -> bool:
@@ -302,7 +303,9 @@ def check_and_reconnect_leader(client: ChatClient) -> bool:
                 temp_client.close()
                 if leader:
                     leader_host, leader_port = leader
-                    print(f"Found leader through node {node_host}:{node_port}: {leader_host}:{leader_port}")
+                    print(
+                        f"Found leader through node {node_host}:{node_port}: {leader_host}:{leader_port}"
+                    )
                     # Connect directly to the discovered leader
                     client.host = leader_host
                     client.port = leader_port
@@ -327,12 +330,16 @@ def check_and_reconnect_leader(client: ChatClient) -> bool:
                         return True
                     else:
                         # If we fail to connect to the actual leader, remove it
-                        print(f"Could not connect to the actual leader at {leader_host}:{leader_port}.")
+                        print(
+                            f"Could not connect to the actual leader at {leader_host}:{leader_port}."
+                        )
                         if (leader_host, leader_port) in client.cluster_nodes:
                             client.cluster_nodes.remove((leader_host, leader_port))
                 else:
                     # The node responded but didn't give us a valid leader => remove it
-                    print(f"Node {node_host}:{node_port} responded but gave no leader, removing it.")
+                    print(
+                        f"Node {node_host}:{node_port} responded but gave no leader, removing it."
+                    )
                     if (node_host, node_port) in client.cluster_nodes:
                         client.cluster_nodes.remove((node_host, node_port))
             else:
@@ -367,7 +374,6 @@ def _clear_local_chat_state():
     st.session_state.messages_limit = 50
     st.session_state.scroll_to_bottom = True
     st.session_state.scroll_to_top = False
-
 
 
 def get_chat_client() -> Optional[ChatClient]:
@@ -406,12 +412,6 @@ def render_login_page() -> None:
     3. Manages username input
     4. Handles account creation and login
     5. Starts necessary background threads upon successful login
-
-    The page adapts its display based on the current state:
-    - Shows connection settings if not connected
-    - Prompts for username if not set
-    - Shows login form if account exists
-    - Shows signup form if account doesn't exist
     """
     # If the user is already logged in, don't render the login page.
     if st.session_state.logged_in:
@@ -499,19 +499,63 @@ def render_login_page() -> None:
     else:
         st.success("Successfully connected to server.")
 
-    # If no pending username is set, prompt for one.
+    def on_username_submit():
+        """Callback for username input"""
+        username = st.session_state.username_input
+        if username.strip():
+            st.session_state.pending_username = username.strip()
+
+    def on_login_submit():
+        """Callback for login form"""
+        password = st.session_state.login_password
+        username = st.session_state.pending_username
+        client = ChatClient(
+            username=username,
+            host=st.session_state.server_host,
+            port=st.session_state.server_port,
+            cluster_nodes=st.session_state.cluster_nodes,
+        )
+        if client.connect():
+            success, error = client.login_sync(password)
+            if success:
+                st.session_state.username = username
+                st.session_state.logged_in = True
+                st.session_state.client = client
+                st.session_state.client_connected = True
+                st.session_state.global_message_limit = 50
+                client.start_read_thread()
+                client.start_leader_check_thread()
+            else:
+                if error and (
+                    "does not exist" in error.lower()
+                    or "will be created automatically" in error.lower()
+                ):
+                    created = client.create_account_sync(password)
+                    if created:
+                        st.session_state.username = username
+                        st.session_state.logged_in = True
+                        st.session_state.client = client
+                        st.session_state.client_connected = True
+                        st.session_state.global_message_limit = 50
+                        client.start_read_thread()
+                        client.start_leader_check_thread()
+                        st.session_state.pending_username = ""
+                    else:
+                        st.error("Failed to create account.")
+                else:
+                    st.error(f"Login failed: {error}")
+        else:
+            st.error("Failed to connect to the server.")
+
+    # If no pending username is set, prompt for one
     if not st.session_state.pending_username:
-        with st.form("enter_username_form"):
-            username = st.text_input("Enter your unique username", key="username_input")
-            if st.form_submit_button("Continue") and username.strip():
-                st.session_state.pending_username = username.strip()
+        username = st.text_input("Enter your unique username", key="username_input")
+        st.button("Submit", on_click=on_username_submit)
         return
 
     username = st.session_state.pending_username
 
-    # Check account existence using a dummy password attempt.
-    # (If the account does not exist, the server will return an error that includes
-    # "does not exist" or "will be created automatically".)
+    # Check account existence using a dummy password attempt
     account_exists = False
     try:
         temp_client = ChatClient(
@@ -538,9 +582,22 @@ def render_login_page() -> None:
 
     if account_exists:
         st.info("Account found. Please log in by entering your password.")
-        with st.form("login_form"):
-            password = st.text_input("Password", type="password", key="login_password")
-            if st.form_submit_button("Login"):
+        password = st.text_input("Password", type="password", key="login_password")
+        st.button("Login", on_click=on_login_submit)
+    else:
+        st.info("No account found. Please create an account by choosing a password.")
+        col1, col2 = st.columns(2)
+        with col1:
+            password1 = st.text_input("Enter Password", type="password", key="signup_password1")
+        with col2:
+            password2 = st.text_input("Confirm Password", type="password", key="signup_password2")
+
+        if st.button("Create Account"):
+            if password1 != password2:
+                st.error("Passwords do not match.")
+            elif len(password1) < 6:
+                st.error("Password must be at least 6 characters long.")
+            else:
                 client = ChatClient(
                     username=username,
                     host=st.session_state.server_host,
@@ -548,77 +605,24 @@ def render_login_page() -> None:
                     cluster_nodes=st.session_state.cluster_nodes,
                 )
                 if client.connect():
-                    success, error = client.login_sync(password)
+                    success = client.create_account_sync(password1)
                     if success:
                         st.session_state.username = username
                         st.session_state.logged_in = True
                         st.session_state.client = client
                         st.session_state.client_connected = True
                         st.session_state.global_message_limit = 50
-                        st.success("Logged in successfully!")
                         client.start_read_thread()
-                        client.start_leader_check_thread()  # Start leader check thread
+                        client.start_leader_check_thread()
+                        st.session_state.pending_username = ""
                     else:
-                        if error and (
-                            "does not exist" in error.lower()
-                            or "will be created automatically" in error.lower()
-                        ):
-                            st.info("Account does not exist. Creating account automatically...")
-                            created = client.create_account_sync(password)
-                            if created:
-                                st.session_state.username = username
-                                st.session_state.logged_in = True
-                                st.session_state.client = client
-                                st.session_state.client_connected = True
-                                st.session_state.global_message_limit = 50
-                                st.success("Account created and logged in successfully!")
-                                client.start_read_thread()
-                                client.start_leader_check_thread()  # Start leader check thread
-                                st.session_state.pending_username = ""  # Clear pending username
-                                st.rerun()  # Update UI state immediately.
-                            else:
-                                st.error("Failed to create account.")
-                        else:
-                            st.error(f"Login failed: {error}")
+                        st.error("Account creation failed. Username may already exist.")
                 else:
-                    st.error("Failed to connect to the server.")
-    else:
-        st.info("No account found. Please create an account by choosing a password.")
-        with st.form("signup_form"):
-            password1 = st.text_input("Enter Password", type="password", key="signup_password1")
-            password2 = st.text_input("Confirm Password", type="password", key="signup_password2")
-            if st.form_submit_button("Create Account"):
-                if password1 != password2:
-                    st.error("Passwords do not match.")
-                elif len(password1) < 6:
-                    st.error("Password must be at least 6 characters long.")
-                else:
-                    client = ChatClient(
-                        username=username,
-                        host=st.session_state.server_host,
-                        port=st.session_state.server_port,
-                        cluster_nodes=st.session_state.cluster_nodes,
-                    )
-                    if client.connect():
-                        success = client.create_account_sync(password1)
-                        if success:
-                            st.session_state.username = username
-                            st.session_state.logged_in = True
-                            st.session_state.client = client
-                            st.session_state.client_connected = True
-                            st.session_state.global_message_limit = 50
-                            st.success("Account created and logged in successfully!")
-                            client.start_read_thread()
-                            client.start_leader_check_thread()  # Start leader check thread
-                            st.session_state.pending_username = ""  # Clear pending username
-                            st.rerun()  # Immediately re-run to reflect logged-in state.
-                        else:
-                            st.error("Account creation failed. Username may already exist.")
-                    else:
-                        st.error("Connection to server failed.")
+                    st.error("Connection to server failed.")
 
     if st.button("Change Username"):
         st.session_state.pending_username = ""
+        st.rerun()
 
 
 def fetch_accounts(pattern: str = "", page: int = 1) -> None:
@@ -755,11 +759,13 @@ def process_incoming_realtime_messages() -> None:
     2. Update the UI with new messages
     3. Handle message delivery status
     4. Update unread message counts
+
+    The function only triggers a UI rerun if there are actual changes
+    (new messages or new chat partners).
     """
     client = get_chat_client()
     if client:
-        new_partner_detected = False
-        new_message_received = False
+        changes_detected = False
         while not client.incoming_messages_queue.empty():
             msg = client.incoming_messages_queue.get()
             if msg.type == chat_pb2.MessageType.SEND_MESSAGE:
@@ -776,21 +782,25 @@ def process_incoming_realtime_messages() -> None:
                 }
                 with st.session_state.lock:
                     if st.session_state.current_chat == sender:
+                        # Only update messages if we're in the chat with the sender
                         st.session_state.messages.append(new_message)
                         st.session_state.messages = deduplicate_messages(st.session_state.messages)
-                        new_message_received = True
+                        changes_detected = True
                         if (
                             "conversations" in st.session_state
                             and st.session_state.current_chat in st.session_state.conversations
                         ):
                             conv = st.session_state.conversations[st.session_state.current_chat]
                             conv["displayed_messages"].append(new_message)
-                            conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
+                            conv["displayed_messages"] = deduplicate_messages(
+                                conv["displayed_messages"]
+                            )
                             if len(conv["displayed_messages"]) > conv["limit"]:
                                 conv["displayed_messages"] = conv["displayed_messages"][
                                     -conv["limit"] :
                                 ]
                     else:
+                        # Update unread count and chat partners list
                         st.session_state.unread_map[sender] = (
                             st.session_state.unread_map.get(sender, 0) + 1
                         )
@@ -798,9 +808,13 @@ def process_incoming_realtime_messages() -> None:
                             st.session_state.chat_partners = []
                         if sender not in st.session_state.chat_partners:
                             st.session_state.chat_partners.append(sender)
-                            new_partner_detected = True
-                st.success(f"New message from {sender}: {text}")
-        if new_partner_detected or new_message_received:
+                            changes_detected = True
+
+                # Show notification for new message
+                st.toast(f"New message from {sender}: {text}")
+
+        # Only rerun if we detected changes that affect the UI
+        if changes_detected:
             st.rerun()
 
 
@@ -910,6 +924,7 @@ def render_sidebar() -> None:
                     else:
                         st.warning("Please confirm the deletion.")
 
+
 def deduplicate_messages(messages):
     """
     Return a new list of messages with duplicates removed.
@@ -925,7 +940,7 @@ def deduplicate_messages(messages):
         sender = msg.get("sender")
         text = msg.get("text")
         ts = float(msg.get("timestamp", 0.0))
-        
+
         key = (sender, text, round(ts, 3))
 
         if key not in seen:
@@ -1015,7 +1030,7 @@ def render_chat_page_with_deletion() -> None:
                         except Exception:
                             formatted_timestamp = "Unknown Time"
 
-                    sender_name = "You" if sender == st.session_state.username else sender 
+                    sender_name = "You" if sender == st.session_state.username else sender
                     cols = st.columns([4, 1])
                     with cols[0]:
                         st.markdown(f"**{sender_name}** [{formatted_timestamp}]:")
@@ -1065,7 +1080,9 @@ def render_chat_page_with_deletion() -> None:
                                     conv["displayed_messages"] = (
                                         st.session_state.displayed_messages.copy()
                                     )
-                                    conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
+                                    conv["displayed_messages"] = deduplicate_messages(
+                                        conv["displayed_messages"]
+                                    )
                                 else:
                                     st.error("Failed to delete selected messages.")
                             except Exception as e:
@@ -1144,7 +1161,9 @@ def render_chat_page_with_deletion() -> None:
                             load_conversation(partner, 0, conv["limit"])
                             conv["offset"] = 0
                             conv["displayed_messages"] = st.session_state.displayed_messages.copy()
-                            conv["displayed_messages"] = deduplicate_messages(conv["displayed_messages"])
+                            conv["displayed_messages"] = deduplicate_messages(
+                                conv["displayed_messages"]
+                            )
                         else:
                             st.error("Failed to send message.")
                     except Exception as e:
@@ -1186,7 +1205,6 @@ def main() -> None:
         cluster_nodes.append((host, int(port)))
 
     st.set_page_config(page_title="Secure Chat", layout="wide")
-    st_autorefresh(interval=1000, key="auto_refresh_chat")  # Refresh every second
 
     init_session_state()
 
@@ -1232,9 +1250,17 @@ def main() -> None:
         # If we do have a connected client and user is logged in, go to chat UI
         if st.session_state.client_connected:
             try:
+                # Process any new messages
                 process_incoming_realtime_messages()
             except Exception as e:
                 st.warning(f"An error occurred while processing messages: {e}")
+
+            # Add manual refresh button in the sidebar
+            with st.sidebar:
+                if st.button("🔄 Refresh"):
+                    st.session_state.fetch_chat_partners = True
+                    st.rerun()
+
             render_sidebar()
             render_chat_page_with_deletion()
         else:

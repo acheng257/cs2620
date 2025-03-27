@@ -12,7 +12,45 @@ import random
 from src.protocols.grpc import chat_pb2, chat_pb2_grpc
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+
+# Create a custom formatter for better readability
+class CustomFormatter(logging.Formatter):
+    """Custom formatter that includes server info and colors for different levels"""
+
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format_str = "%(asctime)s - %(levelname)s - [%(server_info)s] %(message)s"
+
+    FORMATS = {
+        logging.DEBUG: grey + format_str + reset,
+        logging.INFO: grey + format_str + reset,
+        logging.WARNING: yellow + format_str + reset,
+        logging.ERROR: red + format_str + reset,
+        logging.CRITICAL: bold_red + format_str + reset,
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt, datefmt="%Y-%m-%d %H:%M:%S")
+        return formatter.format(record)
+
+
+# Create a heartbeat logger that only logs at DEBUG level
+heartbeat_logger = logging.getLogger("heartbeat")
+heartbeat_logger.setLevel(logging.DEBUG)
+
+# Create a replication logger for all other replication operations
+replication_logger = logging.getLogger("replication")
+replication_logger.setLevel(logging.INFO)
+
+# Add handlers with the custom formatter
+handler = logging.StreamHandler()
+handler.setFormatter(CustomFormatter())
+heartbeat_logger.addHandler(handler)
+replication_logger.addHandler(handler)
 
 
 class ServerRole(Enum):
@@ -47,6 +85,10 @@ class ReplicationManager:
         self.term = 0
         self.voted_for: Optional[str] = None
         self.replicas: Dict[str, ReplicaInfo] = {}
+
+        # Add server info to logging context
+        logging.LoggerAdapter(heartbeat_logger, {"server_info": f"{host}:{port}"})
+        logging.LoggerAdapter(replication_logger, {"server_info": f"{host}:{port}"})
 
         # Separate locks for different state components
         self.role_lock = threading.Lock()
@@ -85,7 +127,7 @@ class ReplicationManager:
         self.heartbeat_thread = threading.Thread(target=self._send_heartbeats, daemon=True)
         self.heartbeat_thread.start()
 
-        logging.info(
+        replication_logger.info(
             f"Server started at {self.host}:{self.port} with {len(self.replicas)} replicas"
         )
 
@@ -397,7 +439,7 @@ class ReplicationManager:
         else:
             logging.error(f"Account '{username}' replication failed. Acks: {acks}")
         return success
-    
+
     def replicate_operation(self, replication_request: chat_pb2.ReplicationMessage) -> bool:
         acks = 1  # Leader counts as one ack
         with self.replica_lock:
@@ -408,8 +450,10 @@ class ReplicationManager:
                     channel = grpc.insecure_channel(f"{replica.host}:{replica.port}")
                     stub = chat_pb2_grpc.ChatServerStub(channel)
                     response = stub.HandleReplication(replication_request, timeout=1.0)
-                    if (response.type == chat_pb2.ReplicationType.REPLICATION_RESPONSE and 
-                        response.replication_response.success):
+                    if (
+                        response.type == chat_pb2.ReplicationType.REPLICATION_RESPONSE
+                        and response.replication_response.success
+                    ):
                         acks += 1
                     channel.close()
                 except Exception as e:
@@ -513,7 +557,7 @@ class ReplicationManager:
                 recipient=recipient,
                 content=content,
                 is_delivered=delivered,
-                forced_id=msg_id,  # <-- use the leader’s exact ID
+                forced_id=msg_id,  # <-- use the leader's exact ID
             )
 
             if stored_id is not None:
@@ -536,7 +580,7 @@ class ReplicationManager:
                     ),
                     timestamp=time.time(),
                 )
-            
+
         elif message.type == chat_pb2.ReplicationType.REPLICATE_DELETE_MESSAGES:
             deletion_dict = MessageToDict(message.deletion)
             message_ids = deletion_dict.get("messageIds", [])
@@ -567,7 +611,9 @@ class ReplicationManager:
             username = deletion_dict.get("username", "")
             message_ids = deletion_dict.get("messageIds", [])
             logging.debug(f"Received deletion_dict: {deletion_dict}")
-            logging.debug(f"Received mark read replication for user: {username} with message_ids: {message_ids}")
+            logging.debug(
+                f"Received mark read replication for user: {username} with message_ids: {message_ids}"
+            )
             success = self.db.mark_messages_as_read(username, message_ids)
             logging.debug(f"Mark read replication for user {username} success: {success}")
             return chat_pb2.ReplicationMessage(
@@ -577,7 +623,6 @@ class ReplicationManager:
                 replication_response=chat_pb2.ReplicationResponse(success=success, message_id=0),
                 timestamp=time.time(),
             )
-
 
         # Default case
         return chat_pb2.ReplicationMessage(
