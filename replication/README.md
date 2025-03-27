@@ -93,21 +93,36 @@ The system uses a leader-follower protocol where:
 - Python 3.7+
 - gRPC tools and runtime
 - SQLite3
-- Required Python packages:
-  ```bash
-  pip install grpcio grpcio-tools protobuf streamlit streamlit-autorefresh
-  ```
+
+### Installation and Setup
+
+1. Install Pipenv if you haven't already:
+```bash
+pip install pipenv
+```
+
+2. Install project dependencies:
+```bash
+# Install all dependencies (including dev dependencies)
+pipenv install --dev
+```
 
 ### Running the System
 
 1. **Generate gRPC Code**
    ```bash
+   # Activate virtual environment
+   pipenv shell
+   
    # Generate Python gRPC code from proto definitions
    python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. src/protocols/grpc/chat.proto
    ```
 
 2. **Start Multiple Server Instances**
    ```bash
+   # Activate virtual environment (if not already activated)
+   pipenv shell
+   
    # Start the first server (potential leader)
    python chat_grpc_server.py --host 0.0.0.0 --port 50051
    
@@ -118,6 +133,9 @@ The system uses a leader-follower protocol where:
 
 3. **Launch the Web Interface**
    ```bash
+   # Activate virtual environment (if not already activated)
+   pipenv shell
+   
    # Connect to the cluster
    streamlit run grpc_app.py -- --cluster-nodes "127.0.0.1:50051,127.0.0.1:50052,127.0.0.1:50053"
    ```
