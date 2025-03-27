@@ -11,26 +11,6 @@ This module provides the ChatClient class which handles:
 The client maintains a connection to the leader server and automatically handles leader changes
 by discovering and reconnecting to the new leader when needed. It uses a cluster configuration
 to maintain a list of all possible servers and implements retry logic for robustness.
-
-Example:
-    ```python
-    # Create a client with cluster configuration
-    client = ChatClient(
-        username="alice",
-        host="127.0.0.1",
-        port=50051,
-        cluster_nodes=[("127.0.0.1", 50051), ("127.0.0.1", 50052)]
-    )
-
-    # Connect and start background threads
-    if client.connect():
-        client.start_read_thread()  # Also starts leader check thread
-
-        # Use the client
-        success, error = client.login_sync("password")
-        if success:
-            client.send_message("bob", "Hello!")
-    ```
 """
 
 import argparse

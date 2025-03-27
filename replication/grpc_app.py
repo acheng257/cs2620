@@ -17,15 +17,6 @@ The application maintains session state to track:
 - Server connection details
 - Chat history and preferences
 - UI state (selected chat partner, scroll position, etc.)
-
-Example:
-    ```bash
-    # Run with default settings (connects to localhost:50051)
-    streamlit run grpc_app.py
-
-    # Run with specific cluster configuration
-    streamlit run grpc_app.py -- --cluster-nodes "127.0.0.1:50051,127.0.0.1:50052"
-    ```
 """
 
 import argparse

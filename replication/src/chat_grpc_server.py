@@ -20,17 +20,6 @@ The replication protocol ensures:
 - Automatic leader election on failure
 - Majority acknowledgment for changes
 - Automatic client redirection to the leader
-
-Example:
-    ```python
-    # Start a server with replicas
-    server = ChatServer(
-        host="0.0.0.0",
-        port=50051,
-        replica_addresses=["127.0.0.1:50052", "127.0.0.1:50053"]
-    )
-    server.serve()
-    ```
 """
 
 import argparse
