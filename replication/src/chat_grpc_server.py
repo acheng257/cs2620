@@ -145,6 +145,7 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
         )
 
         self.cluster_nodes = cluster_nodes or []
+        self.alive_nodes = set()
 
     def CreateAccount(
         self, request: chat_pb2.ChatMessage, context: grpc.ServicerContext
@@ -849,14 +850,32 @@ class ChatServer(chat_pb2_grpc.ChatServerServicer):
             timestamp=time.time(),
         )
 
+    def heartbeat_from_node(self, host, port):
+        """
+        Called when a node sends a heartbeat, marking it alive.
+        """
+        self.alive_nodes.add((host, port))
+
+    def mark_node_dead(self, host, port):
+        """
+        Called if we haven't heard from a node in a while.
+        """
+        if (host, port) in self.alive_nodes:
+            self.alive_nodes.remove((host, port))
+
     def GetClusterNodes(self, request, context):
         """
-        Return the current cluster membership as a list of "host:port" strings.
+        Return the current cluster membership as a list of "host:port" strings,
+        but only include nodes that are known to be alive.
         """
-        # Build a dictionary that will go into the 'payload' field
-        payload_dict = {"nodes": [f"{host}:{port}" for (host, port) in self.cluster_nodes]}
+        # Filter the complete cluster membership against the set of alive nodes.
+        active_nodes = [
+            f"{host}:{port}"
+            for (host, port) in self.cluster_nodes
+            if (host, port) in self.alive_nodes
+        ]
+        payload_dict = {"nodes": active_nodes}
         payload_struct = ParseDict(payload_dict, Struct())
-
         return chat_pb2.ChatMessage(
             type=chat_pb2.MessageType.GET_CLUSTER_NODES,
             payload=payload_struct,
